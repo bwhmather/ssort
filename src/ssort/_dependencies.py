@@ -21,6 +21,7 @@ def _get_dependencies_for_attribute(node):
 
 @get_dependencies.register(ast.Name)
 def _get_dependencies_for_name(node):
+    assert isinstance(node.ctx, ast.Load)
     return [node.id]
 
 

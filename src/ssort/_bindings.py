@@ -24,16 +24,19 @@ def _flatten_target(node):
 
 @_flatten_target.register(ast.Name)
 def _flatten_target_name(node):
+    assert isinstance(node.ctx, ast.Store)
     return [node.id]
 
 
 @_flatten_target.register(ast.Starred)
 def _flatten_target_starred(node):
+    assert isinstance(node.ctx, ast.Store)
     return _flatten_target(node.value)
 
 
 @_flatten_target.register(ast.Tuple)
 def _flatten_target_tuple(node):
+    assert isinstance(node.ctx, ast.Store)
     targets = []
     for element in node.elts:
         targets += _flatten_target(element)
