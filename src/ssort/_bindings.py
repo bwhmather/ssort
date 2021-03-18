@@ -17,14 +17,43 @@ def _get_bindings_for_class_def(node):
     return [node.name]
 
 
+@functools.singledispatch
+def _flatten_target(node):
+    raise NotImplementedError()
+
+
+@_flatten_target.register(ast.Name)
+def _flatten_target_name(node):
+    return [node.id]
+
+
+@_flatten_target.register(ast.Starred)
+def _flatten_target_starred(node):
+    return _flatten_target(node.value)
+
+
+@_flatten_target.register(ast.Tuple)
+def _flatten_target_tuple(node):
+    targets = []
+    for element in node.elts:
+        targets += _flatten_target(element)
+    return targets
+
+
 @get_bindings.register(ast.Assign)
 def _get_bindings_for_assign(node):
     bindings = []
     for target in node.targets:
-        bindings += get_bindings(target)
+        bindings += _flatten_target(target)
+
     return bindings
 
 
+@get_bindings.register(ast.ImportFrom)
+def _get_bindings_for_import_from(node):
+    return [name.asname if name.asname else name.name for name in node.names]
+
+
 @get_bindings.register(ast.Import)
-def _get_bindingsfor_import(node):
+def _get_bindings_for_import(node):
     return [name.asname if name.asname else name.name for name in node.names]
