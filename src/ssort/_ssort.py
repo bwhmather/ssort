@@ -25,17 +25,17 @@ def ssort(f):
     # A dictionary mapping from names to statement indexes.
     scope = {}
 
-    cursor_lineno = 0
-    cursor_col_offset = 0
+    # cursor_lineno = 0
+    # cursor_col_offset = 0
 
     for node in root.body:
-        start_lineno = cursor_lineno
-        start_col_offset = cursor_col_offset
-        end_lineno = node.end_lineno
-        end_col_offset = node.end_col_offset
+        # start_lineno = cursor_lineno
+        # start_col_offset = cursor_col_offset
+        # end_lineno = node.end_lineno
+        # end_col_offset = node.end_col_offset
 
-        cursor_lineno = end_lineno
-        cursor_col_offset = end_col_offset
+        # cursor_lineno = end_lineno
+        # cursor_col_offset = end_col_offset
 
         statement_id = len(statements)
 
