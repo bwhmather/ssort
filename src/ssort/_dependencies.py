@@ -75,3 +75,16 @@ def _get_dependencies_for_tuple(node):
     for element in node.elts:
         dependencies += get_dependencies(element)
     return dependencies
+
+
+@get_dependencies.register(ast.BinOp)
+def _get_dependencies_for_binop(node):
+    return [
+        *get_dependencies(node.left),
+        *get_dependencies(node.right),
+    ]
+
+
+@get_dependencies.register(ast.UnaryOp)
+def _get_dependencies_for_unary(node):
+    return get_dependencies(node.operand)

@@ -126,3 +126,13 @@ def test_tuple_dependencies():
 def test_tuple_dependencies_star_unpacking():
     node = _parse("(a, *b)")
     assert get_dependencies(node) == ["a", "b"]
+
+
+def test_add_dependencies():
+    node = _parse("a + b")
+    assert get_dependencies(node) == ["a", "b"]
+
+
+def test_negate_depenencies():
+    node = _parse("-plus")
+    assert get_dependencies(node) == ["plus"]
