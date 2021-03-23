@@ -39,7 +39,7 @@ def _get_bindings_for_async_function_def(node):
         )
 
     """
-    raise NotImplementedError("TODO")
+    return [node.name]
 
 
 @get_bindings.register(ast.ClassDef)
@@ -66,7 +66,7 @@ def _get_bindings_for_return(node):
         Return(expr? value)
 
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.Delete)
@@ -76,7 +76,7 @@ def _get_bindings_for_delete(node):
 
         Delete(expr* targets)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @functools.singledispatch
@@ -561,7 +561,7 @@ def _get_bindings_for_name(node):
 
         Name(identifier id, expr_context ctx)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.List)
@@ -572,7 +572,7 @@ def _get_bindings_for_list(node):
 
         List(expr* elts, expr_context ctx)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.Tuple)
@@ -583,7 +583,7 @@ def _get_bindings_for_tuple(node):
         Tuple(expr* elts, expr_context ctx)
 
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.Slice)
@@ -595,4 +595,4 @@ def _get_bindings_for_slice(node):
         Slice(expr? lower, expr? upper, expr? step)
 
     """
-    raise NotImplementedError("TODO")
+    return []
