@@ -20,7 +20,7 @@ def test_function_def_bindings():
             name
         """
     )
-    pass
+    assert get_bindings(node) == ["function"]
 
 
 def test_async_function_def_bindings():
