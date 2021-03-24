@@ -8,6 +8,11 @@ def _split_text(source):
     return [text for text, ast in split(f, "<unknown>")]
 
 
+def test_split_empty():
+    statements = _split_text("")
+    assert statements == []
+
+
 def test_split_assignment():
     statements = _split_text("a = 4")
     assert statements == ["a = 4"]
@@ -55,4 +60,17 @@ def test_split_assignments_leading_and_trailing_comments():
     assert statements == [
         "# Before a\na = 4  # After a",
         "# Before b\nb = 2  # After b",
+    ]
+
+
+def test_split_function_def():
+    statements = _split_text(
+        "@something(2, kwarg=3)\n"
+        "def decorated(arg, *args, kwarg, **kwargs):\n"
+        "    pass"
+    )
+    assert statements == [
+        "@something(2, kwarg=3)\n"
+        "def decorated(arg, *args, kwarg, **kwargs):\n"
+        "    pass"
     ]
