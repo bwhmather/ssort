@@ -1,6 +1,25 @@
 import ast
 
 
+def _find_start(node):
+    lineno, col = min(
+        (descendant.lineno, descendant.col_offset)
+        for descendant in ast.walk(node)
+        if hasattr(descendant, "lineno") and hasattr(descendant, "col_offset")
+    )
+    return lineno - 1, col
+
+
+def _find_end(node):
+    lineno, col = max(
+        (descendant.end_lineno, descendant.end_col_offset)
+        for descendant in ast.walk(node)
+        if hasattr(descendant, "end_lineno")
+        and hasattr(descendant, "end_col_offset")
+    )
+    return lineno - 1, col
+
+
 def split(f, filename):
     root_text = f.read()
     root_node = ast.parse(root_text, filename)
@@ -21,31 +40,39 @@ def split(f, filename):
     next_col = 0
 
     next_node = next(nodes, None)
-    while True:
+
+    if next_node is not None:
+        next_start_row, next_start_col = _find_start(next_node)
+        next_end_row, next_end_col = _find_end(next_node)
+
+    while next_node:
         this_node, next_node = next_node, next(nodes, None)
-        if this_node is None:
-            break
+        this_end_row, this_end_col = next_end_row, next_end_col
+
+        if next_node is not None:
+            next_start_row, next_start_col = _find_start(next_node)
+            next_end_row, next_end_col = _find_end(next_node)
 
         start_row = next_row
         start_col = next_col
 
-        if next_node is not None and this_node.end_lineno == next_node.lineno:
+        if next_node is not None and this_end_row == next_end_row:
             # There is another statement on the same line.  It should be
             # possible to claim as far as the start of the next node for this
             # node, but this space can only contain semicolons and whitespace
             # so we are better off filtering it out.
-            end_row = this_node.end_lineno - 1
-            end_col = this_node.end_col_offset
+            end_row = this_end_row
+            end_col = this_end_col
 
-            next_row = next_node.lineno - 1
-            next_col = next_node.col_offset
+            next_row = next_start_row
+            next_col = next_start_col
         else:
             # No other statements on the same line.  Assume that everything up
             # until the end of the line is comments attached to this statement.
-            end_row = this_node.lineno - 1
+            end_row = this_end_row
             end_col = row_lengths[end_row]
 
-            next_row = this_node.lineno
+            next_row = this_end_row + 1
             next_col = 0
 
         start_offset = row_offsets[start_row] + start_col
