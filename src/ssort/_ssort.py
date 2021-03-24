@@ -1,58 +1,34 @@
-import ast
-import dataclasses
-from typing import List
-
 from ssort._bindings import get_bindings
 from ssort._dependencies import get_dependencies
-
-
-@dataclasses.dataclass(frozen=True)
-class _Statement:
-    start_lineno: int
-    start_col_offset: int
-    end_lineno: int
-    end_col_offset: int
-
-    assigned_names: List[str]
-    dependencies: List[str]
+from ssort._parsing import split
 
 
 def ssort(f):
-    root = ast.parse(f.read(), "example.py")
-    print(ast.dump(root, include_attributes=True, indent=2))
+    statement_nodes = []
+    statement_texts = []
+    statement_dependencies = []
 
-    statements = []
     # A dictionary mapping from names to statement indexes.
     scope = {}
 
-    # cursor_lineno = 0
-    # cursor_col_offset = 0
-
-    for node in root.body:
-        # start_lineno = cursor_lineno
-        # start_col_offset = cursor_col_offset
-        # end_lineno = node.end_lineno
-        # end_col_offset = node.end_col_offset
-
-        # cursor_lineno = end_lineno
-        # cursor_col_offset = end_col_offset
-
-        statement_id = len(statements)
+    for text, node in split(f, "example.py"):
+        statement_id = len(statement_nodes)
 
         dependencies = []
-        for dependency in get_dependencies(node):
-            dependencies.append(scope.get(dependency, dependency))
+        for dependency_name in get_dependencies(node):
+            dependencies.append(scope.get(dependency_name, dependency_name))
 
-        # statement.dependencies = dependencies
-        # statements.append(statement)
-
-        print(get_dependencies(node))
-        print(get_bindings(node))
         for name in get_bindings(node):
             scope[name] = statement_id
 
+        statement_texts.append(text)
+        statement_nodes.append(node)
+        statement_dependencies.append(dependencies)
+
     # Patch up dependencies that couldn't be resolved immediately.
-    for statement in statements:
-        for dependency in dependencies:
+    for dependencies in statement_dependencies:
+        for index, dependency in enumerate(dependencies):
             if isinstance(dependency, str):
-                dependency = scope[dependency]
+                dependencies[index] = scope[dependency]
+
+    print("\n".join(statement_texts))
