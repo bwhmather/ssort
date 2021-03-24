@@ -39,7 +39,9 @@ def _get_dependencies_for_function_def(node):
         scope.update(get_bindings(statement))
         dependencies += get_dependencies(statement)
 
-    return [dependency for dependency in dependencies if dependency not in scope]
+    return [
+        dependency for dependency in dependencies if dependency not in scope
+    ]
 
 
 @get_dependencies.register(ast.AsyncFunctionDef)
@@ -84,7 +86,7 @@ def _get_dependencies_for_return(node):
         Return(expr? value)
 
     """
-    raise NotImplementedError("TODO")
+    return get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Delete)
@@ -246,7 +248,7 @@ def _get_dependencies_for_import(node):
 
         Import(alias* names)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_dependencies.register(ast.ImportFrom)
@@ -257,7 +259,7 @@ def _get_dependencies_for_import_from(node):
         ImportFrom(identifier? module, alias* names, int? level)
 
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_dependencies.register(ast.Global)

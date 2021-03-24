@@ -488,7 +488,7 @@ def _get_bindings_for_call(node):
 
         Call(expr func, expr* args, keyword* keywords)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.FormattedValue)
