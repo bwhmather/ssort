@@ -1,6 +1,7 @@
 from ssort._bindings import get_bindings
 from ssort._dependencies import get_dependencies
 from ssort._parsing import split
+from ssort._sorting import sort
 
 
 def ssort(f):
@@ -31,4 +32,10 @@ def ssort(f):
             if isinstance(dependency, str):
                 dependencies[index] = scope[dependency]
 
-    print("\n".join(statement_texts))
+    sorted_statements = sort(statement_dependencies)
+
+    print(
+        "\n".join(
+            statement_texts[statement] for statement in sorted_statements
+        )
+    )
