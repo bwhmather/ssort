@@ -9,6 +9,17 @@ def get_dependencies(node):
     return []
 
 
+def _get_scope_from_arguments(node):
+    scope = set()
+    scope.update(arg.arg for arg in node.args)  # Guh.
+    if node.vararg:
+        scope.update(node.vararg.arg)
+    scope.update(arg.arg for arg in node.kwonlyargs)
+    if node.kwarg:
+        scope.update(node.kwarg.arg)
+    return scope
+
+
 @get_dependencies.register(ast.FunctionDef)
 def _get_dependencies_for_function_def(node):
     """
@@ -27,13 +38,7 @@ def _get_dependencies_for_function_def(node):
     for decorator in node.decorator_list:
         dependencies += get_dependencies(decorator)
 
-    scope = set()
-    scope.update(arg.arg for arg in node.args.args)  # Guh.
-    if node.args.vararg:
-        scope.update(node.args.vararg.arg)
-    scope.update(arg.arg for arg in node.args.kwonlyargs)
-    if node.args.kwarg:
-        scope.update(node.args.kwarg.arg)
+    scope = _get_scope_from_arguments(node.args)
 
     for statement in node.body:
         scope.update(get_bindings(statement))
@@ -59,7 +64,19 @@ def _get_dependencies_for_async_function_def(node):
         )
 
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    for decorator in node.decorator_list:
+        dependencies += get_dependencies(decorator)
+
+    scope = _get_scope_from_arguments(node.args)
+
+    for statement in node.body:
+        scope.update(get_bindings(statement))
+        dependencies += get_dependencies(statement)
+
+    return [
+        dependency for dependency in dependencies if dependency not in scope
+    ]
 
 
 @get_dependencies.register(ast.ClassDef)
@@ -75,7 +92,19 @@ def _get_dependencies_for_class_def(node):
             expr* decorator_list,
         )
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    for decorator in node.decorator_list:
+        dependencies += get_dependencies(decorator)
+
+    scope = {}
+
+    for statement in node.body:
+        scope.update(get_bindings(statement))
+        dependencies += get_dependencies(statement)
+
+    return [
+        dependency for dependency in dependencies if dependency not in scope
+    ]
 
 
 @get_dependencies.register(ast.Return)
@@ -97,6 +126,38 @@ def _get_dependencies_for_delete(node):
         Delete(expr* targets)
     """
     raise NotImplementedError("TODO")
+
+
+@functools.singledispatch
+def _get_target_dependencies(node):
+    raise NotImplementedError(f"not implemented for {node!r}")
+
+
+@_get_target_dependencies.register(ast.Name)
+def _get_target_dependencies_for_name(node):
+    assert isinstance(node.ctx, ast.Store)
+    return []
+
+
+@_get_target_dependencies.register(ast.Starred)
+def _get_target_dependencies_for_starred(node):
+    assert isinstance(node.ctx, ast.Store)
+    return _get_target_dependencies(node.value)
+
+
+@_get_target_dependencies.register(ast.Tuple)
+def _flatten_target_tuple(node):
+    assert isinstance(node.ctx, ast.Store)
+    dependencies = []
+    for element in node.elts:
+        dependencies += _get_target_dependencies(element)
+    return dependencies
+
+
+@_get_target_dependencies.register(ast.Subscript)
+def _get_target_dependencies_for_subscript(node):
+    assert isinstance(node.ctx, ast.Store)
+    return get_dependencies(node.value) + get_dependencies(node.slice)
 
 
 @get_dependencies.register(ast.Assign)
@@ -233,10 +294,16 @@ def _get_dependencies_for_raise(node):
     """
     ..code:: python
 
-
         Raise(expr? exc, expr? cause)
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    if node.exc:
+        dependencies += get_dependencies(node.exc)
+
+    if node.cause:
+        dependencies += get_dependencies(node.cause)
+
+    return dependencies
 
 
 @get_dependencies.register(ast.Try)
@@ -262,7 +329,10 @@ def _get_dependencies_for_assert(node):
         Assert(expr test, expr? msg)
 
     """
-    raise NotImplementedError("TODO")
+    dependencies = get_dependencies(node.test)
+    if node.msg:
+        dependencies += get_dependencies(node.msg)
+    return dependencies
 
 
 @get_dependencies.register(ast.Import)
@@ -386,7 +456,12 @@ def _get_dependencies_for_lambda(node):
 
         Lambda(arguments args, expr body)
     """
-    raise NotImplementedError("TODO")
+    scope = _get_scope_from_arguments(node.args)
+    dependencies = get_dependencies(node.body)
+
+    return [
+        dependency for dependency in dependencies if dependency not in scope
+    ]
 
 
 @get_dependencies.register(ast.IfExp)
@@ -396,7 +471,11 @@ def _get_dependencies_for_if_exp(node):
 
         IfExp(expr test, expr body, expr orelse)
     """
-    raise NotImplementedError("TODO")
+    dependencies = get_dependencies(node.test)
+    dependencies += get_dependencies(node.body)
+    dependencies += get_dependencies(node.orelse)
+
+    return dependencies
 
 
 @get_dependencies.register(ast.Dict)
@@ -406,7 +485,11 @@ def _get_dependencies_for_dict(node):
 
         Dict(expr* keys, expr* values)
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    for key, value in zip(node.keys, node.values):
+        dependencies += get_dependencies(key)
+        dependencies += get_dependencies(value)
+    return dependencies
 
 
 @get_dependencies.register(ast.Set)
@@ -416,7 +499,10 @@ def _get_dependencies_for_set(node):
 
         Set(expr* elts)
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    for elt in node.elts:
+        dependencies += get_dependencies(elt)
+    return dependencies
 
 
 @get_dependencies.register(ast.ListComp)
@@ -426,7 +512,20 @@ def _get_dependencies_for_list_comp(node):
 
         ListComp(expr elt, comprehension* generators)
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    dependencies += get_dependencies(node.elt)
+
+    for generator in node.generators:
+        dependencies += get_dependencies(generator.iter)
+
+        for if_expr in generator.ifs:
+            dependencies += get_dependencies(if_expr)
+
+    bindings = set(get_bindings(node))
+
+    return [
+        dependency for dependency in dependencies if dependency not in bindings
+    ]
 
 
 @get_dependencies.register(ast.SetComp)
@@ -436,7 +535,20 @@ def _get_dependencies_for_set_comp(node):
 
         SetComp(expr elt, comprehension* generators)
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    dependencies += get_dependencies(node.elt)
+
+    for generator in node.generators:
+        dependencies += get_dependencies(generator.iter)
+
+        for if_expr in generator.ifs:
+            dependencies += get_dependencies(if_expr)
+
+    bindings = set(get_bindings(node))
+
+    return [
+        dependency for dependency in dependencies if dependency not in bindings
+    ]
 
 
 @get_dependencies.register(ast.DictComp)
@@ -446,7 +558,21 @@ def _get_dependencies_for_dict_comp(node):
 
         DictComp(expr key, expr value, comprehension* generators)
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    dependencies += get_dependencies(node.key)
+    dependencies += get_dependencies(node.value)
+
+    for generator in node.generators:
+        dependencies += get_dependencies(generator.iter)
+
+        for if_expr in generator.ifs:
+            dependencies += get_dependencies(if_expr)
+
+    bindings = set(get_bindings(node))
+
+    return [
+        dependency for dependency in dependencies if dependency not in bindings
+    ]
 
 
 @get_dependencies.register(ast.GeneratorExp)
@@ -545,7 +671,7 @@ def _get_dependencies_for_formatted_value(node):
 
         FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    raise NotImplementedError("TODO")
+    return get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.JoinedStr)
@@ -555,7 +681,7 @@ def _get_dependencies_for_joined_str(node):
 
         JoinedStr(expr* values)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_dependencies.register(ast.Constant)

@@ -81,7 +81,7 @@ def _get_bindings_for_delete(node):
 
 @functools.singledispatch
 def _flatten_target(node):
-    raise NotImplementedError()
+    raise NotImplementedError(f"not implemented for {node!r}")
 
 
 @_flatten_target.register(ast.Name)
@@ -103,6 +103,12 @@ def _flatten_target_tuple(node):
     for element in node.elts:
         targets += _flatten_target(element)
     return targets
+
+
+@_flatten_target.register(ast.Subscript)
+def _flatten_target_subscript(node):
+    assert isinstance(node.ctx, ast.Store)
+    return []
 
 
 @get_bindings.register(ast.Assign)
@@ -224,7 +230,11 @@ def _get_bindings_for_with(node):
 
         With(withitem* items, stmt* body, string? type_comment)
     """
-    raise NotImplementedError("TODO")
+    bindings = []
+    for item in node.items:
+        if item.optional_vars:
+            bindings += _flatten_target(item.optional_vars)
+    return bindings
 
 
 @get_bindings.register(ast.AsyncWith)
@@ -245,7 +255,7 @@ def _get_bindings_for_raise(node):
 
         Raise(expr? exc, expr? cause)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.Try)
@@ -271,7 +281,7 @@ def _get_bindings_for_assert(node):
         Assert(expr test, expr? msg)
 
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.Import)
@@ -428,7 +438,10 @@ def _get_bindings_for_list_comp(node):
 
         ListComp(expr elt, comprehension* generators)
     """
-    raise NotImplementedError("TODO")
+    bindings = []
+    for generator in node.generators:
+        bindings += _flatten_target(generator.target)
+    return bindings
 
 
 @get_bindings.register(ast.SetComp)
@@ -438,7 +451,10 @@ def _get_bindings_for_set_comp(node):
 
         SetComp(expr elt, comprehension* generators)
     """
-    raise NotImplementedError("TODO")
+    bindings = []
+    for generator in node.generators:
+        bindings += _flatten_target(generator.target)
+    return bindings
 
 
 @get_bindings.register(ast.DictComp)
@@ -448,7 +464,10 @@ def _get_bindings_for_dict_comp(node):
 
         DictComp(expr key, expr value, comprehension* generators)
     """
-    raise NotImplementedError("TODO")
+    bindings = []
+    for generator in node.generators:
+        bindings += _flatten_target(generator.target)
+    return bindings
 
 
 @get_bindings.register(ast.GeneratorExp)
