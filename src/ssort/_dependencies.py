@@ -145,7 +145,15 @@ def _get_dependencies_for_for(node):
             string? type_comment,
         )
     """
-    raise NotImplementedError("TODO")
+    dependencies = get_dependencies(node.iter)
+
+    for stmt in node.body:
+        dependencies += get_dependencies(stmt)
+
+    for stmt in node.orelse:
+        dependencies += get_dependencies(stmt)
+
+    return dependencies
 
 
 @get_dependencies.register(ast.AsyncFor)
@@ -171,7 +179,15 @@ def _get_dependencies_for_while(node):
 
         While(expr test, stmt* body, stmt* orelse)
     """
-    raise NotImplementedError("TODO")
+    dependencies = get_dependencies(node.test)
+
+    for stmt in node.body:
+        dependencies += get_dependencies(stmt)
+
+    for stmt in node.orelse:
+        dependencies += get_dependencies(stmt)
+
+    return dependencies
 
 
 @get_dependencies.register(ast.If)
@@ -181,7 +197,15 @@ def _get_dependencies_for_if(node):
 
         If(expr test, stmt* body, stmt* orelse)
     """
-    raise NotImplementedError("TODO")
+    dependencies = get_dependencies(node.test)
+
+    for stmt in node.body:
+        dependencies += get_dependencies(stmt)
+
+    for stmt in node.orelse:
+        dependencies += get_dependencies(stmt)
+
+    return dependencies
 
 
 @get_dependencies.register(ast.With)
@@ -314,7 +338,10 @@ def _get_dependencies_for_bool_op(node):
         # expr
         BoolOp(boolop op, expr* values)
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    for value in node.values:
+        dependencies += get_dependencies(value)
+    return dependencies
 
 
 @get_dependencies.register(ast.NamedExpr)
@@ -429,7 +456,20 @@ def _get_dependencies_for_generator_exp(node):
 
         GeneratorExp(expr elt, comprehension* generators)
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    dependencies += get_dependencies(node.elt)
+
+    for generator in node.generators:
+        dependencies += get_dependencies(generator.iter)
+
+        for if_expr in generator.ifs:
+            dependencies += get_dependencies(if_expr)
+
+    bindings = set(get_bindings(node))
+
+    return [
+        dependency for dependency in dependencies if dependency not in bindings
+    ]
 
 
 @get_dependencies.register(ast.Await)
@@ -440,7 +480,7 @@ def _get_dependencies_for_await(node):
         # the grammar constrains where yield expressions can occur
         Await(expr value)
     """
-    raise NotImplementedError("TODO")
+    return get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Yield)
@@ -450,7 +490,7 @@ def _get_dependencies_for_yield(node):
 
         Yield(expr? value)
     """
-    raise NotImplementedError("TODO")
+    return get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.YieldFrom)
@@ -460,7 +500,7 @@ def _get_dependencies_for_yield_from(node):
 
         YieldFrom(expr value)
     """
-    raise NotImplementedError("TODO")
+    return get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Compare)
@@ -472,7 +512,12 @@ def _get_dependencies_for_compare(node):
         # x < 4 < 3 and (x < 4) < 3
         Compare(expr left, cmpop* ops, expr* comparators)
     """
-    raise NotImplementedError("TODO")
+    dependencies = get_dependencies(node.left)
+
+    for comp in node.comparators:
+        dependencies += get_dependencies(comp)
+
+    return dependencies
 
 
 @get_dependencies.register(ast.Call)
@@ -541,7 +586,10 @@ def _get_dependencies_for_subscript(node):
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    raise NotImplementedError("TODO")
+    assert isinstance(node.ctx, ast.Load)
+    dependencies = get_dependencies(node.value)
+    dependencies += get_dependencies(node.slice)
+    return dependencies
 
 
 @get_dependencies.register(ast.Starred)
@@ -575,7 +623,11 @@ def _get_dependencies_for_list(node):
 
         List(expr* elts, expr_context ctx)
     """
-    raise NotImplementedError("TODO")
+    assert isinstance(node.ctx, ast.Load)
+    dependencies = []
+    for element in node.elts:
+        dependencies += get_dependencies(element)
+    return dependencies
 
 
 @get_dependencies.register(ast.Tuple)
@@ -601,4 +653,14 @@ def _get_dependencies_for_slice(node):
         Slice(expr? lower, expr? upper, expr? step)
 
     """
-    raise NotImplementedError("TODO")
+    dependencies = []
+    if node.lower is not None:
+        dependencies += get_dependencies(node.lower)
+
+    if node.upper is not None:
+        dependencies += get_dependencies(node.upper)
+
+    if node.step is not None:
+        dependencies += get_dependencies(node.step)
+
+    return dependencies

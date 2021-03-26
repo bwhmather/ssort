@@ -155,7 +155,15 @@ def _get_bindings_for_for(node):
             string? type_comment,
         )
     """
-    raise NotImplementedError("TODO")
+    bindings = _flatten_target(node.target)
+
+    for stmt in node.body:
+        bindings += get_bindings(stmt)
+
+    for stmt in node.orelse:
+        bindings += get_bindings(stmt)
+
+    return bindings
 
 
 @get_bindings.register(ast.AsyncFor)
@@ -181,7 +189,15 @@ def _get_bindings_for_while(node):
 
         While(expr test, stmt* body, stmt* orelse)
     """
-    raise NotImplementedError("TODO")
+    bindings = []
+
+    for stmt in node.body:
+        bindings += get_bindings(stmt)
+
+    for stmt in node.orelse:
+        bindings += get_bindings(stmt)
+
+    return bindings
 
 
 @get_bindings.register(ast.If)
@@ -191,7 +207,14 @@ def _get_bindings_for_if(node):
 
         If(expr test, stmt* body, stmt* orelse)
     """
-    raise NotImplementedError("TODO")
+    bindings = []
+    for stmt in node.body:
+        bindings += get_bindings(stmt)
+
+    for stmt in node.body:
+        bindings += get_bindings(node.orelse)
+
+    return bindings
 
 
 @get_bindings.register(ast.With)
@@ -324,7 +347,7 @@ def _get_bindings_for_bool_op(node):
         # expr
         BoolOp(boolop op, expr* values)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.NamedExpr)
@@ -435,7 +458,10 @@ def _get_bindings_for_generator_exp(node):
 
         GeneratorExp(expr elt, comprehension* generators)
     """
-    raise NotImplementedError("TODO")
+    bindings = []
+    for generator in node.generators:
+        bindings += _flatten_target(generator.target)
+    return bindings
 
 
 @get_bindings.register(ast.Await)
@@ -446,7 +472,7 @@ def _get_bindings_for_await(node):
         # the grammar constrains where yield expressions can occur
         Await(expr value)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.Yield)
@@ -456,7 +482,7 @@ def _get_bindings_for_yield(node):
 
         Yield(expr? value)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.YieldFrom)
@@ -466,7 +492,7 @@ def _get_bindings_for_yield_from(node):
 
         YieldFrom(expr value)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.Compare)
@@ -478,7 +504,7 @@ def _get_bindings_for_compare(node):
         # x < 4 < 3 and (x < 4) < 3
         Compare(expr left, cmpop* ops, expr* comparators)
     """
-    raise NotImplementedError("TODO")
+    return []
 
 
 @get_bindings.register(ast.Call)
