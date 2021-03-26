@@ -1,3 +1,5 @@
+import builtins
+
 from ssort._bindings import get_bindings
 from ssort._dependencies import get_dependencies
 from ssort._parsing import split
@@ -27,10 +29,30 @@ def ssort(f):
         statement_dependencies.append(dependencies)
 
     # Patch up dependencies that couldn't be resolved immediately.
+    statement_dependencies = [
+        [
+            dependency
+            if isinstance(dependency, int)
+            else scope.get(dependency, dependency)
+            for dependency in dependencies
+        ]
+        for dependencies in statement_dependencies
+    ]
+
+    statement_dependencies = [
+        [
+            dependency
+            for dependency in dependencies
+            if not isinstance(dependency, str)
+            or dependency not in builtins.__dict__
+        ]
+        for dependencies in statement_dependencies
+    ]
+
     for dependencies in statement_dependencies:
-        for index, dependency in enumerate(dependencies):
+        for dependency in dependencies:
             if isinstance(dependency, str):
-                dependencies[index] = scope[dependency]
+                raise Exception(f"Could not resolve dependency {dependency!r}")
 
     sorted_statements = sort(statement_dependencies)
 
