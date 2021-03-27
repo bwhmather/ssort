@@ -20,14 +20,14 @@ def get_dependencies(node):
     )
 
 
-def _get_scope_from_arguments(node):
+def _get_scope_from_arguments(args):
     scope = set()
-    scope.update(arg.arg for arg in node.args)  # Guh.
-    if node.vararg:
-        scope.update(node.vararg.arg)
-    scope.update(arg.arg for arg in node.kwonlyargs)
-    if node.kwarg:
-        scope.update(node.kwarg.arg)
+    scope.update(arg.arg for arg in args.args)  # Arghhh.
+    if args.vararg:
+        scope.update(args.vararg.arg)
+    scope.update(arg.arg for arg in args.kwonlyargs)
+    if args.kwarg:
+        scope.update(args.kwarg.arg)
     return scope
 
 
