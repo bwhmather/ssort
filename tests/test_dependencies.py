@@ -254,7 +254,8 @@ def test_aug_assign_dependencies():
 
         AugAssign(expr target, operator op, expr value)
     """
-    pass
+    node = _parse("a += b")
+    assert [dep.name for dep in get_dependencies(node)] == ["b"]
 
 
 def test_ann_assign_dependencies():
@@ -265,7 +266,8 @@ def test_ann_assign_dependencies():
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
-    pass
+    node = _parse("a: int = b")
+    assert [dep.name for dep in get_dependencies(node)] == ["b"]
 
 
 def test_for_dependencies():

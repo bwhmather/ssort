@@ -132,7 +132,7 @@ def _get_bindings_for_aug_assign(node):
 
         AugAssign(expr target, operator op, expr value)
     """
-    raise NotImplementedError("TODO")
+    yield from _flatten_target(node.target)
 
 
 @get_bindings.register(ast.AnnAssign)
@@ -144,7 +144,7 @@ def _get_bindings_for_ann_assign(node):
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
-    raise NotImplementedError("TODO")
+    yield from _flatten_target(node.target)
 
 
 @get_bindings.register(ast.For)

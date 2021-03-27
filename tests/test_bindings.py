@@ -95,7 +95,8 @@ def test_aug_assign_bindings():
 
         AugAssign(expr target, operator op, expr value)
     """
-    pass
+    node = _parse("a += b")
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_ann_assign_bindings():
@@ -106,7 +107,8 @@ def test_ann_assign_bindings():
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
-    pass
+    node = _parse("a: int = b")
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_for_bindings():

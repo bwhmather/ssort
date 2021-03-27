@@ -189,7 +189,7 @@ def _get_dependencies_for_aug_assign(node):
 
         AugAssign(expr target, operator op, expr value)
     """
-    raise NotImplementedError("TODO")
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.AnnAssign)
@@ -201,7 +201,7 @@ def _get_dependencies_for_ann_assign(node):
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
-    raise NotImplementedError("TODO")
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.For)
