@@ -20,7 +20,7 @@ def test_function_def_bindings():
             name
         """
     )
-    assert get_bindings(node) == ["function"]
+    assert list(get_bindings(node)) == ["function"]
 
 
 def test_async_function_def_bindings():
@@ -81,12 +81,12 @@ def test_assign_bindings():
         Assign(expr* targets, expr value, string? type_comment)
     """
     node = _parse("a = b")
-    assert get_bindings(node) == ["a"]
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_assign_bindings_star():
     node = _parse("a, *b = c")
-    assert get_bindings(node) == ["a", "b"]
+    assert list(get_bindings(node)) == ["a", "b"]
 
 
 def test_aug_assign_bindings():
@@ -217,12 +217,12 @@ def test_import_bindings():
         Import(alias* names)
     """
     node = _parse("import something")
-    assert get_bindings(node) == ["something"]
+    assert list(get_bindings(node)) == ["something"]
 
 
 def test_import_bindings_as():
     node = _parse("import something as something_else")
-    assert get_bindings(node) == ["something_else"]
+    assert list(get_bindings(node)) == ["something_else"]
 
 
 def test_import_from_bindings():
@@ -233,12 +233,12 @@ def test_import_from_bindings():
 
     """
     node = _parse("from module import a, b")
-    assert get_bindings(node) == ["a", "b"]
+    assert list(get_bindings(node)) == ["a", "b"]
 
 
 def test_import_from_bindings_as():
     node = _parse("from module import something as something_else")
-    assert get_bindings(node) == ["something_else"]
+    assert list(get_bindings(node)) == ["something_else"]
 
 
 def test_global_bindings():
@@ -501,7 +501,7 @@ def test_name_bindings():
         Name(identifier id, expr_context ctx)
     """
     node = _parse("a")
-    assert get_bindings(node) == []
+    assert list(get_bindings(node)) == []
 
 
 def test_list_bindings():
