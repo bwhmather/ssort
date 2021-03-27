@@ -1,7 +1,16 @@
 import ast
+import dataclasses
 import functools
 
 from ssort._bindings import get_bindings
+
+
+@dataclasses.dataclass(frozen=True)
+class Dependency:
+    name: str
+    lineno: int
+    col_offset: int
+    deferred: bool = False
 
 
 @functools.singledispatch
@@ -47,7 +56,7 @@ def _get_dependencies_for_function_def(node):
         dependencies += get_dependencies(statement)
 
     for dependency in dependencies:
-        if dependency not in scope:
+        if dependency.name not in scope:
             yield dependency
 
 
@@ -77,7 +86,7 @@ def _get_dependencies_for_async_function_def(node):
         dependencies += get_dependencies(statement)
 
     for dependency in dependencies:
-        if dependency not in scope:
+        if dependency.name not in scope:
             yield dependency
 
 
@@ -105,7 +114,7 @@ def _get_dependencies_for_class_def(node):
         dependencies += get_dependencies(statement)
 
     for dependency in dependencies:
-        if dependency not in scope:
+        if dependency.name not in scope:
             yield dependency
 
 
@@ -719,7 +728,9 @@ def _get_dependencies_for_name(node):
         Name(identifier id, expr_context ctx)
     """
     assert isinstance(node.ctx, ast.Load)
-    yield node.id
+    yield Dependency(
+        name=node.id, lineno=node.lineno, col_offset=node.col_offset
+    )
 
 
 @get_dependencies.register(ast.List)

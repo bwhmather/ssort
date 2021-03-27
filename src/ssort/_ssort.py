@@ -18,8 +18,8 @@ def ssort(f):
         statement_id = len(statement_nodes)
 
         dependencies = []
-        for dependency_name in get_dependencies(node):
-            dependencies.append(scope.get(dependency_name, dependency_name))
+        for dependency in get_dependencies(node):
+            dependencies.append(scope.get(dependency.name, dependency.name))
 
         for name in get_bindings(node):
             scope[name] = statement_id
