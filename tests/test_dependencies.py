@@ -358,7 +358,25 @@ def test_try_dependencies():
             stmt* finalbody,
         )
     """
-    pass
+    node = _parse(
+        """
+        try:
+            a = something_stupid()
+        except Exception as exc:
+            b = recover()
+        else:
+            c = otherwise()
+        finally:
+            d = finish()
+        """
+    )
+    assert [dep.name for dep in get_dependencies(node)] == [
+        "something_stupid",
+        "Exception",
+        "recover",
+        "otherwise",
+        "finish",
+    ]
 
 
 def test_assert_dependencies():

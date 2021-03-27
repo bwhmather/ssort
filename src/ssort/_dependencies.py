@@ -310,8 +310,24 @@ def _get_dependencies_for_try(node):
             stmt* orelse,
             stmt* finalbody,
         )
+
+        ExceptHandler(expr? type, identifier? name, stmt* body)
     """
-    raise NotImplementedError("TODO")
+    for stmt in node.body:
+        yield from get_dependencies(stmt)
+
+    for handler in node.handlers:
+        if handler.type:
+            yield from get_dependencies(handler.type)
+
+        for stmt in handler.body:
+            yield from get_dependencies(stmt)
+
+    for stmt in node.orelse:
+        yield from get_dependencies(stmt)
+
+    for stmt in node.finalbody:
+        yield from get_dependencies(stmt)
 
 
 @get_dependencies.register(ast.Assert)

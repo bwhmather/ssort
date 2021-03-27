@@ -244,8 +244,25 @@ def _get_bindings_for_try(node):
             stmt* orelse,
             stmt* finalbody,
         )
+
+        ExceptHandler(expr? type, identifier? name, stmt* body)
     """
-    raise NotImplementedError("TODO")
+
+    for stmt in node.body:
+        yield from get_bindings(stmt)
+
+    for handler in node.handlers:
+        if handler.name:
+            yield handler.name
+
+        for stmt in handler.body:
+            yield from get_bindings(stmt)
+
+    for stmt in node.orelse:
+        yield from get_bindings(stmt)
+
+    for stmt in node.finalbody:
+        yield from get_bindings(stmt)
 
 
 @get_bindings.register(ast.Assert)

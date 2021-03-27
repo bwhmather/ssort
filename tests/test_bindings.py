@@ -199,7 +199,19 @@ def test_try_bindings():
             stmt* finalbody,
         )
     """
-    pass
+    node = _parse(
+        """
+        try:
+            a = something_stupid()
+        except Exception as exc:
+            b = recover()
+        else:
+            c = otherwise()
+        finally:
+            d = finish()
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "exc", "b", "c", "d"]
 
 
 def test_assert_bindings():
