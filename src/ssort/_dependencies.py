@@ -205,12 +205,23 @@ def _get_dependencies_for_ann_assign(node):
 
 
 @get_dependencies.register(ast.For)
+@get_dependencies.register(ast.AsyncFor)
 def _get_dependencies_for_for(node):
     """
     ..code:: python
 
         # use 'orelse' because else is a keyword in target languages
         For(
+            expr target,
+            expr iter,
+            stmt* body,
+            stmt* orelse,
+            string? type_comment,
+        )
+
+    ..code:: python
+
+        AsyncFor(
             expr target,
             expr iter,
             stmt* body,
@@ -225,22 +236,6 @@ def _get_dependencies_for_for(node):
 
     for stmt in node.orelse:
         yield from get_dependencies(stmt)
-
-
-@get_dependencies.register(ast.AsyncFor)
-def _get_dependencies_for_async_for(node):
-    """
-    ..code:: python
-
-        AsyncFor(
-            expr target,
-            expr iter,
-            stmt* body,
-            stmt* orelse,
-            string? type_comment,
-        )
-    """
-    raise NotImplementedError("TODO")
 
 
 @get_dependencies.register(ast.While)
@@ -276,18 +271,13 @@ def _get_dependencies_for_if(node):
 
 
 @get_dependencies.register(ast.With)
+@get_dependencies.register(ast.AsyncWith)
 def _get_dependencies_for_with(node):
     """
     ..code:: python
 
         With(withitem* items, stmt* body, string? type_comment)
-    """
-    raise NotImplementedError("TODO")
 
-
-@get_dependencies.register(ast.AsyncWith)
-def _get_dependencies_for_async_with(node):
-    """
     ..code:: python
 
         AsyncWith(withitem* items, stmt* body, string? type_comment)

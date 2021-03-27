@@ -10,6 +10,7 @@ def get_bindings(node):
 
 
 @get_bindings.register(ast.FunctionDef)
+@get_bindings.register(ast.AsyncFunctionDef)
 def _get_bindings_for_function_def(node):
     """
     ..code:: python
@@ -22,13 +23,7 @@ def _get_bindings_for_function_def(node):
             expr? returns,
             string? type_comment,
         )
-    """
-    yield node.name
 
-
-@get_bindings.register(ast.AsyncFunctionDef)
-def _get_bindings_for_async_function_def(node):
-    """
     ..code:: python
 
         AsyncFunctionDef(
@@ -148,12 +143,23 @@ def _get_bindings_for_ann_assign(node):
 
 
 @get_bindings.register(ast.For)
+@get_bindings.register(ast.AsyncFor)
 def _get_bindings_for_for(node):
     """
     ..code:: python
 
         # use 'orelse' because else is a keyword in target languages
         For(
+            expr target,
+            expr iter,
+            stmt* body,
+            stmt* orelse,
+            string? type_comment,
+        )
+
+    ..code:: python
+
+        AsyncFor(
             expr target,
             expr iter,
             stmt* body,
@@ -168,22 +174,6 @@ def _get_bindings_for_for(node):
 
     for stmt in node.orelse:
         yield from get_bindings(stmt)
-
-
-@get_bindings.register(ast.AsyncFor)
-def _get_bindings_for_async_for(node):
-    """
-    ..code:: python
-
-        AsyncFor(
-            expr target,
-            expr iter,
-            stmt* body,
-            stmt* orelse,
-            string? type_comment,
-        )
-    """
-    raise NotImplementedError("TODO")
 
 
 @get_bindings.register(ast.While)
@@ -215,25 +205,20 @@ def _get_bindings_for_if(node):
 
 
 @get_bindings.register(ast.With)
+@get_bindings.register(ast.AsyncWith)
 def _get_bindings_for_with(node):
     """
     ..code:: python
 
         With(withitem* items, stmt* body, string? type_comment)
-    """
-    for item in node.items:
-        if item.optional_vars:
-            yield from _flatten_target(item.optional_vars)
 
-
-@get_bindings.register(ast.AsyncWith)
-def _get_bindings_for_async_with(node):
-    """
     ..code:: python
 
         AsyncWith(withitem* items, stmt* body, string? type_comment)
     """
-    raise NotImplementedError("TODO")
+    for item in node.items:
+        if item.optional_vars:
+            yield from _flatten_target(item.optional_vars)
 
 
 @get_bindings.register(ast.Raise)
