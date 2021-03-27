@@ -6,7 +6,9 @@ from ssort._bindings import get_bindings
 
 @functools.singledispatch
 def get_dependencies(node):
-    return []
+    raise NotImplementedError(
+        f"could not find dependencies for unsupported node:  {node!r}"
+    )
 
 
 def _get_scope_from_arguments(node):
@@ -44,9 +46,9 @@ def _get_dependencies_for_function_def(node):
         scope.update(get_bindings(statement))
         dependencies += get_dependencies(statement)
 
-    return [
-        dependency for dependency in dependencies if dependency not in scope
-    ]
+    for dependency in dependencies:
+        if dependency not in scope:
+            yield dependency
 
 
 @get_dependencies.register(ast.AsyncFunctionDef)
@@ -74,9 +76,9 @@ def _get_dependencies_for_async_function_def(node):
         scope.update(get_bindings(statement))
         dependencies += get_dependencies(statement)
 
-    return [
-        dependency for dependency in dependencies if dependency not in scope
-    ]
+    for dependency in dependencies:
+        if dependency not in scope:
+            yield dependency
 
 
 @get_dependencies.register(ast.ClassDef)
@@ -96,15 +98,15 @@ def _get_dependencies_for_class_def(node):
     for decorator in node.decorator_list:
         dependencies += get_dependencies(decorator)
 
-    scope = {}
+    scope = _get_scope_from_arguments(node.args)
 
     for statement in node.body:
         scope.update(get_bindings(statement))
         dependencies += get_dependencies(statement)
 
-    return [
-        dependency for dependency in dependencies if dependency not in scope
-    ]
+    for dependency in dependencies:
+        if dependency not in scope:
+            yield dependency
 
 
 @get_dependencies.register(ast.Return)
@@ -115,7 +117,7 @@ def _get_dependencies_for_return(node):
         Return(expr? value)
 
     """
-    return get_dependencies(node.value)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Delete)
@@ -136,7 +138,8 @@ def _get_target_dependencies(node):
 @_get_target_dependencies.register(ast.Name)
 def _get_target_dependencies_for_name(node):
     assert isinstance(node.ctx, ast.Store)
-    return []
+    return
+    yield
 
 
 @_get_target_dependencies.register(ast.Starred)
@@ -148,16 +151,14 @@ def _get_target_dependencies_for_starred(node):
 @_get_target_dependencies.register(ast.Tuple)
 def _flatten_target_tuple(node):
     assert isinstance(node.ctx, ast.Store)
-    dependencies = []
     for element in node.elts:
-        dependencies += _get_target_dependencies(element)
-    return dependencies
+        yield from _get_target_dependencies(element)
 
 
 @_get_target_dependencies.register(ast.Subscript)
 def _get_target_dependencies_for_subscript(node):
     assert isinstance(node.ctx, ast.Store)
-    return get_dependencies(node.value) + get_dependencies(node.slice)
+    yield from get_dependencies(node.value) + get_dependencies(node.slice)
 
 
 @get_dependencies.register(ast.Assign)
@@ -167,7 +168,7 @@ def _get_dependencies_for_assign(node):
 
         Assign(expr* targets, expr value, string? type_comment)
     """
-    return get_dependencies(node.value)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.AugAssign)
@@ -206,15 +207,13 @@ def _get_dependencies_for_for(node):
             string? type_comment,
         )
     """
-    dependencies = get_dependencies(node.iter)
+    yield from get_dependencies(node.iter)
 
     for stmt in node.body:
-        dependencies += get_dependencies(stmt)
+        yield from get_dependencies(stmt)
 
     for stmt in node.orelse:
-        dependencies += get_dependencies(stmt)
-
-    return dependencies
+        yield from get_dependencies(stmt)
 
 
 @get_dependencies.register(ast.AsyncFor)
@@ -240,15 +239,13 @@ def _get_dependencies_for_while(node):
 
         While(expr test, stmt* body, stmt* orelse)
     """
-    dependencies = get_dependencies(node.test)
+    yield from get_dependencies(node.test)
 
     for stmt in node.body:
-        dependencies += get_dependencies(stmt)
+        yield from get_dependencies(stmt)
 
     for stmt in node.orelse:
-        dependencies += get_dependencies(stmt)
-
-    return dependencies
+        yield from get_dependencies(stmt)
 
 
 @get_dependencies.register(ast.If)
@@ -258,15 +255,13 @@ def _get_dependencies_for_if(node):
 
         If(expr test, stmt* body, stmt* orelse)
     """
-    dependencies = get_dependencies(node.test)
+    yield from get_dependencies(node.test)
 
     for stmt in node.body:
-        dependencies += get_dependencies(stmt)
+        yield from get_dependencies(stmt)
 
     for stmt in node.orelse:
-        dependencies += get_dependencies(stmt)
-
-    return dependencies
+        yield from get_dependencies(stmt)
 
 
 @get_dependencies.register(ast.With)
@@ -296,14 +291,11 @@ def _get_dependencies_for_raise(node):
 
         Raise(expr? exc, expr? cause)
     """
-    dependencies = []
     if node.exc:
-        dependencies += get_dependencies(node.exc)
+        yield from get_dependencies(node.exc)
 
     if node.cause:
-        dependencies += get_dependencies(node.cause)
-
-    return dependencies
+        yield from get_dependencies(node.cause)
 
 
 @get_dependencies.register(ast.Try)
@@ -329,10 +321,10 @@ def _get_dependencies_for_assert(node):
         Assert(expr test, expr? msg)
 
     """
-    dependencies = get_dependencies(node.test)
+    yield from get_dependencies(node.test)
+
     if node.msg:
-        dependencies += get_dependencies(node.msg)
-    return dependencies
+        yield from get_dependencies(node.msg)
 
 
 @get_dependencies.register(ast.Import)
@@ -342,7 +334,8 @@ def _get_dependencies_for_import(node):
 
         Import(alias* names)
     """
-    return []
+    return
+    yield
 
 
 @get_dependencies.register(ast.ImportFrom)
@@ -353,7 +346,8 @@ def _get_dependencies_for_import_from(node):
         ImportFrom(identifier? module, alias* names, int? level)
 
     """
-    return []
+    return
+    yield
 
 
 @get_dependencies.register(ast.Global)
@@ -383,7 +377,7 @@ def _get_dependencies_for_expr(node):
 
         Expr(expr value)
     """
-    return get_dependencies(node.value)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Pass)
@@ -396,7 +390,8 @@ def _get_dependencies_for_control_flow(node):
         Pass | Break | Continue
 
     """
-    return []
+    return
+    yield
 
 
 @get_dependencies.register(ast.BoolOp)
@@ -408,10 +403,8 @@ def _get_dependencies_for_bool_op(node):
         # expr
         BoolOp(boolop op, expr* values)
     """
-    dependencies = []
     for value in node.values:
-        dependencies += get_dependencies(value)
-    return dependencies
+        yield from get_dependencies(value)
 
 
 @get_dependencies.register(ast.NamedExpr)
@@ -432,10 +425,8 @@ def _get_dependencies_for_bin_op(node):
 
         BinOp(expr left, operator op, expr right)
     """
-    return [
-        *get_dependencies(node.left),
-        *get_dependencies(node.right),
-    ]
+    yield from get_dependencies(node.left)
+    yield from get_dependencies(node.right)
 
 
 @get_dependencies.register(ast.UnaryOp)
@@ -446,7 +437,7 @@ def _get_dependencies_for_unary_op(node):
         UnaryOp(unaryop op, expr operand)
     """
 
-    return get_dependencies(node.operand)
+    yield from get_dependencies(node.operand)
 
 
 @get_dependencies.register(ast.Lambda)
@@ -457,11 +448,9 @@ def _get_dependencies_for_lambda(node):
         Lambda(arguments args, expr body)
     """
     scope = _get_scope_from_arguments(node.args)
-    dependencies = get_dependencies(node.body)
-
-    return [
-        dependency for dependency in dependencies if dependency not in scope
-    ]
+    for dependency in get_dependencies(node.body):
+        if dependency not in scope:
+            yield dependency
 
 
 @get_dependencies.register(ast.IfExp)
@@ -471,11 +460,9 @@ def _get_dependencies_for_if_exp(node):
 
         IfExp(expr test, expr body, expr orelse)
     """
-    dependencies = get_dependencies(node.test)
-    dependencies += get_dependencies(node.body)
-    dependencies += get_dependencies(node.orelse)
-
-    return dependencies
+    yield from get_dependencies(node.test)
+    yield from get_dependencies(node.body)
+    yield from get_dependencies(node.orelse)
 
 
 @get_dependencies.register(ast.Dict)
@@ -485,11 +472,9 @@ def _get_dependencies_for_dict(node):
 
         Dict(expr* keys, expr* values)
     """
-    dependencies = []
     for key, value in zip(node.keys, node.values):
-        dependencies += get_dependencies(key)
-        dependencies += get_dependencies(value)
-    return dependencies
+        yield from get_dependencies(key)
+        yield from get_dependencies(value)
 
 
 @get_dependencies.register(ast.Set)
@@ -499,10 +484,8 @@ def _get_dependencies_for_set(node):
 
         Set(expr* elts)
     """
-    dependencies = []
     for elt in node.elts:
-        dependencies += get_dependencies(elt)
-    return dependencies
+        yield from get_dependencies(elt)
 
 
 @get_dependencies.register(ast.ListComp)
@@ -523,9 +506,9 @@ def _get_dependencies_for_list_comp(node):
 
     bindings = set(get_bindings(node))
 
-    return [
-        dependency for dependency in dependencies if dependency not in bindings
-    ]
+    for dependency in dependencies:
+        if dependency not in bindings:
+            yield dependency
 
 
 @get_dependencies.register(ast.SetComp)
@@ -546,9 +529,9 @@ def _get_dependencies_for_set_comp(node):
 
     bindings = set(get_bindings(node))
 
-    return [
-        dependency for dependency in dependencies if dependency not in bindings
-    ]
+    for dependency in dependencies:
+        if dependency not in bindings:
+            yield dependency
 
 
 @get_dependencies.register(ast.DictComp)
@@ -570,9 +553,9 @@ def _get_dependencies_for_dict_comp(node):
 
     bindings = set(get_bindings(node))
 
-    return [
-        dependency for dependency in dependencies if dependency not in bindings
-    ]
+    for dependency in dependencies:
+        if dependency not in bindings:
+            yield dependency
 
 
 @get_dependencies.register(ast.GeneratorExp)
@@ -593,9 +576,9 @@ def _get_dependencies_for_generator_exp(node):
 
     bindings = set(get_bindings(node))
 
-    return [
-        dependency for dependency in dependencies if dependency not in bindings
-    ]
+    for dependency in dependencies:
+        if dependency not in bindings:
+            yield dependency
 
 
 @get_dependencies.register(ast.Await)
@@ -606,7 +589,7 @@ def _get_dependencies_for_await(node):
         # the grammar constrains where yield expressions can occur
         Await(expr value)
     """
-    return get_dependencies(node.value)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Yield)
@@ -616,7 +599,7 @@ def _get_dependencies_for_yield(node):
 
         Yield(expr? value)
     """
-    return get_dependencies(node.value)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.YieldFrom)
@@ -626,7 +609,7 @@ def _get_dependencies_for_yield_from(node):
 
         YieldFrom(expr value)
     """
-    return get_dependencies(node.value)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Compare)
@@ -638,12 +621,10 @@ def _get_dependencies_for_compare(node):
         # x < 4 < 3 and (x < 4) < 3
         Compare(expr left, cmpop* ops, expr* comparators)
     """
-    dependencies = get_dependencies(node.left)
+    yield from get_dependencies(node.left)
 
     for comp in node.comparators:
-        dependencies += get_dependencies(comp)
-
-    return dependencies
+        yield from get_dependencies(comp)
 
 
 @get_dependencies.register(ast.Call)
@@ -653,15 +634,13 @@ def _get_dependencies_for_call(node):
 
         Call(expr func, expr* args, keyword* keywords)
     """
-    dependencies = get_dependencies(node.func)
+    yield from get_dependencies(node.func)
 
     for arg in node.args:
-        dependencies += get_dependencies(arg)
+        yield from get_dependencies(arg)
 
     for kwarg in node.keywords:
-        dependencies += get_dependencies(kwarg.value)
-
-    return dependencies
+        yield from get_dependencies(kwarg.value)
 
 
 @get_dependencies.register(ast.FormattedValue)
@@ -671,7 +650,7 @@ def _get_dependencies_for_formatted_value(node):
 
         FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    return get_dependencies(node.value)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.JoinedStr)
@@ -681,7 +660,8 @@ def _get_dependencies_for_joined_str(node):
 
         JoinedStr(expr* values)
     """
-    return []
+    return
+    yield
 
 
 @get_dependencies.register(ast.Constant)
@@ -691,7 +671,8 @@ def _get_dependencies_for_constant(node):
 
         Constant(constant value, string? kind)
     """
-    return []
+    return
+    yield
 
 
 @get_dependencies.register(ast.Attribute)
@@ -702,7 +683,8 @@ def _get_dependencies_for_attribute(node):
         # the following expression can appear in assignment context
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    return get_dependencies(node.value)
+    assert isinstance(node.ctx, ast.Load)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Subscript)
@@ -713,9 +695,8 @@ def _get_dependencies_for_subscript(node):
         Subscript(expr value, expr slice, expr_context ctx)
     """
     assert isinstance(node.ctx, ast.Load)
-    dependencies = get_dependencies(node.value)
-    dependencies += get_dependencies(node.slice)
-    return dependencies
+    yield from get_dependencies(node.value)
+    yield from get_dependencies(node.slice)
 
 
 @get_dependencies.register(ast.Starred)
@@ -725,8 +706,8 @@ def _get_dependencies_for_starred(node):
 
         Starred(expr value, expr_context ctx)
     """
-
-    return get_dependencies(node.value)
+    assert isinstance(node.ctx, ast.Load)
+    yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Name)
@@ -738,7 +719,7 @@ def _get_dependencies_for_name(node):
         Name(identifier id, expr_context ctx)
     """
     assert isinstance(node.ctx, ast.Load)
-    return [node.id]
+    yield node.id
 
 
 @get_dependencies.register(ast.List)
@@ -750,10 +731,8 @@ def _get_dependencies_for_list(node):
         List(expr* elts, expr_context ctx)
     """
     assert isinstance(node.ctx, ast.Load)
-    dependencies = []
     for element in node.elts:
-        dependencies += get_dependencies(element)
-    return dependencies
+        yield from get_dependencies(element)
 
 
 @get_dependencies.register(ast.Tuple)
@@ -764,10 +743,9 @@ def _get_dependencies_for_tuple(node):
         Tuple(expr* elts, expr_context ctx)
 
     """
-    dependencies = []
+    assert isinstance(node.ctx, ast.Load)
     for element in node.elts:
-        dependencies += get_dependencies(element)
-    return dependencies
+        yield from get_dependencies(element)
 
 
 @get_dependencies.register(ast.Slice)
@@ -779,14 +757,11 @@ def _get_dependencies_for_slice(node):
         Slice(expr? lower, expr? upper, expr? step)
 
     """
-    dependencies = []
     if node.lower is not None:
-        dependencies += get_dependencies(node.lower)
+        yield from get_dependencies(node.lower)
 
     if node.upper is not None:
-        dependencies += get_dependencies(node.upper)
+        yield from get_dependencies(node.upper)
 
     if node.step is not None:
-        dependencies += get_dependencies(node.step)
-
-    return dependencies
+        yield from get_dependencies(node.step)
