@@ -1,8 +1,15 @@
 import ast
 import dataclasses
+import enum
 import functools
 
 from ssort._bindings import get_bindings
+
+
+class Scope(enum.Enum):
+    LOCAL = "LOCAL"
+    NONLOCAL = "NONLOCAL"
+    GLOBAL = "GLOBAL"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -11,6 +18,7 @@ class Dependency:
     lineno: int
     col_offset: int
     deferred: bool = False
+    scope: Scope = Scope.LOCAL
 
 
 @functools.singledispatch
@@ -59,8 +67,15 @@ def _get_dependencies_for_function_def(node):
             dependencies.append(dependency)
 
     for dependency in dependencies:
-        if dependency.name not in scope:
+        if dependency.scope == Scope.GLOBAL:
             yield dependency
+
+        elif dependency.scope == Scope.NONLOCAL:
+            yield dataclasses.replace(dependency, scope=Scope.LOCAL)
+
+        else:
+            if dependency.name not in scope:
+                yield dependency
 
 
 @get_dependencies.register(ast.AsyncFunctionDef)
@@ -92,8 +107,15 @@ def _get_dependencies_for_async_function_def(node):
             dependencies.append(dependency)
 
     for dependency in dependencies:
-        if dependency.name not in scope:
+        if dependency.scope == Scope.GLOBAL:
             yield dependency
+
+        elif dependency.scope == Scope.NONLOCAL:
+            yield dataclasses.replace(dependency, scope=Scope.LOCAL)
+
+        else:
+            if dependency.name not in scope:
+                yield dependency
 
 
 @get_dependencies.register(ast.ClassDef)
@@ -373,7 +395,13 @@ def _get_dependencies_for_global(node):
 
         Global(identifier* names)
     """
-    raise NotImplementedError("TODO")
+    for name in node.names:
+        yield Dependency(
+            name=name,
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+            scope=Scope.GLOBAL,
+        )
 
 
 @get_dependencies.register(ast.Nonlocal)
@@ -383,7 +411,13 @@ def _get_dependencies_for_non_local(node):
 
         Nonlocal(identifier* names)
     """
-    raise NotImplementedError("TODO")
+    for name in node.names:
+        yield Dependency(
+            name=name,
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+            scope=Scope.NONLOCAL,
+        )
 
 
 @get_dependencies.register(ast.Expr)

@@ -305,7 +305,8 @@ def _get_bindings_for_global(node):
 
         Global(identifier* names)
     """
-    raise NotImplementedError("TODO")
+    for name in node.names:
+        yield name
 
 
 @get_bindings.register(ast.Nonlocal)
@@ -315,7 +316,8 @@ def _get_bindings_for_non_local(node):
 
         Nonlocal(identifier* names)
     """
-    raise NotImplementedError("TODO")
+    for name in node.names:
+        yield name
 
 
 @get_bindings.register(ast.Expr)

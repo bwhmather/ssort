@@ -88,6 +88,84 @@ def test_function_def_dependencies_decorator():
     assert [dep.name for dep in get_dependencies(node)] == ["decorator", "arg"]
 
 
+def test_function_def_dependencies_nonlocal():
+    node = _parse(
+        """
+        def function():
+            nonlocal a
+            a = 4
+        """
+    )
+    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+
+
+def test_function_def_dependencies_nonlocal_closure():
+    node = _parse(
+        """
+        def function():
+            def inner():
+                nonlocal a
+                a = 4
+            return inner
+        """
+    )
+    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+
+
+def test_function_def_dependencies_nonlocal_closure_capture():
+    node = _parse(
+        """
+        def function():
+            def inner():
+                nonlocal a
+                a = 4
+            a = 2
+            return inner
+        """
+    )
+
+    assert [dep.name for dep in get_dependencies(node)] == []
+
+
+def test_function_def_dependencies_global():
+    node = _parse(
+        """
+        def function():
+            global a
+            a = 4
+        """
+    )
+    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+
+
+def test_function_def_dependencies_global_closure():
+    node = _parse(
+        """
+        def function():
+            def inner():
+                global a
+                a = 4
+            return inner
+        """
+    )
+    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+
+
+def test_function_def_dependencies_global_closure_no_capture():
+    node = _parse(
+        """
+        def function():
+            def inner():
+                global a
+                a = 4
+            a = 2
+            return inner
+        """
+    )
+
+    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+
+
 def test_async_function_def_dependencies():
     """
     ..code:: python
