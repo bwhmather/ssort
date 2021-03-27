@@ -40,6 +40,7 @@ def _get_scope_from_arguments(args):
 
 
 @get_dependencies.register(ast.FunctionDef)
+@get_dependencies.register(ast.AsyncFunctionDef)
 def _get_dependencies_for_function_def(node):
     """
     ..code:: python
@@ -52,35 +53,7 @@ def _get_dependencies_for_function_def(node):
             expr? returns,
             string? type_comment,
         )
-    """
-    for decorator in node.decorator_list:
-        yield from get_dependencies(decorator)
 
-    scope = _get_scope_from_arguments(node.args)
-
-    dependencies = []
-    for statement in node.body:
-        scope.update(get_bindings(statement))
-        for dependency in get_dependencies(statement):
-            if not dependency.deferred:
-                dependency = dataclasses.replace(dependency, deferred=True)
-            dependencies.append(dependency)
-
-    for dependency in dependencies:
-        if dependency.scope == Scope.GLOBAL:
-            yield dependency
-
-        elif dependency.scope == Scope.NONLOCAL:
-            yield dataclasses.replace(dependency, scope=Scope.LOCAL)
-
-        else:
-            if dependency.name not in scope:
-                yield dependency
-
-
-@get_dependencies.register(ast.AsyncFunctionDef)
-def _get_dependencies_for_async_function_def(node):
-    """
     ..code:: python
 
         AsyncFunctionDef(
