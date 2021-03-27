@@ -45,15 +45,18 @@ def _get_dependencies_for_function_def(node):
             string? type_comment,
         )
     """
-    dependencies = []
     for decorator in node.decorator_list:
-        dependencies += get_dependencies(decorator)
+        yield from get_dependencies(decorator)
 
     scope = _get_scope_from_arguments(node.args)
 
+    dependencies = []
     for statement in node.body:
         scope.update(get_bindings(statement))
-        dependencies += get_dependencies(statement)
+        for dependency in get_dependencies(statement):
+            if not dependency.deferred:
+                dependency = dataclasses.replace(dependency, deferred=True)
+            dependencies.append(dependency)
 
     for dependency in dependencies:
         if dependency.name not in scope:
@@ -75,15 +78,18 @@ def _get_dependencies_for_async_function_def(node):
         )
 
     """
-    dependencies = []
     for decorator in node.decorator_list:
-        dependencies += get_dependencies(decorator)
+        yield from get_dependencies(decorator)
 
     scope = _get_scope_from_arguments(node.args)
 
+    dependencies = []
     for statement in node.body:
         scope.update(get_bindings(statement))
-        dependencies += get_dependencies(statement)
+        for dependency in get_dependencies(statement):
+            if not dependency.deferred:
+                dependency = dataclasses.replace(dependency, deferred=True)
+            dependencies.append(dependency)
 
     for dependency in dependencies:
         if dependency.name not in scope:
@@ -103,19 +109,20 @@ def _get_dependencies_for_class_def(node):
             expr* decorator_list,
         )
     """
-    dependencies = []
     for decorator in node.decorator_list:
-        dependencies += get_dependencies(decorator)
+        yield from get_dependencies(decorator)
 
-    scope = _get_scope_from_arguments(node.args)
+    for base in node.bases:
+        yield from get_dependencies(base)
+
+    scope = set()
 
     for statement in node.body:
-        scope.update(get_bindings(statement))
-        dependencies += get_dependencies(statement)
+        for stmt_dep in get_dependencies(statement):
+            if stmt_dep.deferred or stmt_dep.name not in scope:
+                yield stmt_dep
 
-    for dependency in dependencies:
-        if dependency.name not in scope:
-            yield dependency
+        scope.update(get_bindings(statement))
 
 
 @get_dependencies.register(ast.Return)

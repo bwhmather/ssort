@@ -117,7 +117,28 @@ def test_class_def_dependencies():
             expr* decorator_list,
         )
     """
-    pass
+    node = _parse(
+        """
+        @decorator(arg)
+        class A(B, C):
+            _a = something
+            _b = something
+
+            @method_decorator(_a)
+            def method():
+                return _b
+        """
+    )
+    assert [dep.name for dep in get_dependencies(node)] == [
+        "decorator",
+        "arg",
+        "B",
+        "C",
+        "something",
+        "something",
+        "method_decorator",
+        "_b",
+    ]
 
 
 def test_return_dependencies():
