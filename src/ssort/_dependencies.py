@@ -141,37 +141,6 @@ def _get_dependencies_for_delete(node):
     raise NotImplementedError("TODO")
 
 
-@functools.singledispatch
-def _get_target_dependencies(node):
-    raise NotImplementedError(f"not implemented for {node!r}")
-
-
-@_get_target_dependencies.register(ast.Name)
-def _get_target_dependencies_for_name(node):
-    assert isinstance(node.ctx, ast.Store)
-    return
-    yield
-
-
-@_get_target_dependencies.register(ast.Starred)
-def _get_target_dependencies_for_starred(node):
-    assert isinstance(node.ctx, ast.Store)
-    return _get_target_dependencies(node.value)
-
-
-@_get_target_dependencies.register(ast.Tuple)
-def _flatten_target_tuple(node):
-    assert isinstance(node.ctx, ast.Store)
-    for element in node.elts:
-        yield from _get_target_dependencies(element)
-
-
-@_get_target_dependencies.register(ast.Subscript)
-def _get_target_dependencies_for_subscript(node):
-    assert isinstance(node.ctx, ast.Store)
-    yield from get_dependencies(node.value) + get_dependencies(node.slice)
-
-
 @get_dependencies.register(ast.Assign)
 def _get_dependencies_for_assign(node):
     """
