@@ -64,12 +64,41 @@ def _topological_sort(dependencies_table):
     return result
 
 
+def bubble_sort(array, swap):
+    n = len(array)
+    while n > 1:
+        next_n = 0
+        for i in range(1, n):
+            if swap(array[i - 1], array[i]):
+                array[i - 1], array[i] = array[i], array[i - 1]
+                next_n = i
+        n = next_n
+
+
+def bubble_sorted(array, swap):
+    array = array.copy()
+    bubble_sort(array, swap)
+    return array
+
+
 def _optimize(statements, dependencies_table):
-    # TODO bubble sort
-    return statements
+    def _swap(a, b):
+        if a in dependencies_table[b]:
+            return False
+        if a < b:
+            return False
+        return True
+
+    # Bubble sort will only move items one step at a time, meaning that we can
+    # make sure nothing ever moves past something that depends on it.  The
+    # builtin `sorted` function, while much faster, might result in us breaking
+    # the topological sort.
+    return bubble_sorted(statements, _swap)
 
 
 def sort(dependencies_table):
     dag_table = _replace_cycles(dependencies_table)
     sorted_statements = _topological_sort(dag_table)
-    return _optimize(sorted_statements, dag_table)
+    sorted_statements = _optimize(sorted_statements, dag_table)
+    assert _is_topologically_sorted(sorted_statements, dag_table)
+    return sorted_statements
