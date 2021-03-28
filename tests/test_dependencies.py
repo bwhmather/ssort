@@ -1,4 +1,5 @@
 import ast
+import sys
 import textwrap
 
 from ssort._dependencies import get_dependencies
@@ -9,7 +10,10 @@ def _parse(source):
     root = ast.parse(source)
     assert len(root.body) == 1
     node = root.body[0]
-    print(ast.dump(node, include_attributes=True, indent=2))
+    if sys.version_info >= (3, 9):
+        print(ast.dump(node, include_attributes=True, indent=2))
+    else:
+        print(ast.dump(node, include_attributes=True))
     return node
 
 
