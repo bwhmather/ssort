@@ -198,13 +198,19 @@ def _get_dependencies_for_for(node):
             string? type_comment,
         )
     """
+    bindings = set(get_bindings(node))
+
     yield from get_dependencies(node.iter)
 
     for stmt in node.body:
-        yield from get_dependencies(stmt)
+        for dependency in get_dependencies(stmt):
+            if dependency.name not in bindings:
+                yield dependency
 
     for stmt in node.orelse:
-        yield from get_dependencies(stmt)
+        for dependency in get_dependencies(stmt):
+            if dependency.name not in bindings:
+                yield dependency
 
 
 @get_dependencies.register(ast.While)
