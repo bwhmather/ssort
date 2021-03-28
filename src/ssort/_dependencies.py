@@ -257,8 +257,20 @@ def _get_dependencies_for_with(node):
     ..code:: python
 
         AsyncWith(withitem* items, stmt* body, string? type_comment)
+
+    .. code:: python
+
+        WithItem(expr context_expr, expr? optional_vars)
     """
-    raise NotImplementedError("TODO")
+    bindings = set(get_bindings(node))
+
+    for item in node.items:
+        yield from get_dependencies(item.context_expr)
+
+    for stmt in node.body:
+        for dependency in get_dependencies(stmt):
+            if dependency.name not in bindings:
+                yield dependency
 
 
 @get_dependencies.register(ast.Raise)
