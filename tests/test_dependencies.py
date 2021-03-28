@@ -17,6 +17,10 @@ def _parse(source):
     return node
 
 
+def _dep_names(node):
+    return [dep.name for dep in get_dependencies(node)]
+
+
 def test_function_def_dependencies():
     node = _parse(
         """
@@ -24,7 +28,7 @@ def test_function_def_dependencies():
             name
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["name"]
+    assert _dep_names(node) == ["name"]
 
 
 def test_function_def_dependencies_multiple():
@@ -35,7 +39,7 @@ def test_function_def_dependencies_multiple():
             b
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["a", "b"]
+    assert _dep_names(node) == ["a", "b"]
 
 
 def test_function_def_dependencies_arg_shadows():
@@ -45,7 +49,7 @@ def test_function_def_dependencies_arg_shadows():
             arg
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == []
+    assert _dep_names(node) == []
 
 
 def test_function_def_dependencies_assignment_shadows():
@@ -56,7 +60,7 @@ def test_function_def_dependencies_assignment_shadows():
             a
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["b"]
+    assert _dep_names(node) == ["b"]
 
 
 def test_function_def_dependencies_rest_shadows():
@@ -67,7 +71,7 @@ def test_function_def_dependencies_rest_shadows():
             rest
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["value"]
+    assert _dep_names(node) == ["value"]
 
 
 def test_function_def_dependencies_shadowed_after():
@@ -78,7 +82,7 @@ def test_function_def_dependencies_shadowed_after():
             a = b
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["b"]
+    assert _dep_names(node) == ["b"]
 
 
 def test_function_def_dependencies_decorator():
@@ -89,7 +93,7 @@ def test_function_def_dependencies_decorator():
             pass
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["decorator", "arg"]
+    assert _dep_names(node) == ["decorator", "arg"]
 
 
 def test_function_def_dependencies_nonlocal():
@@ -100,7 +104,7 @@ def test_function_def_dependencies_nonlocal():
             a = 4
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+    assert _dep_names(node) == ["a"]
 
 
 def test_function_def_dependencies_nonlocal_closure():
@@ -113,7 +117,7 @@ def test_function_def_dependencies_nonlocal_closure():
             return inner
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+    assert _dep_names(node) == ["a"]
 
 
 def test_function_def_dependencies_nonlocal_closure_capture():
@@ -128,7 +132,7 @@ def test_function_def_dependencies_nonlocal_closure_capture():
         """
     )
 
-    assert [dep.name for dep in get_dependencies(node)] == []
+    assert _dep_names(node) == []
 
 
 def test_function_def_dependencies_global():
@@ -139,7 +143,7 @@ def test_function_def_dependencies_global():
             a = 4
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+    assert _dep_names(node) == ["a"]
 
 
 def test_function_def_dependencies_global_closure():
@@ -152,7 +156,7 @@ def test_function_def_dependencies_global_closure():
             return inner
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+    assert _dep_names(node) == ["a"]
 
 
 def test_function_def_dependencies_global_closure_no_capture():
@@ -167,7 +171,7 @@ def test_function_def_dependencies_global_closure_no_capture():
         """
     )
 
-    assert [dep.name for dep in get_dependencies(node)] == ["a"]
+    assert _dep_names(node) == ["a"]
 
 
 def test_async_function_def_dependencies():
@@ -211,7 +215,7 @@ def test_class_def_dependencies():
                 return _b
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == [
+    assert _dep_names(node) == [
         "decorator",
         "arg",
         "B",
@@ -249,7 +253,7 @@ def test_assign_dependencies():
         Assign(expr* targets, expr value, string? type_comment)
     """
     node = _parse("a = b")
-    assert [dep.name for dep in get_dependencies(node)] == ["b"]
+    assert _dep_names(node) == ["b"]
 
 
 def test_aug_assign_dependencies():
@@ -259,7 +263,7 @@ def test_aug_assign_dependencies():
         AugAssign(expr target, operator op, expr value)
     """
     node = _parse("a += b")
-    assert [dep.name for dep in get_dependencies(node)] == ["b"]
+    assert _dep_names(node) == ["b"]
 
 
 def test_ann_assign_dependencies():
@@ -271,7 +275,7 @@ def test_ann_assign_dependencies():
 
     """
     node = _parse("a: int = b")
-    assert [dep.name for dep in get_dependencies(node)] == ["b"]
+    assert _dep_names(node) == ["b"]
 
 
 def test_for_dependencies():
@@ -374,7 +378,7 @@ def test_try_dependencies():
             d = finish()
         """
     )
-    assert [dep.name for dep in get_dependencies(node)] == [
+    assert _dep_names(node) == [
         "something_stupid",
         "Exception",
         "recover",
@@ -477,7 +481,7 @@ def test_bin_op_dependencies():
         BinOp(expr left, operator op, expr right)
     """
     node = _parse("a + b")
-    assert [dep.name for dep in get_dependencies(node)] == ["a", "b"]
+    assert _dep_names(node) == ["a", "b"]
 
 
 def test_unary_op_dependencies():
@@ -487,7 +491,7 @@ def test_unary_op_dependencies():
         UnaryOp(unaryop op, expr operand)
     """
     node = _parse("-plus")
-    assert [dep.name for dep in get_dependencies(node)] == ["plus"]
+    assert _dep_names(node) == ["plus"]
 
 
 def test_lambda_dependencies():
@@ -608,7 +612,7 @@ def test_call_dependencies():
         Call(expr func, expr* args, keyword* keywords)
     """
     node = _parse("function(1, arg_value, kwarg=kwarg_value, kwarg_2=2)")
-    assert [dep.name for dep in get_dependencies(node)] == [
+    assert _dep_names(node) == [
         "function",
         "arg_value",
         "kwarg_value",
@@ -617,12 +621,12 @@ def test_call_dependencies():
 
 def test_call_dependencies_arg_unpacking():
     node = _parse("function(*args)")
-    assert [dep.name for dep in get_dependencies(node)] == ["function", "args"]
+    assert _dep_names(node) == ["function", "args"]
 
 
 def test_call_dependencies_kwarg_unpacking():
     node = _parse("function(*kwargs)")
-    assert [dep.name for dep in get_dependencies(node)] == [
+    assert _dep_names(node) == [
         "function",
         "kwargs",
     ]
@@ -630,7 +634,7 @@ def test_call_dependencies_kwarg_unpacking():
 
 def test_method_call_dependencies():
     node = _parse("obj.method(arg_value, kwarg=kwarg_value)")
-    assert [dep.name for dep in get_dependencies(node)] == [
+    assert _dep_names(node) == [
         "obj",
         "arg_value",
         "kwarg_value",
@@ -701,7 +705,7 @@ def test_name_dependencies():
         Name(identifier id, expr_context ctx)
     """
     node = _parse("name")
-    assert [dep.name for dep in get_dependencies(node)] == ["name"]
+    assert _dep_names(node) == ["name"]
 
 
 def test_list_dependencies():
@@ -722,12 +726,12 @@ def test_tuple_dependencies():
 
     """
     node = _parse("(a, b, 3)")
-    assert [dep.name for dep in get_dependencies(node)] == ["a", "b"]
+    assert _dep_names(node) == ["a", "b"]
 
 
 def test_tuple_dependencies_star_unpacking():
     node = _parse("(a, *b)")
-    assert [dep.name for dep in get_dependencies(node)] == ["a", "b"]
+    assert _dep_names(node) == ["a", "b"]
 
 
 def test_slice_dependencies():
