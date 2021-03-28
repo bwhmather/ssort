@@ -6,7 +6,7 @@ from ssort._parsing import split
 from ssort._sorting import sort
 
 
-def ssort(f):
+def ssort(text, *, filename="<unknown>"):
     statement_nodes = []
     statement_texts = []
     statement_dependencies = []
@@ -14,7 +14,7 @@ def ssort(f):
     # A dictionary mapping from names to statement indexes.
     scope = {}
 
-    for text, node in split(f, "example.py"):
+    for text, node in split(text, filename=filename):
         statement_id = len(statement_nodes)
 
         dependencies = []

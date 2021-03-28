@@ -1,11 +1,8 @@
-import io
-
 from ssort._parsing import split
 
 
 def _split_text(source):
-    f = io.StringIO(source)
-    return [text for text, ast in split(f, "<unknown>")]
+    return [text for text, ast in split(source, filename="<unknown>")]
 
 
 def test_split_empty():

@@ -20,8 +20,7 @@ def _find_end(node):
     return lineno - 1, col
 
 
-def split(f, filename):
-    root_text = f.read()
+def split(root_text, *, filename="<unknown>"):
     root_node = ast.parse(root_text, filename)
 
     # Build an index of row lengths and start offsets to enable fast string

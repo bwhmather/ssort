@@ -42,7 +42,7 @@ __version__ = "0.1.0"
 
 def _main():
     with open("example.py", "r") as f:
-        ssort(f)
+        ssort(f.read(), filename="example.py")
 
 
 if __name__ == "__main__":
