@@ -188,7 +188,13 @@ def test_async_function_def_dependencies():
         )
 
     """
-    pass
+    node = _parse(
+        """
+        async def function(arg):
+            return await other(arg)
+        """
+    )
+    assert _dep_names(node) == ["other"]
 
 
 def test_class_def_dependencies():
@@ -234,7 +240,8 @@ def test_return_dependencies():
         Return(expr? value)
 
     """
-    pass
+    node = _parse("return a + b")
+    assert _dep_names(node) == ["a", "b"]
 
 
 def test_delete_dependencies():
@@ -243,7 +250,18 @@ def test_delete_dependencies():
 
         Delete(expr* targets)
     """
-    pass
+    node = _parse("del something")
+    assert _dep_names(node) == ["something"]
+
+
+def test_delete_dependencies_multiple():
+    node = _parse("del a, b")
+    assert _dep_names(node) == ["a", "b"]
+
+
+def test_delete_dependencies_subscript():
+    node = _parse("del a[b:c]")
+    assert _dep_names(node) == ["a", "b", "c"]
 
 
 def test_assign_dependencies():
@@ -291,7 +309,25 @@ def test_for_dependencies():
             string? type_comment,
         )
     """
-    pass
+    node = _parse(
+        """
+        for a in b(c):
+            d = a + e
+        else:
+            f = g
+        """
+    )
+    assert _dep_names(node) == ["b", "c", "e", "g"]
+
+
+def test_for_dependencies_target_replaces_scope():
+    node = _parse(
+        """
+        for a in a():
+            pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
 
 
 def test_async_for_dependencies():
@@ -306,7 +342,15 @@ def test_async_for_dependencies():
             string? type_comment,
         )
     """
-    pass
+    node = _parse(
+        """
+        for a in b(c):
+            d = a + e
+        else:
+            f = g
+        """
+    )
+    assert _dep_names(node) == ["b", "c", "e", "g"]
 
 
 def test_while_dependencies():
@@ -315,7 +359,15 @@ def test_while_dependencies():
 
         While(expr test, stmt* body, stmt* orelse)
     """
-    pass
+    node = _parse(
+        """
+        while predicate():
+            action()
+        else:
+            cleanup()
+        """
+    )
+    assert _dep_names(node) == ["predicate", "action", "cleanup"]
 
 
 def test_if_dependencies():
@@ -324,7 +376,15 @@ def test_if_dependencies():
 
         If(expr test, stmt* body, stmt* orelse)
     """
-    pass
+    node = _parse(
+        """
+        if predicate():
+            return subsequent()
+        else:
+            return alternate()
+        """
+    )
+    assert _dep_names(node) == ["predicate", "subsequent", "alternate"]
 
 
 def test_with_dependencies():
@@ -333,7 +393,14 @@ def test_with_dependencies():
 
         With(withitem* items, stmt* body, string? type_comment)
     """
-    pass
+    node = _parse(
+        """
+        with A() as a:
+            a()
+            b()
+        """
+    )
+    assert _dep_names(node) == ["A", "b"]
 
 
 def test_async_with_dependencies():
@@ -342,17 +409,24 @@ def test_async_with_dependencies():
 
         AsyncWith(withitem* items, stmt* body, string? type_comment)
     """
-    pass
+    node = _parse(
+        """
+        async with A() as a:
+            a()
+            b()
+        """
+    )
+    assert _dep_names(node) == ["A", "b"]
 
 
 def test_raise_dependencies():
     """
     ..code:: python
 
-
         Raise(expr? exc, expr? cause)
     """
-    pass
+    node = _parse("raise Exception(message)")
+    assert _dep_names(node) == ["Exception", "message"]
 
 
 def test_try_dependencies():
