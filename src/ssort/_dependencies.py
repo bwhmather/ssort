@@ -138,7 +138,8 @@ def _get_dependencies_for_delete(node):
 
         Delete(expr* targets)
     """
-    raise NotImplementedError("TODO")
+    for target in node.targets:
+        yield from get_dependencies(target)
 
 
 @get_dependencies.register(ast.Assign)
@@ -698,7 +699,6 @@ def _get_dependencies_for_subscript(node):
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    assert isinstance(node.ctx, ast.Load)
     yield from get_dependencies(node.value)
     yield from get_dependencies(node.slice)
 
@@ -722,7 +722,6 @@ def _get_dependencies_for_name(node):
 
         Name(identifier id, expr_context ctx)
     """
-    assert isinstance(node.ctx, ast.Load)
     yield Dependency(
         name=node.id, lineno=node.lineno, col_offset=node.col_offset
     )
