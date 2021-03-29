@@ -610,7 +610,8 @@ def test_list_comp_dependencies():
 
         ListComp(expr elt, comprehension* generators)
     """
-    pass
+    node = _parse("[action(a) for a in iterator]")
+    assert _dep_names(node) == ["action", "iterator"]
 
 
 def test_set_comp_dependencies():
@@ -619,7 +620,8 @@ def test_set_comp_dependencies():
 
         SetComp(expr elt, comprehension* generators)
     """
-    pass
+    node = _parse("{action(a) for a in iterator}")
+    assert _dep_names(node) == ["action", "iterator"]
 
 
 def test_dict_comp_dependencies():
@@ -628,7 +630,15 @@ def test_dict_comp_dependencies():
 
         DictComp(expr key, expr value, comprehension* generators)
     """
-    pass
+    node = _parse(
+        """
+        {
+            process_key(key): process_value(value)
+            for key, value in iterator
+        }
+        """
+    )
+    assert _dep_names(node) == ["process_key", "process_value", "iterator"]
 
 
 def test_generator_exp_dependencies():

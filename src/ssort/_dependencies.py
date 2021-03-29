@@ -525,7 +525,7 @@ def _get_dependencies_for_list_comp(node):
     bindings = set(get_bindings(node))
 
     for dependency in dependencies:
-        if dependency not in bindings:
+        if dependency.name not in bindings:
             yield dependency
 
 
@@ -548,7 +548,7 @@ def _get_dependencies_for_set_comp(node):
     bindings = set(get_bindings(node))
 
     for dependency in dependencies:
-        if dependency not in bindings:
+        if dependency.name not in bindings:
             yield dependency
 
 
@@ -572,7 +572,7 @@ def _get_dependencies_for_dict_comp(node):
     bindings = set(get_bindings(node))
 
     for dependency in dependencies:
-        if dependency not in bindings:
+        if dependency.name not in bindings:
             yield dependency
 
 
@@ -595,7 +595,7 @@ def _get_dependencies_for_generator_exp(node):
     bindings = set(get_bindings(node))
 
     for dependency in dependencies:
-        if dependency not in bindings:
+        if dependency.name not in bindings:
             yield dependency
 
 
