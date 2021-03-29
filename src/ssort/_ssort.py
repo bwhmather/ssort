@@ -56,6 +56,9 @@ def ssort(text, *, filename="<unknown>"):
 
     sorted_statements = sort(statement_dependencies)
 
-    return "\n".join(
-        statement_texts[statement] for statement in sorted_statements
+    return (
+        "\n".join(
+            statement_texts[statement] for statement in sorted_statements
+        )
+        + "\n"
     )
