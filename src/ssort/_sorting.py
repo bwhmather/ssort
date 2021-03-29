@@ -1,3 +1,6 @@
+from ssort._bubble_sort import bubble_sort
+
+
 def _replace_cycles(dependencies_table):
     """
     Finds all cycles and replaces them with forward links that keep them from
@@ -64,24 +67,9 @@ def _topological_sort(dependencies_table):
     return result
 
 
-def bubble_sort(array, swap):
-    n = len(array)
-    while n > 1:
-        next_n = 0
-        for i in range(1, n):
-            if swap(array[i - 1], array[i]):
-                array[i - 1], array[i] = array[i], array[i - 1]
-                next_n = i
-        n = next_n
-
-
-def bubble_sorted(array, swap):
-    array = array.copy()
-    bubble_sort(array, swap)
-    return array
-
-
 def _optimize(statements, dependencies_table):
+    statements = statements.copy()
+
     def _swap(a, b):
         if a in dependencies_table[b]:
             return False
@@ -93,7 +81,9 @@ def _optimize(statements, dependencies_table):
     # make sure nothing ever moves past something that depends on it.  The
     # builtin `sorted` function, while much faster, might result in us breaking
     # the topological sort.
-    return bubble_sorted(statements, _swap)
+    bubble_sort(statements, _swap)
+
+    return statements
 
 
 def sort(dependencies_table):

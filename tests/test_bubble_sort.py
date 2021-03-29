@@ -1,4 +1,4 @@
-from ssort._sorting import bubble_sort
+from ssort._bubble_sort import bubble_sort
 
 
 def test_sort_empty():
