@@ -1,7 +1,7 @@
 import builtins
 
 from ssort._bindings import get_bindings
-from ssort._dependencies import get_dependencies
+from ssort._dependencies import Dependency, get_dependencies
 from ssort._parsing import split
 from ssort._sorting import sort
 
@@ -19,7 +19,7 @@ def ssort(text, *, filename="<unknown>"):
 
         dependencies = []
         for dependency in get_dependencies(node):
-            dependencies.append(scope.get(dependency.name, dependency.name))
+            dependencies.append(scope.get(dependency.name, dependency))
 
         for name in get_bindings(node):
             scope[name] = statement_id
@@ -32,8 +32,8 @@ def ssort(text, *, filename="<unknown>"):
     statement_dependencies = [
         [
             dependency
-            if isinstance(dependency, int)
-            else scope.get(dependency, dependency)
+            if not isinstance(dependency, Dependency)
+            else scope.get(dependency.name, dependency)
             for dependency in dependencies
         ]
         for dependencies in statement_dependencies
@@ -43,15 +43,15 @@ def ssort(text, *, filename="<unknown>"):
         [
             dependency
             for dependency in dependencies
-            if not isinstance(dependency, str)
-            or dependency not in builtins.__dict__
+            if not isinstance(dependency, Dependency)
+            or dependency.name not in builtins.__dict__
         ]
         for dependencies in statement_dependencies
     ]
 
     for dependencies in statement_dependencies:
         for dependency in dependencies:
-            if isinstance(dependency, str):
+            if isinstance(dependency, Dependency):
                 raise Exception(f"Could not resolve dependency {dependency!r}")
 
     sorted_statements = sort(statement_dependencies)
