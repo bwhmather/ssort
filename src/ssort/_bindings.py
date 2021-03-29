@@ -200,8 +200,8 @@ def _get_bindings_for_if(node):
     for stmt in node.body:
         yield from get_bindings(stmt)
 
-    for stmt in node.body:
-        yield from get_bindings(node.orelse)
+    for stmt in node.orelse:
+        yield from get_bindings(stmt)
 
 
 @get_bindings.register(ast.With)
