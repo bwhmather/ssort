@@ -91,11 +91,11 @@ def _main():
         try:
             updated = ssort(original, filename=str(path))
         except Exception as e:
-            raise Exception(f"ERROR while sorting {path}") from e
+            raise Exception(f"ERROR while sorting {path}\n") from e
 
         if args.check:
             if original != updated:
-                sys.stderr.write(f"ERROR: {path} is incorrectly sorted.")
+                sys.stderr.write(f"ERROR: {path} is incorrectly sorted.\n")
                 errors = True
         else:
             path.write_text(updated)
@@ -103,8 +103,8 @@ def _main():
         if args.show_diff:
             sys.stderr.writelines(
                 difflib.unified_diff(
-                    original,
-                    updated,
+                    original.splitlines(keepends=True),
+                    updated.splitlines(keepends=True),
                     fromfile=f"{path}:before",
                     tofile=f"{path}:after",
                 )
