@@ -172,7 +172,9 @@ def _get_dependencies_for_ann_assign(node):
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
-    yield from get_dependencies(node.value)
+    # Can be None for type declaration.
+    if node.value:
+        yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.For)
