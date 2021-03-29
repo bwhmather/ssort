@@ -128,7 +128,8 @@ def _get_dependencies_for_return(node):
         Return(expr? value)
 
     """
-    yield from get_dependencies(node.value)
+    if node.value:
+        yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.Delete)
@@ -616,7 +617,8 @@ def _get_dependencies_for_yield(node):
 
         Yield(expr? value)
     """
-    yield from get_dependencies(node.value)
+    if node.value:
+        yield from get_dependencies(node.value)
 
 
 @get_dependencies.register(ast.YieldFrom)
