@@ -574,7 +574,8 @@ def test_lambda_dependencies():
 
         Lambda(arguments args, expr body)
     """
-    pass
+    node = _parse("lambda arg, *args, **kwargs: arg + other(*args) / kwargs")
+    assert _dep_names(node) == ["other"]
 
 
 def test_if_exp_dependencies():

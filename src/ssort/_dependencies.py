@@ -32,10 +32,10 @@ def _get_scope_from_arguments(args):
     scope = set()
     scope.update(arg.arg for arg in args.args)  # Arghhh.
     if args.vararg:
-        scope.update(args.vararg.arg)
+        scope.add(args.vararg.arg)
     scope.update(arg.arg for arg in args.kwonlyargs)
     if args.kwarg:
-        scope.update(args.kwarg.arg)
+        scope.add(args.kwarg.arg)
     return scope
 
 
@@ -467,7 +467,7 @@ def _get_dependencies_for_lambda(node):
     """
     scope = _get_scope_from_arguments(node.args)
     for dependency in get_dependencies(node.body):
-        if dependency not in scope:
+        if dependency.name not in scope:
             yield dependency
 
 
