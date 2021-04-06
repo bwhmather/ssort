@@ -114,6 +114,16 @@ def test_assign_bindings_attribute():
     assert list(get_bindings(node)) == []
 
 
+def test_assign_bindings_list():
+    node = _parse("[a, b, [c, d]] = value")
+    assert list(get_bindings(node)) == ["a", "b", "c", "d"]
+
+
+def test_assign_bindings_list_star():
+    node = _parse("[first, *rest] = value")
+    assert list(get_bindings(node)) == ["first", "rest"]
+
+
 def test_aug_assign_bindings():
     """
     ..code:: python

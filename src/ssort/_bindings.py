@@ -121,6 +121,13 @@ def _flatten_target_attribute(node):
     yield
 
 
+@_flatten_target.register(ast.List)
+def _flatten_target_list(node):
+    assert isinstance(node.ctx, ast.Store)
+    for element in node.elts:
+        yield from _flatten_target(element)
+
+
 @get_bindings.register(ast.Assign)
 def _get_bindings_for_assign(node):
     """
