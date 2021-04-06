@@ -408,6 +408,26 @@ def test_with_dependencies():
     assert _dep_names(node) == ["A", "b"]
 
 
+def test_with_dependencies_bindings():
+    node = _parse(
+        """
+        with chdir(os.path.dirname(path)):
+            requirements = parse_requirements(path)
+            for req in requirements.values():
+                if req.name:
+                    results.append(req.name)
+        """
+    )
+    assert _dep_names(node) == [
+        "chdir",
+        "os",
+        "path",
+        "parse_requirements",
+        "path",
+        "results",
+    ]
+
+
 def test_async_with_dependencies():
     """
     ..code:: python

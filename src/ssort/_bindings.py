@@ -232,6 +232,9 @@ def _get_bindings_for_with(node):
         if item.optional_vars:
             yield from _flatten_target(item.optional_vars)
 
+    for stmt in node.body:
+        yield from get_bindings(stmt)
+
 
 @get_bindings.register(ast.Raise)
 def _get_bindings_for_raise(node):

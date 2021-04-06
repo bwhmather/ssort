@@ -191,7 +191,27 @@ def test_with_bindings():
 
         With(withitem* items, stmt* body, string? type_comment)
     """
-    pass
+    node = _parse(
+        """
+        with A() as a:
+            a()
+            b()
+        """
+    )
+    assert list(get_bindings(node)) == ["a"]
+
+
+def test_with_dependencies_bindings():
+    node = _parse(
+        """
+        with chdir(os.path.dirname(path)):
+            requirements = parse_requirements(path)
+            for req in requirements.values():
+                if req.name:
+                    results.append(req.name)
+        """
+    )
+    assert list(get_bindings(node)) == ["requirements", "req"]
 
 
 def test_async_with_bindings():
