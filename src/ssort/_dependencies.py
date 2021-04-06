@@ -704,7 +704,6 @@ def _get_dependencies_for_attribute(node):
         # the following expression can appear in assignment context
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    assert isinstance(node.ctx, ast.Load)
     yield from get_dependencies(node.value)
 
 

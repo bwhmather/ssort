@@ -109,6 +109,18 @@ def _flatten_target_subscript(node):
     yield
 
 
+@_flatten_target.register(ast.Attribute)
+def _flatten_target_attribute(node):
+    """
+    ..code:: python
+
+        Attribute(expr value, identifier attr, expr_context ctx)
+    """
+    assert isinstance(node.ctx, ast.Store)
+    return
+    yield
+
+
 @get_bindings.register(ast.Assign)
 def _get_bindings_for_assign(node):
     """
@@ -570,10 +582,10 @@ def _get_bindings_for_attribute(node):
     """
     ..code:: python
 
-        # the following expression can appear in assignment context
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    raise NotImplementedError("TODO")
+    return
+    yield
 
 
 @get_bindings.register(ast.Subscript)

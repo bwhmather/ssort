@@ -264,6 +264,11 @@ def test_delete_dependencies_subscript():
     assert _dep_names(node) == ["a", "b", "c"]
 
 
+def test_delete_dependencies_attribute():
+    node = _parse("del obj.attr")
+    assert _dep_names(node) == ["obj"]
+
+
 def test_assign_dependencies():
     """
     ..code:: python
@@ -760,7 +765,8 @@ def test_attribute_dependencies():
         # the following expression can appear in assignment context
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    pass
+    node = _parse("obj.attr.method()")
+    assert _dep_names(node) == ["obj"]
 
 
 def test_subscript_dependencies():

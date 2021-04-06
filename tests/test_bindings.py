@@ -75,7 +75,23 @@ def test_delete_bindings():
 
         Delete(expr* targets)
     """
-    pass
+    node = _parse("del something")
+    assert list(get_bindings(node)) == []
+
+
+def test_delete_bindings_multiple():
+    node = _parse("del a, b")
+    assert list(get_bindings(node)) == []
+
+
+def test_delete_bindings_subscript():
+    node = _parse("del a[b:c]")
+    assert list(get_bindings(node)) == []
+
+
+def test_delete_bindings_attribute():
+    node = _parse("del obj.attr")
+    assert list(get_bindings(node)) == []
 
 
 def test_assign_bindings():
@@ -91,6 +107,11 @@ def test_assign_bindings():
 def test_assign_bindings_star():
     node = _parse("a, *b = c")
     assert list(get_bindings(node)) == ["a", "b"]
+
+
+def test_assign_bindings_attribute():
+    node = _parse("obj.attr = value")
+    assert list(get_bindings(node)) == []
 
 
 def test_aug_assign_bindings():
