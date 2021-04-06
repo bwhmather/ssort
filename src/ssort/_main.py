@@ -52,7 +52,8 @@ def main():
     args = parser.parse_args()
 
     errors = False
-    for path in _find_files(args.files):
+    paths = _find_files(args.files)
+    for path in paths:
         original = path.read_text()
 
         try:
@@ -77,5 +78,8 @@ def main():
                 )
             )
 
-    if errors:
-        sys.exit(1)
+    if args.check:
+        if errors:
+            sys.exit(1)
+        else:
+            sys.stderr.write(f"{len(paths)} files would be left unchanged")
