@@ -380,7 +380,18 @@ def test_dict_bindings():
 
         Dict(expr* keys, expr* values)
     """
-    pass
+    node = _parse("{key: value}")
+    assert list(get_bindings(node)) == []
+
+
+def test_dict_bindings_empty():
+    node = _parse("{}")
+    assert list(get_bindings(node)) == []
+
+
+def test_dict_bindings_unpack():
+    node = _parse("{**values}")
+    assert list(get_bindings(node)) == []
 
 
 def test_set_bindings():

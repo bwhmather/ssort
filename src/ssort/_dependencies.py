@@ -493,7 +493,6 @@ def _get_dependencies_for_dict(node):
         Dict(expr* keys, expr* values)
     """
     for key, value in zip(node.keys, node.values):
-        yield from get_dependencies(key)
         yield from get_dependencies(value)
 
 

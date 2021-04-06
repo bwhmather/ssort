@@ -431,7 +431,8 @@ def _get_bindings_for_dict(node):
 
         Dict(expr* keys, expr* values)
     """
-    raise NotImplementedError("TODO")
+    return
+    yield
 
 
 @get_bindings.register(ast.Set)

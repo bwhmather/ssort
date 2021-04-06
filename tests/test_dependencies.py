@@ -598,7 +598,18 @@ def test_dict_dependencies():
 
         Dict(expr* keys, expr* values)
     """
-    pass
+    node = _parse("{key: value}")
+    assert _dep_names(node) == ["value"]
+
+
+def test_dict_dependencies_empty():
+    node = _parse("{}")
+    assert _dep_names(node) == []
+
+
+def test_dict_dependencies_unpack():
+    node = _parse("{**values}")
+    assert _dep_names(node) == ["values"]
 
 
 def test_set_dependencies():
