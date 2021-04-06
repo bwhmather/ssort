@@ -10,15 +10,21 @@ def _find_files(patterns):
     if not patterns:
         patterns = ["."]
 
-    paths = set()
+    paths_set = set()
+    paths_list = []
     for pattern in patterns:
         path = pathlib.Path(pattern)
         if path.suffix == ".py":
-            paths.add(path)
+            subpaths = [path]
         else:
-            paths.update(path.glob("**/*.py"))
+            subpaths = list(path.glob("**/*.py"))
 
-    return list(paths)
+        for subpath in sorted(subpaths):
+            if subpath not in paths_set:
+                paths_set.add(subpath)
+                paths_list.append(subpath)
+
+    return paths_list
 
 
 def main():
