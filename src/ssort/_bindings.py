@@ -404,7 +404,8 @@ def _get_bindings_for_bin_op(node):
 
         BinOp(expr left, operator op, expr right)
     """
-    raise NotImplementedError("TODO")
+    return
+    yield
 
 
 @get_bindings.register(ast.UnaryOp)
@@ -436,7 +437,8 @@ def _get_bindings_for_if_exp(node):
 
         IfExp(expr test, expr body, expr orelse)
     """
-    raise NotImplementedError("TODO")
+    return
+    yield
 
 
 @get_bindings.register(ast.Dict)
@@ -457,7 +459,8 @@ def _get_bindings_for_set(node):
 
         Set(expr* elts)
     """
-    raise NotImplementedError("TODO")
+    return
+    yield
 
 
 @get_bindings.register(ast.ListComp)
@@ -569,7 +572,8 @@ def _get_bindings_for_formatted_value(node):
 
         FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    raise NotImplementedError("TODO")
+    return
+    yield
 
 
 @get_bindings.register(ast.JoinedStr)
@@ -579,7 +583,8 @@ def _get_bindings_for_joined_str(node):
 
         JoinedStr(expr* values)
     """
-    raise NotImplementedError("TODO")
+    return
+    yield
 
 
 @get_bindings.register(ast.Constant)
