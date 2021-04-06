@@ -284,6 +284,11 @@ def test_import_bindings_as():
     assert list(get_bindings(node)) == ["something_else"]
 
 
+def test_import_bindings_nested():
+    node = _parse("import module.submodule")
+    assert list(get_bindings(node)) == ["module"]
+
+
 def test_import_from_bindings():
     """
     ..code:: python

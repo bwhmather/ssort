@@ -300,7 +300,11 @@ def _get_bindings_for_import(node):
         Import(alias* names)
     """
     for name in node.names:
-        yield name.asname if name.asname else name.name
+        if name.asname:
+            yield name.asname
+        else:
+            root, *rest = name.name.split(".", 1)
+            yield root
 
 
 @get_bindings.register(ast.ImportFrom)
