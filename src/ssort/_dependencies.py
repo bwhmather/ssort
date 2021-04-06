@@ -2,6 +2,7 @@ import ast
 import dataclasses
 import enum
 import functools
+import sys
 
 from ssort._bindings import get_bindings
 
@@ -25,6 +26,7 @@ class Dependency:
 def get_dependencies(node):
     raise NotImplementedError(
         f"could not find dependencies for unsupported node:  {node!r}"
+        f"at line {node.lineno}, column: {node.col_offset}"
     )
 
 
@@ -784,3 +786,16 @@ def _get_dependencies_for_slice(node):
 
     if node.step is not None:
         yield from get_dependencies(node.step)
+
+
+if sys.version_info < (3, 9):
+
+    @get_dependencies.register(ast.Index)
+    def _get_dependencies_for_index(node):
+        """
+        ..code:: python
+
+            # can appear only in Subscript
+            Index(expr value)
+        """
+        yield from get_dependencies(node.value)

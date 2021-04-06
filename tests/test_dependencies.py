@@ -806,7 +806,28 @@ def test_subscript_dependencies():
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    pass
+    node = _parse("array[key]")
+    assert _dep_names(node) == ["array", "key"]
+
+
+def test_subscript_dependencies_slice():
+    node = _parse("array[start:end]")
+    assert _dep_names(node) == ["array", "start", "end"]
+
+
+def test_subscript_dependencies_slice_end():
+    node = _parse("array[:end]")
+    assert _dep_names(node) == ["array", "end"]
+
+
+def test_subscript_dependencies_slice_start():
+    node = _parse("array[start:]")
+    assert _dep_names(node) == ["array", "start"]
+
+
+def test_subscript_dependencies_slice_all():
+    node = _parse("array[:]")
+    assert _dep_names(node) == ["array"]
 
 
 def test_starred_dependencies():

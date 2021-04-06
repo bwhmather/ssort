@@ -5,7 +5,8 @@ import functools
 @functools.singledispatch
 def get_bindings(node):
     raise NotImplementedError(
-        f"could not find bindings for unsupported node:  {node!r}"
+        f"could not find bindings for unsupported node {node!r} "
+        f"at line {node.lineno}, column: {node.col_offset}"
     )
 
 
@@ -610,7 +611,8 @@ def _get_bindings_for_subscript(node):
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    raise NotImplementedError("TODO")
+    return
+    yield
 
 
 @get_bindings.register(ast.Starred)
