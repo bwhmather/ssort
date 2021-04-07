@@ -6,7 +6,6 @@ from ssort._dependencies import Dependency, get_dependencies
 from ssort._parsing import split
 from ssort._sorting import sort
 
-
 DEFAULT_SCOPE = {
     *builtins.__dict__,
     "__file__",
