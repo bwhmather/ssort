@@ -61,13 +61,58 @@ def _remove_self_references(graph):
         graph.remove_dependency(node, node)
 
 
+def _find_cycle(graph):
+    processed = set()
+    for node in graph.nodes:
+        if node in processed:
+            continue
+
+        in_stack = {node}
+        stack = [(node, set(graph.dependencies[node]))]
+
+        while stack:
+            top_node, top_dependencies = stack[-1]
+
+            if not top_dependencies:
+                processed.add(top_node)
+                in_stack.remove(top_node)
+                stack.pop()
+                continue
+
+            dependency = top_dependencies.pop()
+            if dependency in in_stack:
+                cycle = [dependency]
+                while stack[-1][0] != dependency:
+                    cycle.append(stack[-1][0])
+                    stack.pop()
+                return cycle
+            if dependency not in processed:
+                stack.append((dependency, set(graph.dependencies[dependency])))
+                in_stack.add(dependency)
+
+
 def _replace_cycles(graph):
     """
     Finds all cycles and replaces them with forward links that keep them from
     being re-ordered.
     """
     _remove_self_references(graph)
-    # TODO
+    while True:
+        cycle = _find_cycle(graph)
+        if not cycle:
+            break
+
+        for node in cycle:
+            for dependency in cycle:
+                graph.remove_dependency(node, dependency)
+
+        # TODO this is a bit of an abstraction leak.  Need a better way to tell
+        # this function what the safe order is.
+        nodes = iter(sorted(cycle))
+        prev = next(nodes)
+        for node in nodes:
+            graph.add_dependency(node, prev)
+            prev = node
 
 
 def _reverse_links(table):
