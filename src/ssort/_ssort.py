@@ -1,4 +1,5 @@
 import builtins
+import sys
 
 from ssort._bindings import get_bindings
 from ssort._dependencies import Dependency, get_dependencies
@@ -62,10 +63,24 @@ def ssort(text, *, filename="<unknown>"):
         for dependencies in statement_dependencies
     ]
 
-    for dependencies in statement_dependencies:
-        for dependency in dependencies:
-            if isinstance(dependency, Dependency):
-                raise Exception(f"Could not resolve dependency {dependency!r}")
+    if "*" in scope:
+        sys.stderr.write("WARNING: can't determine dependencies on * import")
+        statement_dependencies = [
+            [
+                dependency
+                for dependency in dependencies
+                if not isinstance(dependency, Dependency)
+            ]
+            for dependencies in statement_dependencies
+        ]
+
+    else:
+        for dependencies in statement_dependencies:
+            for dependency in dependencies:
+                if isinstance(dependency, Dependency):
+                    raise Exception(
+                        f"Could not resolve dependency {dependency!r}"
+                    )
 
     sorted_statements = sort(statement_dependencies)
 
