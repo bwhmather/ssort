@@ -1,21 +1,73 @@
 from ssort._bubble_sort import bubble_sort
 
 
-def _replace_cycles(dependencies_table):
+class _Graph:
+    def __init__(self, table=[]):
+        self.nodes = set()
+        self.dependencies = {}
+        self.dependants = {}
+
+        for node, dependencies in enumerate(table):
+            self.add_node(node)
+            for dependency in dependencies:
+                self.add_node(dependency)
+                self.add_dependency(node, dependency)
+
+    def add_node(self, identifier):
+        if identifier not in self.nodes:
+            self.nodes.add(identifier)
+            self.dependencies[identifier] = set()
+            self.dependants[identifier] = set()
+
+    def add_dependency(self, node, dependency):
+        assert node in self.nodes
+        assert dependency in self.nodes
+
+        self.dependencies[node].add(dependency)
+        self.dependants[dependency].add(node)
+
+    def remove_node(self, node):
+        self.nodes.discard(node)
+        del self.dependencies[node]
+        del self.dependants[node]
+
+        for other in self.nodes:
+            self.dependencies[other].discard(node)
+            self.dependants[other].discard(node)
+
+    def remove_dependency(self, node, dependency):
+        assert node in self.nodes
+        assert dependency in self.nodes
+
+        self.dependencies[node].discard(dependency)
+        self.dependants[dependency].discard(node)
+
+    def copy(self):
+        graph = _Graph()
+        graph.nodes.update(self.nodes)
+        graph.dependencies = {
+            node: set(dependencies)
+            for node, dependencies in self.dependencies.items()
+        }
+        graph.dependants = {
+            node: set(dependants)
+            for node, dependants in self.dependants.items()
+        }
+        return graph
+
+
+def _remove_self_references(graph):
+    for node in graph.nodes:
+        graph.remove_dependency(node, node)
+
+
+def _replace_cycles(graph):
     """
     Finds all cycles and replaces them with forward links that keep them from
     being re-ordered.
     """
-    result = []
-    for statement, dependencies in enumerate(dependencies_table):
-        result.append(
-            [
-                dependency
-                for dependency in dependencies
-                if dependency != statement
-            ]
-        )
-    return result
+    _remove_self_references(graph)
+    # TODO
 
 
 def _reverse_links(table):
@@ -28,50 +80,46 @@ def _reverse_links(table):
     return reversed_table
 
 
-def _is_topologically_sorted(statements, dependencies_table):
+def _is_topologically_sorted(nodes, graph):
     visited = set()
-    for statement in statements:
-        visited.add(statement)
-        for dependency in dependencies_table[statement]:
+    for node in nodes:
+        visited.add(node)
+        for dependency in graph.dependencies[node]:
             if dependency not in visited:
                 return False
     return True
 
 
-def _topological_sort(dependencies_table):
-    dependants_table = _reverse_links(dependencies_table)
+def _topological_sort(graph):
+    # Create a mutable copy of the graph so that we can pop edges from it as we
+    # traverse.
+    remaining = graph.copy()
 
-    pending = {
-        statement
-        for statement, dependencies in enumerate(dependencies_table)
-        if not dependencies
-    }
-
-    # Create a mutable copy of the dependencies table that we can pop edges
-    # from as we traverse them.
-    graph = [set(dependencies) for dependencies in dependencies_table]
+    pending = {node for node in graph.nodes if not graph.dependencies[node]}
 
     result = []
     while pending:
-        statement = pending.pop()
-        for dependant in dependants_table[statement]:
-            graph[dependant].discard(statement)
-            if not graph[dependant]:
+        node = pending.pop()
+        dependants = set(remaining.dependants[node])
+        remaining.remove_node(node)
+
+        for dependant in dependants:
+            if not remaining.dependencies[dependant]:
                 pending.add(dependant)
 
-        result.append(statement)
+        result.append(node)
 
-    assert len(result) == len(dependencies_table)
-    assert _is_topologically_sorted(result, dependencies_table)
+    assert not remaining.nodes
+    assert _is_topologically_sorted(result, graph)
 
     return result
 
 
-def _optimize(statements, dependencies_table):
+def _optimize(statements, graph):
     statements = statements.copy()
 
     def _swap(a, b):
-        if a in dependencies_table[b]:
+        if a in graph.dependencies[b]:
             return False
         if a < b:
             return False
@@ -87,8 +135,9 @@ def _optimize(statements, dependencies_table):
 
 
 def sort(dependencies_table):
-    dag_table = _replace_cycles(dependencies_table)
-    sorted_statements = _topological_sort(dag_table)
-    sorted_statements = _optimize(sorted_statements, dag_table)
-    assert _is_topologically_sorted(sorted_statements, dag_table)
+    graph = _Graph(dependencies_table)
+    _replace_cycles(graph)
+    sorted_statements = _topological_sort(graph)
+    sorted_statements = _optimize(sorted_statements, graph)
+    assert _is_topologically_sorted(sorted_statements, graph)
     return sorted_statements
