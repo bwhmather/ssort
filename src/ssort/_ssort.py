@@ -6,6 +6,19 @@ from ssort._parsing import split
 from ssort._sorting import sort
 
 
+DEFAULT_SCOPE = {
+    *builtins.__dict__,
+    "__file__",
+    "unicode",
+    "long",
+    "xrange",
+    "buffer",
+    "bytearray",
+    "basestring",
+    "WindowsError",
+}
+
+
 def ssort(text, *, filename="<unknown>"):
     statement_nodes = []
     statement_texts = []
@@ -44,7 +57,7 @@ def ssort(text, *, filename="<unknown>"):
             dependency
             for dependency in dependencies
             if not isinstance(dependency, Dependency)
-            or dependency.name not in builtins.__dict__
+            or dependency.name not in DEFAULT_SCOPE
         ]
         for dependencies in statement_dependencies
     ]
