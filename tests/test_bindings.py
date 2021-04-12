@@ -211,7 +211,7 @@ def test_with_bindings():
     assert list(get_bindings(node)) == ["a"]
 
 
-def test_with_dependencies_bindings():
+def test_with_requirements_bindings():
     node = _parse(
         """
         with chdir(os.path.dirname(path)):

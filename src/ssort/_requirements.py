@@ -14,7 +14,7 @@ class Scope(enum.Enum):
 
 
 @dataclasses.dataclass(frozen=True)
-class Dependency:
+class Requirement:
     name: str
     lineno: int
     col_offset: int
@@ -23,9 +23,9 @@ class Dependency:
 
 
 @functools.singledispatch
-def get_dependencies(node):
+def get_requirements(node):
     raise NotImplementedError(
-        f"could not find dependencies for unsupported node:  {node!r}"
+        f"could not find requirements for unsupported node:  {node!r}"
         f"at line {node.lineno}, column: {node.col_offset}"
     )
 
@@ -41,9 +41,9 @@ def _get_scope_from_arguments(args):
     return scope
 
 
-@get_dependencies.register(ast.FunctionDef)
-@get_dependencies.register(ast.AsyncFunctionDef)
-def _get_dependencies_for_function_def(node):
+@get_requirements.register(ast.FunctionDef)
+@get_requirements.register(ast.AsyncFunctionDef)
+def _get_requirements_for_function_def(node):
     """
     ..code:: python
 
@@ -69,32 +69,32 @@ def _get_dependencies_for_function_def(node):
 
     """
     for decorator in node.decorator_list:
-        yield from get_dependencies(decorator)
+        yield from get_requirements(decorator)
 
     scope = _get_scope_from_arguments(node.args)
 
-    dependencies = []
+    requirements = []
     for statement in node.body:
         scope.update(get_bindings(statement))
-        for dependency in get_dependencies(statement):
-            if not dependency.deferred:
-                dependency = dataclasses.replace(dependency, deferred=True)
-            dependencies.append(dependency)
+        for requirement in get_requirements(statement):
+            if not requirement.deferred:
+                requirement = dataclasses.replace(requirement, deferred=True)
+            requirements.append(requirement)
 
-    for dependency in dependencies:
-        if dependency.scope == Scope.GLOBAL:
-            yield dependency
+    for requirement in requirements:
+        if requirement.scope == Scope.GLOBAL:
+            yield requirement
 
-        elif dependency.scope == Scope.NONLOCAL:
-            yield dataclasses.replace(dependency, scope=Scope.LOCAL)
+        elif requirement.scope == Scope.NONLOCAL:
+            yield dataclasses.replace(requirement, scope=Scope.LOCAL)
 
         else:
-            if dependency.name not in scope:
-                yield dependency
+            if requirement.name not in scope:
+                yield requirement
 
 
-@get_dependencies.register(ast.ClassDef)
-def _get_dependencies_for_class_def(node):
+@get_requirements.register(ast.ClassDef)
+def _get_requirements_for_class_def(node):
     """
     ..code:: python
 
@@ -107,23 +107,23 @@ def _get_dependencies_for_class_def(node):
         )
     """
     for decorator in node.decorator_list:
-        yield from get_dependencies(decorator)
+        yield from get_requirements(decorator)
 
     for base in node.bases:
-        yield from get_dependencies(base)
+        yield from get_requirements(base)
 
     scope = set()
 
     for statement in node.body:
-        for stmt_dep in get_dependencies(statement):
+        for stmt_dep in get_requirements(statement):
             if stmt_dep.deferred or stmt_dep.name not in scope:
                 yield stmt_dep
 
         scope.update(get_bindings(statement))
 
 
-@get_dependencies.register(ast.Return)
-def _get_dependencies_for_return(node):
+@get_requirements.register(ast.Return)
+def _get_requirements_for_return(node):
     """
     ..code:: python
 
@@ -131,42 +131,42 @@ def _get_dependencies_for_return(node):
 
     """
     if node.value:
-        yield from get_dependencies(node.value)
+        yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.Delete)
-def _get_dependencies_for_delete(node):
+@get_requirements.register(ast.Delete)
+def _get_requirements_for_delete(node):
     """
     ..code:: python
 
         Delete(expr* targets)
     """
     for target in node.targets:
-        yield from get_dependencies(target)
+        yield from get_requirements(target)
 
 
-@get_dependencies.register(ast.Assign)
-def _get_dependencies_for_assign(node):
+@get_requirements.register(ast.Assign)
+def _get_requirements_for_assign(node):
     """
     ..code:: python
 
         Assign(expr* targets, expr value, string? type_comment)
     """
-    yield from get_dependencies(node.value)
+    yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.AugAssign)
-def _get_dependencies_for_aug_assign(node):
+@get_requirements.register(ast.AugAssign)
+def _get_requirements_for_aug_assign(node):
     """
     ..code:: python
 
         AugAssign(expr target, operator op, expr value)
     """
-    yield from get_dependencies(node.value)
+    yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.AnnAssign)
-def _get_dependencies_for_ann_assign(node):
+@get_requirements.register(ast.AnnAssign)
+def _get_requirements_for_ann_assign(node):
     """
     ..code:: python
 
@@ -176,12 +176,12 @@ def _get_dependencies_for_ann_assign(node):
     """
     # Can be None for type declaration.
     if node.value:
-        yield from get_dependencies(node.value)
+        yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.For)
-@get_dependencies.register(ast.AsyncFor)
-def _get_dependencies_for_for(node):
+@get_requirements.register(ast.For)
+@get_requirements.register(ast.AsyncFor)
+def _get_requirements_for_for(node):
     """
     ..code:: python
 
@@ -206,54 +206,54 @@ def _get_dependencies_for_for(node):
     """
     bindings = set(get_bindings(node))
 
-    yield from get_dependencies(node.iter)
+    yield from get_requirements(node.iter)
 
     for stmt in node.body:
-        for dependency in get_dependencies(stmt):
-            if dependency.name not in bindings:
-                yield dependency
+        for requirement in get_requirements(stmt):
+            if requirement.name not in bindings:
+                yield requirement
 
     for stmt in node.orelse:
-        for dependency in get_dependencies(stmt):
-            if dependency.name not in bindings:
-                yield dependency
+        for requirement in get_requirements(stmt):
+            if requirement.name not in bindings:
+                yield requirement
 
 
-@get_dependencies.register(ast.While)
-def _get_dependencies_for_while(node):
+@get_requirements.register(ast.While)
+def _get_requirements_for_while(node):
     """
     ..code:: python
 
         While(expr test, stmt* body, stmt* orelse)
     """
-    yield from get_dependencies(node.test)
+    yield from get_requirements(node.test)
 
     for stmt in node.body:
-        yield from get_dependencies(stmt)
+        yield from get_requirements(stmt)
 
     for stmt in node.orelse:
-        yield from get_dependencies(stmt)
+        yield from get_requirements(stmt)
 
 
-@get_dependencies.register(ast.If)
-def _get_dependencies_for_if(node):
+@get_requirements.register(ast.If)
+def _get_requirements_for_if(node):
     """
     ..code:: python
 
         If(expr test, stmt* body, stmt* orelse)
     """
-    yield from get_dependencies(node.test)
+    yield from get_requirements(node.test)
 
     for stmt in node.body:
-        yield from get_dependencies(stmt)
+        yield from get_requirements(stmt)
 
     for stmt in node.orelse:
-        yield from get_dependencies(stmt)
+        yield from get_requirements(stmt)
 
 
-@get_dependencies.register(ast.With)
-@get_dependencies.register(ast.AsyncWith)
-def _get_dependencies_for_with(node):
+@get_requirements.register(ast.With)
+@get_requirements.register(ast.AsyncWith)
+def _get_requirements_for_with(node):
     """
     ..code:: python
 
@@ -270,30 +270,30 @@ def _get_dependencies_for_with(node):
     bindings = set(get_bindings(node))
 
     for item in node.items:
-        yield from get_dependencies(item.context_expr)
+        yield from get_requirements(item.context_expr)
 
     for stmt in node.body:
-        for dependency in get_dependencies(stmt):
-            if dependency.name not in bindings:
-                yield dependency
+        for requirement in get_requirements(stmt):
+            if requirement.name not in bindings:
+                yield requirement
 
 
-@get_dependencies.register(ast.Raise)
-def _get_dependencies_for_raise(node):
+@get_requirements.register(ast.Raise)
+def _get_requirements_for_raise(node):
     """
     ..code:: python
 
         Raise(expr? exc, expr? cause)
     """
     if node.exc:
-        yield from get_dependencies(node.exc)
+        yield from get_requirements(node.exc)
 
     if node.cause:
-        yield from get_dependencies(node.cause)
+        yield from get_requirements(node.cause)
 
 
-@get_dependencies.register(ast.Try)
-def _get_dependencies_for_try(node):
+@get_requirements.register(ast.Try)
+def _get_requirements_for_try(node):
     """
     ..code:: python
 
@@ -307,38 +307,38 @@ def _get_dependencies_for_try(node):
         ExceptHandler(expr? type, identifier? name, stmt* body)
     """
     for stmt in node.body:
-        yield from get_dependencies(stmt)
+        yield from get_requirements(stmt)
 
     for handler in node.handlers:
         if handler.type:
-            yield from get_dependencies(handler.type)
+            yield from get_requirements(handler.type)
 
         for stmt in handler.body:
-            yield from get_dependencies(stmt)
+            yield from get_requirements(stmt)
 
     for stmt in node.orelse:
-        yield from get_dependencies(stmt)
+        yield from get_requirements(stmt)
 
     for stmt in node.finalbody:
-        yield from get_dependencies(stmt)
+        yield from get_requirements(stmt)
 
 
-@get_dependencies.register(ast.Assert)
-def _get_dependencies_for_assert(node):
+@get_requirements.register(ast.Assert)
+def _get_requirements_for_assert(node):
     """
     ..code:: python
 
         Assert(expr test, expr? msg)
 
     """
-    yield from get_dependencies(node.test)
+    yield from get_requirements(node.test)
 
     if node.msg:
-        yield from get_dependencies(node.msg)
+        yield from get_requirements(node.msg)
 
 
-@get_dependencies.register(ast.Import)
-def _get_dependencies_for_import(node):
+@get_requirements.register(ast.Import)
+def _get_requirements_for_import(node):
     """
     ..code:: python
 
@@ -348,8 +348,8 @@ def _get_dependencies_for_import(node):
     yield
 
 
-@get_dependencies.register(ast.ImportFrom)
-def _get_dependencies_for_import_from(node):
+@get_requirements.register(ast.ImportFrom)
+def _get_requirements_for_import_from(node):
     """
     ..code:: python
 
@@ -360,15 +360,15 @@ def _get_dependencies_for_import_from(node):
     yield
 
 
-@get_dependencies.register(ast.Global)
-def _get_dependencies_for_global(node):
+@get_requirements.register(ast.Global)
+def _get_requirements_for_global(node):
     """
     ..code:: python
 
         Global(identifier* names)
     """
     for name in node.names:
-        yield Dependency(
+        yield Requirement(
             name=name,
             lineno=node.lineno,
             col_offset=node.col_offset,
@@ -376,15 +376,15 @@ def _get_dependencies_for_global(node):
         )
 
 
-@get_dependencies.register(ast.Nonlocal)
-def _get_dependencies_for_non_local(node):
+@get_requirements.register(ast.Nonlocal)
+def _get_requirements_for_non_local(node):
     """
     ..code:: python
 
         Nonlocal(identifier* names)
     """
     for name in node.names:
-        yield Dependency(
+        yield Requirement(
             name=name,
             lineno=node.lineno,
             col_offset=node.col_offset,
@@ -392,20 +392,20 @@ def _get_dependencies_for_non_local(node):
         )
 
 
-@get_dependencies.register(ast.Expr)
-def _get_dependencies_for_expr(node):
+@get_requirements.register(ast.Expr)
+def _get_requirements_for_expr(node):
     """
     ..code:: python
 
         Expr(expr value)
     """
-    yield from get_dependencies(node.value)
+    yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.Pass)
-@get_dependencies.register(ast.Break)
-@get_dependencies.register(ast.Continue)
-def _get_dependencies_for_control_flow(node):
+@get_requirements.register(ast.Pass)
+@get_requirements.register(ast.Break)
+@get_requirements.register(ast.Continue)
+def _get_requirements_for_control_flow(node):
     """
     ..code:: python
 
@@ -416,8 +416,8 @@ def _get_dependencies_for_control_flow(node):
     yield
 
 
-@get_dependencies.register(ast.BoolOp)
-def _get_dependencies_for_bool_op(node):
+@get_requirements.register(ast.BoolOp)
+def _get_requirements_for_bool_op(node):
     """
     ..code:: python
 
@@ -426,11 +426,11 @@ def _get_dependencies_for_bool_op(node):
         BoolOp(boolop op, expr* values)
     """
     for value in node.values:
-        yield from get_dependencies(value)
+        yield from get_requirements(value)
 
 
-@get_dependencies.register(ast.NamedExpr)
-def _get_dependencies_for_named_expr(node):
+@get_requirements.register(ast.NamedExpr)
+def _get_requirements_for_named_expr(node):
     """
     ..code:: python
 
@@ -439,203 +439,203 @@ def _get_dependencies_for_named_expr(node):
     raise NotImplementedError("TODO")
 
 
-@get_dependencies.register(ast.BinOp)
-def _get_dependencies_for_bin_op(node):
+@get_requirements.register(ast.BinOp)
+def _get_requirements_for_bin_op(node):
 
     """
     ..code:: python
 
         BinOp(expr left, operator op, expr right)
     """
-    yield from get_dependencies(node.left)
-    yield from get_dependencies(node.right)
+    yield from get_requirements(node.left)
+    yield from get_requirements(node.right)
 
 
-@get_dependencies.register(ast.UnaryOp)
-def _get_dependencies_for_unary_op(node):
+@get_requirements.register(ast.UnaryOp)
+def _get_requirements_for_unary_op(node):
     """
     ..code:: python
 
         UnaryOp(unaryop op, expr operand)
     """
 
-    yield from get_dependencies(node.operand)
+    yield from get_requirements(node.operand)
 
 
-@get_dependencies.register(ast.Lambda)
-def _get_dependencies_for_lambda(node):
+@get_requirements.register(ast.Lambda)
+def _get_requirements_for_lambda(node):
     """
     ..code:: python
 
         Lambda(arguments args, expr body)
     """
     scope = _get_scope_from_arguments(node.args)
-    for dependency in get_dependencies(node.body):
-        if dependency.name not in scope:
-            yield dependency
+    for requirement in get_requirements(node.body):
+        if requirement.name not in scope:
+            yield requirement
 
 
-@get_dependencies.register(ast.IfExp)
-def _get_dependencies_for_if_exp(node):
+@get_requirements.register(ast.IfExp)
+def _get_requirements_for_if_exp(node):
     """
     ..code:: python
 
         IfExp(expr test, expr body, expr orelse)
     """
-    yield from get_dependencies(node.test)
-    yield from get_dependencies(node.body)
-    yield from get_dependencies(node.orelse)
+    yield from get_requirements(node.test)
+    yield from get_requirements(node.body)
+    yield from get_requirements(node.orelse)
 
 
-@get_dependencies.register(ast.Dict)
-def _get_dependencies_for_dict(node):
+@get_requirements.register(ast.Dict)
+def _get_requirements_for_dict(node):
     """
     ..code:: python
 
         Dict(expr* keys, expr* values)
     """
     for key, value in zip(node.keys, node.values):
-        yield from get_dependencies(value)
+        yield from get_requirements(value)
 
 
-@get_dependencies.register(ast.Set)
-def _get_dependencies_for_set(node):
+@get_requirements.register(ast.Set)
+def _get_requirements_for_set(node):
     """
     ..code:: python
 
         Set(expr* elts)
     """
     for elt in node.elts:
-        yield from get_dependencies(elt)
+        yield from get_requirements(elt)
 
 
-@get_dependencies.register(ast.ListComp)
-def _get_dependencies_for_list_comp(node):
+@get_requirements.register(ast.ListComp)
+def _get_requirements_for_list_comp(node):
     """
     ..code:: python
 
         ListComp(expr elt, comprehension* generators)
     """
-    dependencies = []
-    dependencies += get_dependencies(node.elt)
+    requirements = []
+    requirements += get_requirements(node.elt)
 
     for generator in node.generators:
-        dependencies += get_dependencies(generator.iter)
+        requirements += get_requirements(generator.iter)
 
         for if_expr in generator.ifs:
-            dependencies += get_dependencies(if_expr)
+            requirements += get_requirements(if_expr)
 
     bindings = set(get_bindings(node))
 
-    for dependency in dependencies:
-        if dependency.name not in bindings:
-            yield dependency
+    for requirement in requirements:
+        if requirement.name not in bindings:
+            yield requirement
 
 
-@get_dependencies.register(ast.SetComp)
-def _get_dependencies_for_set_comp(node):
+@get_requirements.register(ast.SetComp)
+def _get_requirements_for_set_comp(node):
     """
     ..code:: python
 
         SetComp(expr elt, comprehension* generators)
     """
-    dependencies = []
-    dependencies += get_dependencies(node.elt)
+    requirements = []
+    requirements += get_requirements(node.elt)
 
     for generator in node.generators:
-        dependencies += get_dependencies(generator.iter)
+        requirements += get_requirements(generator.iter)
 
         for if_expr in generator.ifs:
-            dependencies += get_dependencies(if_expr)
+            requirements += get_requirements(if_expr)
 
     bindings = set(get_bindings(node))
 
-    for dependency in dependencies:
-        if dependency.name not in bindings:
-            yield dependency
+    for requirement in requirements:
+        if requirement.name not in bindings:
+            yield requirement
 
 
-@get_dependencies.register(ast.DictComp)
-def _get_dependencies_for_dict_comp(node):
+@get_requirements.register(ast.DictComp)
+def _get_requirements_for_dict_comp(node):
     """
     ..code:: python
 
         DictComp(expr key, expr value, comprehension* generators)
     """
-    dependencies = []
-    dependencies += get_dependencies(node.key)
-    dependencies += get_dependencies(node.value)
+    requirements = []
+    requirements += get_requirements(node.key)
+    requirements += get_requirements(node.value)
 
     for generator in node.generators:
-        dependencies += get_dependencies(generator.iter)
+        requirements += get_requirements(generator.iter)
 
         for if_expr in generator.ifs:
-            dependencies += get_dependencies(if_expr)
+            requirements += get_requirements(if_expr)
 
     bindings = set(get_bindings(node))
 
-    for dependency in dependencies:
-        if dependency.name not in bindings:
-            yield dependency
+    for requirement in requirements:
+        if requirement.name not in bindings:
+            yield requirement
 
 
-@get_dependencies.register(ast.GeneratorExp)
-def _get_dependencies_for_generator_exp(node):
+@get_requirements.register(ast.GeneratorExp)
+def _get_requirements_for_generator_exp(node):
     """
     ..code:: python
 
         GeneratorExp(expr elt, comprehension* generators)
     """
-    dependencies = []
-    dependencies += get_dependencies(node.elt)
+    requirements = []
+    requirements += get_requirements(node.elt)
 
     for generator in node.generators:
-        dependencies += get_dependencies(generator.iter)
+        requirements += get_requirements(generator.iter)
 
         for if_expr in generator.ifs:
-            dependencies += get_dependencies(if_expr)
+            requirements += get_requirements(if_expr)
 
     bindings = set(get_bindings(node))
 
-    for dependency in dependencies:
-        if dependency.name not in bindings:
-            yield dependency
+    for requirement in requirements:
+        if requirement.name not in bindings:
+            yield requirement
 
 
-@get_dependencies.register(ast.Await)
-def _get_dependencies_for_await(node):
+@get_requirements.register(ast.Await)
+def _get_requirements_for_await(node):
     """
     ..code:: python
 
         # the grammar constrains where yield expressions can occur
         Await(expr value)
     """
-    yield from get_dependencies(node.value)
+    yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.Yield)
-def _get_dependencies_for_yield(node):
+@get_requirements.register(ast.Yield)
+def _get_requirements_for_yield(node):
     """
     ..code:: python
 
         Yield(expr? value)
     """
     if node.value:
-        yield from get_dependencies(node.value)
+        yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.YieldFrom)
-def _get_dependencies_for_yield_from(node):
+@get_requirements.register(ast.YieldFrom)
+def _get_requirements_for_yield_from(node):
     """
     ..code:: python
 
         YieldFrom(expr value)
     """
-    yield from get_dependencies(node.value)
+    yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.Compare)
-def _get_dependencies_for_compare(node):
+@get_requirements.register(ast.Compare)
+def _get_requirements_for_compare(node):
     """
     ..code:: python
 
@@ -643,40 +643,40 @@ def _get_dependencies_for_compare(node):
         # x < 4 < 3 and (x < 4) < 3
         Compare(expr left, cmpop* ops, expr* comparators)
     """
-    yield from get_dependencies(node.left)
+    yield from get_requirements(node.left)
 
     for comp in node.comparators:
-        yield from get_dependencies(comp)
+        yield from get_requirements(comp)
 
 
-@get_dependencies.register(ast.Call)
-def _get_dependencies_for_call(node):
+@get_requirements.register(ast.Call)
+def _get_requirements_for_call(node):
     """
     ..code:: python
 
         Call(expr func, expr* args, keyword* keywords)
     """
-    yield from get_dependencies(node.func)
+    yield from get_requirements(node.func)
 
     for arg in node.args:
-        yield from get_dependencies(arg)
+        yield from get_requirements(arg)
 
     for kwarg in node.keywords:
-        yield from get_dependencies(kwarg.value)
+        yield from get_requirements(kwarg.value)
 
 
-@get_dependencies.register(ast.FormattedValue)
-def _get_dependencies_for_formatted_value(node):
+@get_requirements.register(ast.FormattedValue)
+def _get_requirements_for_formatted_value(node):
     """
     ..code:: python
 
         FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    yield from get_dependencies(node.value)
+    yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.JoinedStr)
-def _get_dependencies_for_joined_str(node):
+@get_requirements.register(ast.JoinedStr)
+def _get_requirements_for_joined_str(node):
     """
     ..code:: python
 
@@ -686,8 +686,8 @@ def _get_dependencies_for_joined_str(node):
     yield
 
 
-@get_dependencies.register(ast.Constant)
-def _get_dependencies_for_constant(node):
+@get_requirements.register(ast.Constant)
+def _get_requirements_for_constant(node):
     """
     ..code:: python
 
@@ -697,54 +697,54 @@ def _get_dependencies_for_constant(node):
     yield
 
 
-@get_dependencies.register(ast.Attribute)
-def _get_dependencies_for_attribute(node):
+@get_requirements.register(ast.Attribute)
+def _get_requirements_for_attribute(node):
     """
     ..code:: python
 
         # the following expression can appear in assignment context
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    yield from get_dependencies(node.value)
+    yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.Subscript)
-def _get_dependencies_for_subscript(node):
+@get_requirements.register(ast.Subscript)
+def _get_requirements_for_subscript(node):
     """
     ..code:: python
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    yield from get_dependencies(node.value)
-    yield from get_dependencies(node.slice)
+    yield from get_requirements(node.value)
+    yield from get_requirements(node.slice)
 
 
-@get_dependencies.register(ast.Starred)
-def _get_dependencies_for_starred(node):
+@get_requirements.register(ast.Starred)
+def _get_requirements_for_starred(node):
     """
     ..code:: python
 
         Starred(expr value, expr_context ctx)
     """
     assert isinstance(node.ctx, ast.Load)
-    yield from get_dependencies(node.value)
+    yield from get_requirements(node.value)
 
 
-@get_dependencies.register(ast.Name)
-def _get_dependencies_for_name(node):
+@get_requirements.register(ast.Name)
+def _get_requirements_for_name(node):
 
     """
     ..code:: python
 
         Name(identifier id, expr_context ctx)
     """
-    yield Dependency(
+    yield Requirement(
         name=node.id, lineno=node.lineno, col_offset=node.col_offset
     )
 
 
-@get_dependencies.register(ast.List)
-def _get_dependencies_for_list(node):
+@get_requirements.register(ast.List)
+def _get_requirements_for_list(node):
 
     """
     ..code:: python
@@ -753,11 +753,11 @@ def _get_dependencies_for_list(node):
     """
     assert isinstance(node.ctx, ast.Load)
     for element in node.elts:
-        yield from get_dependencies(element)
+        yield from get_requirements(element)
 
 
-@get_dependencies.register(ast.Tuple)
-def _get_dependencies_for_tuple(node):
+@get_requirements.register(ast.Tuple)
+def _get_requirements_for_tuple(node):
     """
     ..code:: python
 
@@ -766,11 +766,11 @@ def _get_dependencies_for_tuple(node):
     """
     assert isinstance(node.ctx, ast.Load)
     for element in node.elts:
-        yield from get_dependencies(element)
+        yield from get_requirements(element)
 
 
-@get_dependencies.register(ast.Slice)
-def _get_dependencies_for_slice(node):
+@get_requirements.register(ast.Slice)
+def _get_requirements_for_slice(node):
     """
     ..code:: python
 
@@ -779,23 +779,23 @@ def _get_dependencies_for_slice(node):
 
     """
     if node.lower is not None:
-        yield from get_dependencies(node.lower)
+        yield from get_requirements(node.lower)
 
     if node.upper is not None:
-        yield from get_dependencies(node.upper)
+        yield from get_requirements(node.upper)
 
     if node.step is not None:
-        yield from get_dependencies(node.step)
+        yield from get_requirements(node.step)
 
 
 if sys.version_info < (3, 9):
 
-    @get_dependencies.register(ast.Index)
-    def _get_dependencies_for_index(node):
+    @get_requirements.register(ast.Index)
+    def _get_requirements_for_index(node):
         """
         ..code:: python
 
             # can appear only in Subscript
             Index(expr value)
         """
-        yield from get_dependencies(node.value)
+        yield from get_requirements(node.value)

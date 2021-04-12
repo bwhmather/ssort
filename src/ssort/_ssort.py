@@ -2,8 +2,8 @@ import builtins
 import sys
 
 from ssort._bindings import get_bindings
-from ssort._dependencies import Dependency, get_dependencies
 from ssort._parsing import split
+from ssort._requirements import Requirement, get_requirements
 from ssort._sorting import sort
 
 DEFAULT_SCOPE = {
@@ -31,8 +31,8 @@ def ssort(text, *, filename="<unknown>"):
         statement_id = len(statement_nodes)
 
         dependencies = []
-        for dependency in get_dependencies(node):
-            dependencies.append(scope.get(dependency.name, dependency))
+        for requirement in get_requirements(node):
+            dependencies.append(scope.get(requirement.name, requirement))
 
         for name in get_bindings(node):
             scope[name] = statement_id
@@ -45,7 +45,7 @@ def ssort(text, *, filename="<unknown>"):
     statement_dependencies = [
         [
             dependency
-            if not isinstance(dependency, Dependency)
+            if not isinstance(dependency, Requirement)
             else scope.get(dependency.name, dependency)
             for dependency in dependencies
         ]
@@ -56,7 +56,7 @@ def ssort(text, *, filename="<unknown>"):
         [
             dependency
             for dependency in dependencies
-            if not isinstance(dependency, Dependency)
+            if not isinstance(dependency, Requirement)
             or dependency.name not in DEFAULT_SCOPE
         ]
         for dependencies in statement_dependencies
@@ -68,7 +68,7 @@ def ssort(text, *, filename="<unknown>"):
             [
                 dependency
                 for dependency in dependencies
-                if not isinstance(dependency, Dependency)
+                if not isinstance(dependency, Requirement)
             ]
             for dependencies in statement_dependencies
         ]
@@ -76,7 +76,7 @@ def ssort(text, *, filename="<unknown>"):
     else:
         for dependencies in statement_dependencies:
             for dependency in dependencies:
-                if isinstance(dependency, Dependency):
+                if isinstance(dependency, Requirement):
                     raise Exception(
                         f"Could not resolve dependency {dependency!r}"
                     )
