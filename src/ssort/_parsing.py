@@ -1,4 +1,6 @@
 import ast
+import dataclasses
+import weakref
 
 
 def _find_start(node):
@@ -78,3 +80,32 @@ def split(root_text, *, filename="<unknown>"):
         end_offset = row_offsets[end_row] + end_col
 
         yield root_text[start_offset:end_offset], this_node
+
+
+@dataclasses.dataclass(frozen=True)
+class Statement:
+    _module: weakref.ref
+    _node: ast.AST
+    _text: str
+
+
+class Module:
+    def __init__(self, text, *, filename="<unknown>"):
+        self_ref = weakref.ref(self)
+        self._statements = [
+            Statement(_module=self_ref, _node=node, _text=text)
+            for text, node in split(text)
+        ]
+
+    def statements(self):
+        yield from self._statements
+
+
+def statement_node(module, statement):
+    assert statement._module() == module
+    return statement._node
+
+
+def statement_text(module, statement):
+    assert statement._module() == module
+    return statement._text

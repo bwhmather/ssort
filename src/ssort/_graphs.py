@@ -1,14 +1,18 @@
 class Graph:
-    def __init__(self, table=[]):
+    def __init__(self):
         self.nodes = set()
         self.dependencies = {}
         self.dependants = {}
 
-        for node, dependencies in enumerate(table):
-            self.add_node(node)
-            for dependency in dependencies:
-                self.add_node(dependency)
-                self.add_dependency(node, dependency)
+    @classmethod
+    def from_dependencies(cls, nodes, get_dependencies):
+        graph = cls()
+        for node in nodes:
+            graph.add_node(node)
+            for dependency in get_dependencies(node):
+                graph.add_node(dependency)
+                graph.add_dependency(node, dependency)
+        return graph
 
     def add_node(self, identifier):
         if identifier not in self.nodes:
@@ -40,17 +44,9 @@ class Graph:
         self.dependants[dependency].discard(node)
 
     def copy(self):
-        graph = Graph()
-        graph.nodes.update(self.nodes)
-        graph.dependencies = {
-            node: set(dependencies)
-            for node, dependencies in self.dependencies.items()
-        }
-        graph.dependants = {
-            node: set(dependants)
-            for node, dependants in self.dependants.items()
-        }
-        return graph
+        return Graph.from_dependencies(
+            self.nodes, self.dependencies.__getitem__
+        )
 
 
 def _remove_self_references(graph):
@@ -88,7 +84,7 @@ def _find_cycle(graph):
                 in_stack.add(dependency)
 
 
-def replace_cycles(graph):
+def replace_cycles(graph, *, key):
     """
     Finds all cycles and replaces them with forward links that keep them from
     being re-ordered.
@@ -105,7 +101,7 @@ def replace_cycles(graph):
 
         # TODO this is a bit of an abstraction leak.  Need a better way to tell
         # this function what the safe order is.
-        nodes = iter(sorted(cycle))
+        nodes = iter(sorted(cycle, key=key))
         prev = next(nodes)
         for node in nodes:
             graph.add_dependency(node, prev)
