@@ -38,7 +38,7 @@ jobs:
         pip install black
     - name: Run black
       run: |
-        black --check src/ tests/ setup.py
+        black --check --diff src/ tests/ setup.py
 
   isort:
     name: "ISort"
@@ -55,7 +55,7 @@ jobs:
         pip install isort
     - name: Run isort
       run: |
-        isort --check-only src/ tests/ setup.py
+        isort --check-only --diff src/ tests/ setup.py
 
   pyflakes:
     name: "PyFlakes"
