@@ -546,7 +546,7 @@ except ImportError: # pragma: no cover
                 repr_running = set()
 
                 def wrapper(self):
-                    key = id(self), get_ident()
+                    key = id(self), _get_ident()
                     if key in repr_running:
                         return fillvalue
                     repr_running.add(key)
