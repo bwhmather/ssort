@@ -1,3 +1,16 @@
+
+import collections
+
+import dns.exception
+import dns.immutable
+import dns.name
+import dns.node
+import dns.rdataclass
+import dns.rdatatype
+import dns.rdata
+import dns.rdtypes.ANY.SOA
+import dns.transaction
+import dns.zone
 # Taken from Dnspython
 
 # ISC License
@@ -19,27 +32,10 @@
 # PERFORMANCE OF THIS SOFTWARE.
 
 """DNS Versioned Zones."""
-
-import collections
 try:
     import threading as _threading
 except ImportError:  # pragma: no cover
     import dummy_threading as _threading    # type: ignore
-
-import dns.exception
-import dns.immutable
-import dns.name
-import dns.node
-import dns.rdataclass
-import dns.rdatatype
-import dns.rdata
-import dns.rdtypes.ANY.SOA
-import dns.transaction
-import dns.zone
-
-
-class UseTransaction(dns.exception.DNSException):
-    """To alter a versioned zone, use a transaction."""
 
 
 class Version:
@@ -121,24 +117,6 @@ class WritableVersion(Version):
             del self.nodes[name]
 
 
-@dns.immutable.immutable
-class ImmutableVersion(Version):
-    def __init__(self, version):
-        # We tell super() that it's a replacement as we don't want it
-        # to copy the nodes, as we're about to do that with an
-        # immutable Dict.
-        super().__init__(version.zone, True)
-        # set the right id!
-        self.id = version.id
-        # Make changed nodes immutable
-        for name in version.changed:
-            node = version.nodes.get(name)
-            # it might not exist if we deleted it in the version
-            if node:
-                version.nodes[name] = ImmutableNode(node)
-        self.nodes = dns.immutable.Dict(version.nodes, True)
-
-
 # A node with a version id.
 
 class Node(dns.node.Node):
@@ -178,6 +156,87 @@ class ImmutableNode(Node):
 
     def replace_rdataset(self, replacement):
         raise TypeError("immutable")
+
+
+@dns.immutable.immutable
+class ImmutableVersion(Version):
+    def __init__(self, version):
+        # We tell super() that it's a replacement as we don't want it
+        # to copy the nodes, as we're about to do that with an
+        # immutable Dict.
+        super().__init__(version.zone, True)
+        # set the right id!
+        self.id = version.id
+        # Make changed nodes immutable
+        for name in version.changed:
+            node = version.nodes.get(name)
+            # it might not exist if we deleted it in the version
+            if node:
+                version.nodes[name] = ImmutableNode(node)
+        self.nodes = dns.immutable.Dict(version.nodes, True)
+
+
+class Transaction(dns.transaction.Transaction):
+
+    def __init__(self, zone, replacement, version=None):
+        read_only = version is not None
+        super().__init__(zone, replacement, read_only)
+        self.version = version
+
+    @property
+    def zone(self):
+        return self.manager
+
+    def _setup_version(self):
+        assert self.version is None
+        self.version = WritableVersion(self.zone, self.replacement)
+
+    def _get_rdataset(self, name, rdtype, covers):
+        return self.version.get_rdataset(name, rdtype, covers)
+
+    def _put_rdataset(self, name, rdataset):
+        assert not self.read_only
+        self.version.put_rdataset(name, rdataset)
+
+    def _delete_name(self, name):
+        assert not self.read_only
+        self.version.delete_node(name)
+
+    def _delete_rdataset(self, name, rdtype, covers):
+        assert not self.read_only
+        self.version.delete_rdataset(name, rdtype, covers)
+
+    def _name_exists(self, name):
+        return self.version.get_node(name) is not None
+
+    def _changed(self):
+        if self.read_only:
+            return False
+        else:
+            return len(self.version.changed) > 0
+
+    def _end_transaction(self, commit):
+        if self.read_only:
+            self.zone._end_read(self)
+        elif commit and len(self.version.changed) > 0:
+            self.zone._commit_version(self, ImmutableVersion(self.version),
+                                      self.version.origin)
+        else:
+            # rollback
+            self.zone._end_write(self)
+
+    def _set_origin(self, origin):
+        if self.version.origin is None:
+            self.version.origin = origin
+
+    def _iterate_rdatasets(self):
+        for (name, node) in self.version.items():
+            for rdataset in node:
+                yield (name, rdataset)
+
+
+class UseTransaction(dns.exception.DNSException):
+    """To alter a versioned zone, use a transaction."""
 
 
 class Zone(dns.zone.Zone):
@@ -412,62 +471,3 @@ class Zone(dns.zone.Zone):
 
     def replace_rdataset(self, name, replacement):
         raise UseTransaction
-
-
-class Transaction(dns.transaction.Transaction):
-
-    def __init__(self, zone, replacement, version=None):
-        read_only = version is not None
-        super().__init__(zone, replacement, read_only)
-        self.version = version
-
-    @property
-    def zone(self):
-        return self.manager
-
-    def _setup_version(self):
-        assert self.version is None
-        self.version = WritableVersion(self.zone, self.replacement)
-
-    def _get_rdataset(self, name, rdtype, covers):
-        return self.version.get_rdataset(name, rdtype, covers)
-
-    def _put_rdataset(self, name, rdataset):
-        assert not self.read_only
-        self.version.put_rdataset(name, rdataset)
-
-    def _delete_name(self, name):
-        assert not self.read_only
-        self.version.delete_node(name)
-
-    def _delete_rdataset(self, name, rdtype, covers):
-        assert not self.read_only
-        self.version.delete_rdataset(name, rdtype, covers)
-
-    def _name_exists(self, name):
-        return self.version.get_node(name) is not None
-
-    def _changed(self):
-        if self.read_only:
-            return False
-        else:
-            return len(self.version.changed) > 0
-
-    def _end_transaction(self, commit):
-        if self.read_only:
-            self.zone._end_read(self)
-        elif commit and len(self.version.changed) > 0:
-            self.zone._commit_version(self, ImmutableVersion(self.version),
-                                      self.version.origin)
-        else:
-            # rollback
-            self.zone._end_write(self)
-
-    def _set_origin(self, origin):
-        if self.version.origin is None:
-            self.version.origin = origin
-
-    def _iterate_rdatasets(self):
-        for (name, node) in self.version.items():
-            for rdataset in node:
-                yield (name, rdataset)

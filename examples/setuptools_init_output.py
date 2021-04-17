@@ -1,26 +1,3 @@
-# Taken from setuptools
-
-# Copyright Jason R. Coombs
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-
-"""Extensions to the 'distutils' for large or complex distributions"""
 
 import os
 import functools
@@ -54,9 +31,6 @@ __all__ = [
     'SetuptoolsDeprecationWarning',
     'find_packages'
 ]
-
-if PY3:
-    __all__.append('find_namespace_packages')
 
 __version__ = setuptools.version.__version__
 
@@ -139,13 +113,45 @@ class PackageFinder:
         return lambda name: any(fnmatchcase(name, pat=pat) for pat in patterns)
 
 
+find_packages = PackageFinder.find
+
+
+setup.__doc__ = distutils.core.setup.__doc__
+
+
+_Command = monkey.get_unpatched(distutils.core.Command)
+# Taken from setuptools
+
+# Copyright Jason R. Coombs
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+"""Extensions to the 'distutils' for large or complex distributions"""
+
+if PY3:
+    __all__.append('find_namespace_packages')
+
+
 class PEP420PackageFinder(PackageFinder):
     @staticmethod
     def _looks_like_package(path):
         return True
-
-
-find_packages = PackageFinder.find
 
 if PY3:
     find_namespace_packages = PEP420PackageFinder.find
@@ -185,12 +191,6 @@ def setup(**attrs):
     # Make sure we have any requirements needed to interpret 'attrs'.
     _install_setup_requires(attrs)
     return distutils.core.setup(**attrs)
-
-
-setup.__doc__ = distutils.core.setup.__doc__
-
-
-_Command = monkey.get_unpatched(distutils.core.Command)
 
 
 class Command(_Command):

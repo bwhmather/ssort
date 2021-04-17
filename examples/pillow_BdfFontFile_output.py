@@ -1,3 +1,17 @@
+
+
+from . import FontFile, Image
+
+bdf_slant = {
+    "R": "Roman",
+    "I": "Italic",
+    "O": "Oblique",
+    "RI": "Reverse Italic",
+    "RO": "Reverse Oblique",
+    "OT": "Other",
+}
+
+bdf_spacing = {"P": "Proportional", "M": "Monospaced", "C": "Cell"}
 # Taken from the Pillow project
 
 # The Python Imaging Library (PIL) is
@@ -52,20 +66,6 @@
 """
 Parse X Bitmap Distribution Format (BDF)
 """
-
-
-from . import FontFile, Image
-
-bdf_slant = {
-    "R": "Roman",
-    "I": "Italic",
-    "O": "Oblique",
-    "RI": "Reverse Italic",
-    "RO": "Reverse Oblique",
-    "OT": "Other",
-}
-
-bdf_spacing = {"P": "Proportional", "M": "Monospaced", "C": "Cell"}
 
 
 def bdf_char(f):

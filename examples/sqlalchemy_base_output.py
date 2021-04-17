@@ -1,3 +1,15 @@
+
+
+import itertools
+import re
+
+from .visitors import ClauseVisitor
+from .. import exc
+from .. import util
+
+
+PARSE_AUTOCOMMIT = util.symbol("PARSE_AUTOCOMMIT")
+NO_ARG = util.symbol("NO_ARG")
 # Taken from SQLAlchemy
 
 # sql/base.py
@@ -30,18 +42,6 @@
 """
 
 
-import itertools
-import re
-
-from .visitors import ClauseVisitor
-from .. import exc
-from .. import util
-
-
-PARSE_AUTOCOMMIT = util.symbol("PARSE_AUTOCOMMIT")
-NO_ARG = util.symbol("NO_ARG")
-
-
 class Immutable(object):
     """mark a ClauseElement as 'immutable' when expressions are cloned."""
 
@@ -55,8 +55,16 @@ class Immutable(object):
         return self
 
 
-def _from_objects(*elements):
-    return itertools.chain(*[element._from_objects for element in elements])
+class Generative(object):
+    """Allow a ClauseElement to generate itself via the
+    @_generative decorator.
+
+    """
+
+    def _generate(self):
+        s = self.__class__.__new__(self.__class__)
+        s.__dict__ = self.__dict__.copy()
+        return s
 
 
 @util.decorator
@@ -66,6 +74,195 @@ def _generative(fn, *args, **kw):
     self = args[0]._generate()
     fn(self, *args[1:], **kw)
     return self
+
+
+def _from_objects(*elements):
+    return itertools.chain(*[element._from_objects for element in elements])
+
+
+class Executable(Generative):
+    """Mark a ClauseElement as supporting execution.
+
+    :class:`.Executable` is a superclass for all "statement" types
+    of objects, including :func:`select`, :func:`delete`, :func:`update`,
+    :func:`insert`, :func:`text`.
+
+    """
+
+    supports_execution = True
+    _execution_options = util.immutabledict()
+    _bind = None
+
+    @_generative
+    def execution_options(self, **kw):
+        """ Set non-SQL options for the statement which take effect during
+        execution.
+
+        Execution options can be set on a per-statement or
+        per :class:`_engine.Connection` basis.   Additionally, the
+        :class:`_engine.Engine` and ORM :class:`~.orm.query.Query`
+        objects provide
+        access to execution options which they in turn configure upon
+        connections.
+
+        The :meth:`execution_options` method is generative.  A new
+        instance of this statement is returned that contains the options::
+
+            statement = select([table.c.x, table.c.y])
+            statement = statement.execution_options(autocommit=True)
+
+        Note that only a subset of possible execution options can be applied
+        to a statement - these include "autocommit" and "stream_results",
+        but not "isolation_level" or "compiled_cache".
+        See :meth:`_engine.Connection.execution_options` for a full list of
+        possible options.
+
+        .. seealso::
+
+            :meth:`_engine.Connection.execution_options`
+
+            :meth:`_query.Query.execution_options`
+
+            :meth:`.Executable.get_execution_options`
+
+        """
+        if "isolation_level" in kw:
+            raise exc.ArgumentError(
+                "'isolation_level' execution option may only be specified "
+                "on Connection.execution_options(), or "
+                "per-engine using the isolation_level "
+                "argument to create_engine()."
+            )
+        if "compiled_cache" in kw:
+            raise exc.ArgumentError(
+                "'compiled_cache' execution option may only be specified "
+                "on Connection.execution_options(), not per statement."
+            )
+        self._execution_options = self._execution_options.union(kw)
+
+    def get_execution_options(self):
+        """ Get the non-SQL options which will take effect during execution.
+
+        .. versionadded:: 1.3
+
+        .. seealso::
+
+            :meth:`.Executable.execution_options`
+        """
+        return self._execution_options
+
+    def execute(self, *multiparams, **params):
+        """Compile and execute this :class:`.Executable`.
+
+        """
+        e = self.bind
+        if e is None:
+            label = getattr(self, "description", self.__class__.__name__)
+            msg = (
+                "This %s is not directly bound to a Connection or Engine. "
+                "Use the .execute() method of a Connection or Engine "
+                "to execute this construct." % label
+            )
+            raise exc.UnboundExecutionError(msg)
+        return e._execute_clauseelement(self, multiparams, params)
+
+    def scalar(self, *multiparams, **params):
+        """Compile and execute this :class:`.Executable`, returning the
+        result's scalar representation.
+
+        """
+        return self.execute(*multiparams, **params).scalar()
+
+    @property
+    def bind(self):
+        """Returns the :class:`_engine.Engine` or :class:`_engine.Connection`
+        to
+        which this :class:`.Executable` is bound, or None if none found.
+
+        This is a traversal which checks locally, then
+        checks among the "from" clauses of associated objects
+        until a bound engine or connection is found.
+
+        """
+        if self._bind is not None:
+            return self._bind
+
+        for f in _from_objects(self):
+            if f is self:
+                continue
+            engine = f.bind
+            if engine is not None:
+                return engine
+        else:
+            return None
+
+
+class SchemaEventTarget(object):
+    """Base class for elements that are the targets of :class:`.DDLEvents`
+    events.
+
+    This includes :class:`.SchemaItem` as well as :class:`.SchemaType`.
+
+    """
+
+    def _set_parent(self, parent):
+        """Associate with this SchemaEvent's parent object."""
+
+    def _set_parent_with_dispatch(self, parent):
+        self.dispatch.before_parent_attach(self, parent)
+        self._set_parent(parent)
+        self.dispatch.after_parent_attach(self, parent)
+
+
+class SchemaVisitor(ClauseVisitor):
+    """Define the visiting for ``SchemaItem`` objects."""
+
+    __traverse_options__ = {"schema_visitor": True}
+
+
+class ColumnSet(util.ordered_column_set):
+    def contains_column(self, col):
+        return col in self
+
+    def extend(self, cols):
+        for col in cols:
+            self.add(col)
+
+    def __add__(self, other):
+        return list(self) + list(other)
+
+    @util.dependencies("sqlalchemy.sql.elements")
+    def __eq__(self, elements, other):
+        l = []
+        for c in other:
+            for local in self:
+                if c.shares_lineage(local):
+                    l.append(c == local)
+        return elements.and_(*l)
+
+    def __hash__(self):
+        return hash(tuple(x for x in self))
+
+
+def _bind_or_error(schemaitem, msg=None):
+    bind = schemaitem.bind
+    if not bind:
+        name = schemaitem.__class__.__name__
+        label = getattr(
+            schemaitem, "fullname", getattr(schemaitem, "name", None)
+        )
+        if label:
+            item = "%s object %r" % (name, label)
+        else:
+            item = "%s object" % name
+        if msg is None:
+            msg = (
+                "%s is not bound to an Engine or Connection.  "
+                "Execution can not proceed without a database to execute "
+                "against." % item
+            )
+        raise exc.UnboundExecutionError(msg)
+    return bind
 
 
 class _DialectArgView(util.collections_abc.MutableMapping):
@@ -338,158 +535,6 @@ class DialectKWArgs(object):
                     construct_arg_dictionary[arg_name] = kwargs[k]
 
 
-class Generative(object):
-    """Allow a ClauseElement to generate itself via the
-    @_generative decorator.
-
-    """
-
-    def _generate(self):
-        s = self.__class__.__new__(self.__class__)
-        s.__dict__ = self.__dict__.copy()
-        return s
-
-
-class Executable(Generative):
-    """Mark a ClauseElement as supporting execution.
-
-    :class:`.Executable` is a superclass for all "statement" types
-    of objects, including :func:`select`, :func:`delete`, :func:`update`,
-    :func:`insert`, :func:`text`.
-
-    """
-
-    supports_execution = True
-    _execution_options = util.immutabledict()
-    _bind = None
-
-    @_generative
-    def execution_options(self, **kw):
-        """ Set non-SQL options for the statement which take effect during
-        execution.
-
-        Execution options can be set on a per-statement or
-        per :class:`_engine.Connection` basis.   Additionally, the
-        :class:`_engine.Engine` and ORM :class:`~.orm.query.Query`
-        objects provide
-        access to execution options which they in turn configure upon
-        connections.
-
-        The :meth:`execution_options` method is generative.  A new
-        instance of this statement is returned that contains the options::
-
-            statement = select([table.c.x, table.c.y])
-            statement = statement.execution_options(autocommit=True)
-
-        Note that only a subset of possible execution options can be applied
-        to a statement - these include "autocommit" and "stream_results",
-        but not "isolation_level" or "compiled_cache".
-        See :meth:`_engine.Connection.execution_options` for a full list of
-        possible options.
-
-        .. seealso::
-
-            :meth:`_engine.Connection.execution_options`
-
-            :meth:`_query.Query.execution_options`
-
-            :meth:`.Executable.get_execution_options`
-
-        """
-        if "isolation_level" in kw:
-            raise exc.ArgumentError(
-                "'isolation_level' execution option may only be specified "
-                "on Connection.execution_options(), or "
-                "per-engine using the isolation_level "
-                "argument to create_engine()."
-            )
-        if "compiled_cache" in kw:
-            raise exc.ArgumentError(
-                "'compiled_cache' execution option may only be specified "
-                "on Connection.execution_options(), not per statement."
-            )
-        self._execution_options = self._execution_options.union(kw)
-
-    def get_execution_options(self):
-        """ Get the non-SQL options which will take effect during execution.
-
-        .. versionadded:: 1.3
-
-        .. seealso::
-
-            :meth:`.Executable.execution_options`
-        """
-        return self._execution_options
-
-    def execute(self, *multiparams, **params):
-        """Compile and execute this :class:`.Executable`.
-
-        """
-        e = self.bind
-        if e is None:
-            label = getattr(self, "description", self.__class__.__name__)
-            msg = (
-                "This %s is not directly bound to a Connection or Engine. "
-                "Use the .execute() method of a Connection or Engine "
-                "to execute this construct." % label
-            )
-            raise exc.UnboundExecutionError(msg)
-        return e._execute_clauseelement(self, multiparams, params)
-
-    def scalar(self, *multiparams, **params):
-        """Compile and execute this :class:`.Executable`, returning the
-        result's scalar representation.
-
-        """
-        return self.execute(*multiparams, **params).scalar()
-
-    @property
-    def bind(self):
-        """Returns the :class:`_engine.Engine` or :class:`_engine.Connection`
-        to
-        which this :class:`.Executable` is bound, or None if none found.
-
-        This is a traversal which checks locally, then
-        checks among the "from" clauses of associated objects
-        until a bound engine or connection is found.
-
-        """
-        if self._bind is not None:
-            return self._bind
-
-        for f in _from_objects(self):
-            if f is self:
-                continue
-            engine = f.bind
-            if engine is not None:
-                return engine
-        else:
-            return None
-
-
-class SchemaEventTarget(object):
-    """Base class for elements that are the targets of :class:`.DDLEvents`
-    events.
-
-    This includes :class:`.SchemaItem` as well as :class:`.SchemaType`.
-
-    """
-
-    def _set_parent(self, parent):
-        """Associate with this SchemaEvent's parent object."""
-
-    def _set_parent_with_dispatch(self, parent):
-        self.dispatch.before_parent_attach(self, parent)
-        self._set_parent(parent)
-        self.dispatch.after_parent_attach(self, parent)
-
-
-class SchemaVisitor(ClauseVisitor):
-    """Define the visiting for ``SchemaItem`` objects."""
-
-    __traverse_options__ = {"schema_visitor": True}
-
-
 class ColumnCollection(util.OrderedProperties):
     """An ordered dictionary that stores a list of ColumnElement
     instances.
@@ -650,48 +695,3 @@ class ImmutableColumnCollection(util.ImmutableProperties, ColumnCollection):
         object.__setattr__(self, "_all_columns", all_columns)
 
     extend = remove = util.ImmutableProperties._immutable
-
-
-class ColumnSet(util.ordered_column_set):
-    def contains_column(self, col):
-        return col in self
-
-    def extend(self, cols):
-        for col in cols:
-            self.add(col)
-
-    def __add__(self, other):
-        return list(self) + list(other)
-
-    @util.dependencies("sqlalchemy.sql.elements")
-    def __eq__(self, elements, other):
-        l = []
-        for c in other:
-            for local in self:
-                if c.shares_lineage(local):
-                    l.append(c == local)
-        return elements.and_(*l)
-
-    def __hash__(self):
-        return hash(tuple(x for x in self))
-
-
-def _bind_or_error(schemaitem, msg=None):
-    bind = schemaitem.bind
-    if not bind:
-        name = schemaitem.__class__.__name__
-        label = getattr(
-            schemaitem, "fullname", getattr(schemaitem, "name", None)
-        )
-        if label:
-            item = "%s object %r" % (name, label)
-        else:
-            item = "%s object" % name
-        if msg is None:
-            msg = (
-                "%s is not bound to an Engine or Connection.  "
-                "Execution can not proceed without a database to execute "
-                "against." % item
-            )
-        raise exc.UnboundExecutionError(msg)
-    return bind

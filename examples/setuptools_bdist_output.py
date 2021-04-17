@@ -1,3 +1,8 @@
+
+import os
+from distutils.core import Command
+from distutils.errors import *
+from distutils.util import get_platform
 # Taken from setuptools
 
 # Copyright Jason R. Coombs
@@ -24,11 +29,6 @@
 
 Implements the Distutils 'bdist' command (create a built [binary]
 distribution)."""
-
-import os
-from distutils.core import Command
-from distutils.errors import *
-from distutils.util import get_platform
 
 
 def show_formats():
