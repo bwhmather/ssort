@@ -1,6 +1,6 @@
 class Graph:
     def __init__(self):
-        self.nodes = set()
+        self.nodes = []
         self.dependencies = {}
         self.dependants = {}
 
@@ -16,32 +16,45 @@ class Graph:
 
     def add_node(self, identifier):
         if identifier not in self.nodes:
-            self.nodes.add(identifier)
-            self.dependencies[identifier] = set()
-            self.dependants[identifier] = set()
+            self.nodes.append(identifier)
+            self.dependencies[identifier] = []
+            self.dependants[identifier] = []
 
     def add_dependency(self, node, dependency):
-        assert node in self.nodes
         assert dependency in self.nodes
 
-        self.dependencies[node].add(dependency)
-        self.dependants[dependency].add(node)
+        if dependency not in self.dependencies[node]:
+            self.dependencies[node].append(dependency)
+            self.dependants[dependency].append(node)
 
     def remove_node(self, node):
-        self.nodes.discard(node)
+        self.nodes.remove(node)
         del self.dependencies[node]
         del self.dependants[node]
 
         for other in self.nodes:
-            self.dependencies[other].discard(node)
-            self.dependants[other].discard(node)
+            try:
+                self.dependencies[other].remove(node)
+            except ValueError:
+                pass
+
+            try:
+                self.dependants[other].remove(node)
+            except ValueError:
+                pass
 
     def remove_dependency(self, node, dependency):
-        assert node in self.nodes
         assert dependency in self.nodes
 
-        self.dependencies[node].discard(dependency)
-        self.dependants[dependency].discard(node)
+        try:
+            self.dependencies[node].remove(dependency)
+        except ValueError:
+            pass
+
+        try:
+            self.dependants[dependency].remove(node)
+        except ValueError:
+            pass
 
     def copy(self):
         return Graph.from_dependencies(
@@ -123,17 +136,20 @@ def topological_sort(graph):
     # traverse.
     remaining = graph.copy()
 
-    pending = {node for node in graph.nodes if not graph.dependencies[node]}
+    pending = [
+        node for node in reversed(graph.nodes) if not graph.dependencies[node]
+    ]
 
     result = []
     while pending:
         node = pending.pop()
-        dependants = set(remaining.dependants[node])
+        dependants = remaining.dependants[node]
         remaining.remove_node(node)
 
-        for dependant in dependants:
+        for dependant in reversed(dependants):
             if not remaining.dependencies[dependant]:
-                pending.add(dependant)
+                if dependant not in pending:
+                    pending.append(dependant)
 
         result.append(node)
 
