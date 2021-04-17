@@ -1,3 +1,4 @@
+import ast
 import builtins
 import sys
 
@@ -41,6 +42,16 @@ def statement_bindings(module, statement):
     return get_bindings(statement_node(module, statement))
 
 
+def _dedup(values):
+    output = []
+    visited = set()
+    for value in values:
+        if value not in visited:
+            output.append(value)
+        visited.add(value)
+    return output
+
+
 @memoize_weak
 def _statement_graph(module):
     """
@@ -49,21 +60,21 @@ def _statement_graph(module):
     # A dictionary mapping from names to the statements which bind them.
     scope = {}
 
-    # A dictionary mapping from statements to sets of unresolved Requirements.
+    # A dictionary mapping from statements to lists of unresolved Requirements.
     unresolved = {}
 
     dependencies = {}
     dependants = {}
 
     for statement in module.statements():
-        dependencies[statement] = set()
-        dependants[statement] = set()
-        unresolved[statement] = list()
+        dependencies[statement] = []
+        dependants[statement] = []
+        unresolved[statement] = []
 
         for requirement in statement_requirements(module, statement):
             # TODO error if requirement is not deferred.
             if requirement.name in scope:
-                dependencies[statement].add(scope[requirement.name])
+                dependencies[statement].append(scope[requirement.name])
                 continue
 
             if requirement.name in DEFAULT_SCOPE:
@@ -79,7 +90,7 @@ def _statement_graph(module):
         remaining = []
         for requirement in unresolved[statement]:
             if requirement.name in scope:
-                dependencies[statement].add(scope[requirement.name])
+                dependencies[statement].append(scope[requirement.name])
             else:
                 remaining.append(requirement.name)
         unresolved[statement] = remaining
@@ -89,7 +100,7 @@ def _statement_graph(module):
 
         for statement in module.statements():
             for requirement in unresolved[statement]:
-                dependencies[statement].add(scope["*"])
+                dependencies[statement].append(scope["*"])
 
     else:
         for statement in module.statements():
@@ -100,21 +111,94 @@ def _statement_graph(module):
 
     for statement in module.statements():
         for dependency in dependencies[statement]:
-            dependants[dependency].add(statement)
+            dependants[dependency].append(statement)
+
+    for statement in module.statements():
+        dependencies[statement] = _dedup(dependencies[statement])
+        dependants[statement] = _dedup(dependants[statement])
 
     return dependencies, dependants
 
 
-@memoize_weak
 def statement_dependencies(module, statement):
     dependencies, dependants = _statement_graph(module)
     yield from dependencies[statement]
 
 
-@memoize_weak
 def statement_dependants(module, statement):
     dependencies, dependants = _statement_graph(module)
     yield from dependants[statement]
+
+
+def statement_is_import(module, statement):
+    node = statement_node(module, statement)
+    return isinstance(node, (ast.Import, ast.ImportFrom))
+
+
+def statement_is_assignment(module, statement):
+    node = statement_node(module, statement)
+    return isinstance(
+        node, (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.NamedExpr)
+    )
+
+
+def _partition(values, predicate):
+    passed = []
+    failed = []
+
+    for value in values:
+        if predicate(value):
+            passed.append(value)
+        else:
+            failed.append(value)
+    return passed, failed
+
+
+def _presort(module):
+    statements = list(module.statements())
+    output = []
+
+    # TODO add dependency between imports and all non-import statements that
+    # precede them.
+    imports, statements = _partition(
+        statements, lambda statement: statement_is_import(module, statement)
+    )
+    output += imports
+
+    assignments, statements = _partition(
+        statements,
+        lambda statement: statement_is_assignment(module, statement),
+    )
+    output += assignments
+
+    # Output all remaining statements with no dependants followed, recursively
+    # by all of the statements that they depend on.
+    # The goal here is to try to make it so that dependencies will always be
+    # sorted close to the statements that depend on them, and in the order that
+    # they are used.  We sort them after their dependants so that they get
+    # squeezed down.
+    free, statements = _partition(
+        statements,
+        lambda statement: not list(statement_dependants(module, statement)),
+    )
+    output += free
+
+    output_set = set(output)
+    cursor = 0
+    while cursor < len(output):
+        for dependency in statement_dependencies(module, output[cursor]):
+            if dependency not in output_set:
+                output.append(dependency)
+                output_set.add(dependency)
+        cursor += 1
+
+    # Anything else was probably part of an isolated cycle.  Add it to the end
+    # in the same order it came in.
+    output += [
+        statement for statement in statements if statement not in output_set
+    ]
+
+    return output
 
 
 def _optimize(statements, graph, *, key=lambda value: value):
@@ -137,23 +221,30 @@ def _optimize(statements, graph, *, key=lambda value: value):
     return statements
 
 
+def _sort_key_from_iter(values):
+    index = {statement: index for index, statement in enumerate(values)}
+    key = lambda value: index[value]
+    return key
+
+
 def ssort(text, *, filename="<unknown>"):
     module = Module(text, filename=filename)
 
-    presorted = list(module.statements())
-    index = {statement: index for index, statement in enumerate(presorted)}
-    key = lambda value: index[value]
+    presorted = _presort(module)
 
     graph = Graph.from_dependencies(
         module.statements(),
         lambda statement: statement_dependencies(module, statement),
     )
-    replace_cycles(graph, key=key)
+    replace_cycles(graph, key=_sort_key_from_iter(module.statements()))
     toposorted = topological_sort(graph)
 
-    sorted_statements = _optimize(toposorted, graph, key=key)
+    sorted_statements = _optimize(
+        toposorted, graph, key=_sort_key_from_iter(presorted)
+    )
 
     assert is_topologically_sorted(sorted_statements, graph)
+
     return (
         "\n".join(
             statement_text(module, statement)

@@ -101,3 +101,30 @@ def test_cycle_with_dependant():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_depencency_order():
+    original = _clean(
+        """
+        def _step2():
+            ...
+        def _step1():
+            ...
+        def main():
+            _step1()
+            _step2()
+        """
+    )
+    expected = _clean(
+        """
+        def _step1():
+            ...
+        def _step2():
+            ...
+        def main():
+            _step1()
+            _step2()
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
