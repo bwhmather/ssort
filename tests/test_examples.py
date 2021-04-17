@@ -40,6 +40,18 @@ def test_examples(example):
     assert actual_text == expected_text
 
 
+@pytest.mark.parametrize("example", examples)
+def test_idempotent(example):
+    examples_dir = pathlib.Path("examples")
+    input_path = examples_dir / f"{example}_input.py"
+    input_text = input_path.read_text()
+
+    sorted_text = ssort(input_text, filename=str(input_path))
+    resorted_text = ssort(sorted_text, filename=str(input_path))
+
+    assert resorted_text == sorted_text
+
+
 def _presort(input_text, *, filename):
     module = Module(input_text, filename=filename)
     presorted = presort(module)
