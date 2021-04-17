@@ -31,16 +31,22 @@ def test_trailing_newline():
 def test_cycle():
     original = _clean(
         """
-        a = b
-        b = c
-        c = a
+        def a():
+            return b()
+        def b():
+            return c()
+        def c():
+            return a()
         """
     )
     expected = _clean(
         """
-        a = b
-        b = c
-        c = a
+        def a():
+            return b()
+        def b():
+            return c()
+        def c():
+            return a()
         """
     )
     actual = ssort(original)
@@ -50,16 +56,22 @@ def test_cycle():
 def test_cycle_reversed():
     original = _clean(
         """
-        a = c
-        b = a
-        c = b
+        def a():
+            return c()
+        def b():
+            return a()
+        def c():
+            return b()
         """
     )
     expected = _clean(
         """
-        a = c
-        b = a
-        c = b
+        def a():
+            return c()
+        def b():
+            return a()
+        def c():
+            return b()
         """
     )
     actual = ssort(original)
@@ -69,16 +81,22 @@ def test_cycle_reversed():
 def test_cycle_with_dependant():
     original = _clean(
         """
-        c = a
-        a = b
-        b = a
+        def c():
+            return a()
+        def a():
+            return b()
+        def b():
+            return a()
         """
     )
     expected = _clean(
         """
-        a = b
-        c = a
-        b = a
+        def a():
+            return b()
+        def c():
+            return a()
+        def b():
+            return a()
         """
     )
     actual = ssort(original)
