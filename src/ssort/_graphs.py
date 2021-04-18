@@ -1,3 +1,6 @@
+from ssort._utils import sort_key_from_iter
+
+
 class Graph:
     def __init__(self):
         self.nodes = []
@@ -136,22 +139,25 @@ def topological_sort(graph):
     # traverse.
     remaining = graph.copy()
 
-    pending = [
-        node for node in reversed(graph.nodes) if not graph.dependencies[node]
-    ]
+    key = sort_key_from_iter(graph.nodes)
+
+    pending = [node for node in graph.nodes if not graph.dependants[node]]
 
     result = []
     while pending:
+        pending = list(sorted(pending, key=key))
         node = pending.pop()
-        dependants = remaining.dependants[node]
+        dependencies = remaining.dependencies[node]
         remaining.remove_node(node)
 
-        for dependant in reversed(dependants):
-            if not remaining.dependencies[dependant]:
-                if dependant not in pending:
-                    pending.append(dependant)
+        for dependency in dependencies:
+            if not remaining.dependants[dependency]:
+                if dependency not in pending:
+                    pending.append(dependency)
 
         result.append(node)
+
+    result.reverse()
 
     assert not remaining.nodes
     assert is_topologically_sorted(result, graph)
