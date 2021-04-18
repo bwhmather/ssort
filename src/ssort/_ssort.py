@@ -37,10 +37,11 @@ def ssort(text, *, filename="<unknown>"):
     presorted = presort(module)
 
     graph = Graph.from_dependencies(
-        module.statements(),
+        presorted,
         lambda statement: statement_dependencies(module, statement),
     )
     replace_cycles(graph, key=sort_key_from_iter(module.statements()))
+
     toposorted = topological_sort(graph)
 
     sorted_statements = _optimize(
