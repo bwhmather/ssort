@@ -13,6 +13,9 @@ class Statement:
     _node: ast.AST
     _text: str
 
+    def __repr__(self):
+        return f"<Statement text={self._text!r}>"
+
 
 class Module:
     def __init__(self, text, *, filename="<unknown>"):
