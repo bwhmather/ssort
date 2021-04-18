@@ -47,9 +47,17 @@ def presort(module):
     cursor = 0
     while cursor < len(output):
         for dependency in statement_dependencies(module, output[cursor]):
-            if dependency not in output_set:
-                output.append(dependency)
-                output_set.add(dependency)
+            if dependency in output_set:
+                continue
+
+            if any(
+                dependant not in output_set
+                for dependant in statement_dependants(module, dependency)
+            ):
+                continue
+
+            output.append(dependency)
+            output_set.add(dependency)
         cursor += 1
 
     # Anything else was probably part of an isolated cycle.  Add it to the end
