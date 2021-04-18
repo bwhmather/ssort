@@ -1,5 +1,9 @@
 from ssort._dependencies import statement_dependants, statement_dependencies
-from ssort._modules import statement_is_assignment, statement_is_import
+from ssort._modules import (
+    statement_is_assignment,
+    statement_is_docstring,
+    statement_is_import,
+)
 
 
 def _partition(values, predicate):
@@ -17,6 +21,11 @@ def _partition(values, predicate):
 def presort(module):
     statements = list(module.statements())
     output = []
+
+    docstrings, statements = _partition(
+        statements, lambda statement: statement_is_docstring(module, statement)
+    )
+    output += docstrings
 
     # TODO add dependency between imports and all non-import statements that
     # precede them.

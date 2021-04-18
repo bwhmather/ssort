@@ -64,3 +64,20 @@ def statement_is_assignment(module, statement):
     return isinstance(
         node, (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.NamedExpr)
     )
+
+
+def statement_is_docstring(module, statement):
+    if statement != next(module.statements()):
+        return False
+
+    node = statement_node(module, statement)
+    if not isinstance(node, ast.Expr):
+        return False
+
+    if not isinstance(node.value, ast.Constant):
+        return False
+
+    if not isinstance(node.value.value, str):
+        return False
+
+    return True

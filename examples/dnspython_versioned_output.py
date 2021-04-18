@@ -1,16 +1,3 @@
-
-import collections
-
-import dns.exception
-import dns.immutable
-import dns.name
-import dns.node
-import dns.rdataclass
-import dns.rdatatype
-import dns.rdata
-import dns.rdtypes.ANY.SOA
-import dns.transaction
-import dns.zone
 # Taken from Dnspython
 
 # ISC License
@@ -32,6 +19,19 @@ import dns.zone
 # PERFORMANCE OF THIS SOFTWARE.
 
 """DNS Versioned Zones."""
+
+import collections
+
+import dns.exception
+import dns.immutable
+import dns.name
+import dns.node
+import dns.rdataclass
+import dns.rdatatype
+import dns.rdata
+import dns.rdtypes.ANY.SOA
+import dns.transaction
+import dns.zone
 try:
     import threading as _threading
 except ImportError:  # pragma: no cover

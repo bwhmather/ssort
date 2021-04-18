@@ -1,3 +1,33 @@
+# Taken from setuptools
+
+# Copyright Jason R. Coombs
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+"""distutils._msvccompiler
+
+Contains MSVCCompiler, an implementation of the abstract CCompiler class
+for Microsoft Visual Studio 2015.
+
+The module is compatible with VS 2015 and later. You can find legacy support
+for older versions in distutils.msvc9compiler and distutils.msvccompiler.
+"""
 
 # Written by Perry Stoll
 # hacked by Robin Becker and Thomas Heller to do a better job of
@@ -33,36 +63,6 @@ PLAT_TO_VCVARS = {
     'win-arm32' : 'x86_arm',
     'win-arm64' : 'x86_arm64'
 }
-# Taken from setuptools
-
-# Copyright Jason R. Coombs
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-
-"""distutils._msvccompiler
-
-Contains MSVCCompiler, an implementation of the abstract CCompiler class
-for Microsoft Visual Studio 2015.
-
-The module is compatible with VS 2015 and later. You can find legacy support
-for older versions in distutils.msvc9compiler and distutils.msvccompiler.
-"""
 
 def _find_vc2017():
     """Returns "15, path" based on the result of invoking vswhere.exe

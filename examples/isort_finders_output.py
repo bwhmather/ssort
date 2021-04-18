@@ -1,24 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-import inspect
-import os
-import os.path
-import re
-import sys
-import sysconfig
-from fnmatch import fnmatch
-from glob import glob
-
-from .pie_slice import PY2
-from .utils import chdir, exists_case_sensitive
-
-
-KNOWN_SECTION_MAPPING = {
-    'STDLIB': 'STANDARD_LIBRARY',
-    'FUTURE': 'FUTURE_LIBRARY',
-    'FIRSTPARTY': 'FIRST_PARTY',
-    'THIRDPARTY': 'THIRD_PARTY',
-}
 # Taken from isort
 
 # The MIT License (MIT)
@@ -45,6 +24,27 @@ KNOWN_SECTION_MAPPING = {
 
 """Finders try to find right section for passed module name
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import inspect
+import os
+import os.path
+import re
+import sys
+import sysconfig
+from fnmatch import fnmatch
+from glob import glob
+
+from .pie_slice import PY2
+from .utils import chdir, exists_case_sensitive
+
+
+KNOWN_SECTION_MAPPING = {
+    'STDLIB': 'STANDARD_LIBRARY',
+    'FUTURE': 'FUTURE_LIBRARY',
+    'FIRSTPARTY': 'FIRST_PARTY',
+    'THIRDPARTY': 'THIRD_PARTY',
+}
 
 
 class BaseFinder(object):
