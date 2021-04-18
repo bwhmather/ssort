@@ -35,54 +35,51 @@ def _statement_graph(module):
     # A dictionary mapping from names to the statements which bind them.
     scope = {}
 
-    # A dictionary mapping from statements to lists of unresolved Requirements.
-    unresolved = {}
-
-    dependencies = {}
-    dependants = {}
+    unresolved = set()
+    resolved = {}
 
     for statement in module.statements():
-        dependencies[statement] = []
-        dependants[statement] = []
-        unresolved[statement] = []
-
         for requirement in statement_requirements(module, statement):
             # TODO error if requirement is not deferred.
             if requirement.name in scope:
-                dependencies[statement].append(scope[requirement.name])
+                resolved[requirement] = scope[requirement.name]
                 continue
 
             if requirement.name in DEFAULT_SCOPE:
+                resolved[requirement] = None
                 continue
 
-            unresolved[statement].append(requirement)
+            unresolved.add(requirement)
 
         for name in statement_bindings(module, statement):
             scope[name] = statement
 
     # Patch up dependencies that couldn't be resolved immediately.
-    for statement in module.statements():
-        remaining = []
-        for requirement in unresolved[statement]:
-            if requirement.name in scope:
-                dependencies[statement].append(scope[requirement.name])
-            else:
-                remaining.append(requirement.name)
-        unresolved[statement] = remaining
+    for requirement in list(unresolved):
+        if requirement.name in scope:
+            resolved[requirement] = scope[requirement.name]
+            unresolved.remove(requirement)
 
     if "*" in scope:
         sys.stderr.write("WARNING: can't determine dependencies on * import")
 
-        for statement in module.statements():
-            for requirement in unresolved[statement]:
-                dependencies[statement].append(scope["*"])
+        for requirement in unresolved:
+            resolved[requirement] = scope["*"]
 
     else:
-        for statement in module.statements():
-            for requirement in unresolved[statement]:
-                raise Exception(
-                    f"Could not resolve requirement {requirement!r}"
-                )
+        for requirement in unresolved:
+            raise Exception(f"Could not resolve requirement {requirement!r}")
+
+    dependencies = {}
+    dependants = {}
+    for statement in module.statements():
+        dependants[statement] = []
+        dependencies[statement] = []
+
+    for statement in module.statements():
+        for requirement in statement_requirements(module, statement):
+            if resolved[requirement] is not None:
+                dependencies[statement].append(resolved[requirement])
 
     for statement in module.statements():
         for dependency in dependencies[statement]:
