@@ -128,3 +128,91 @@ def test_depencency_order():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_isort_finders():
+    original = _clean(
+        """
+        class Base:
+            pass
+
+        def a():
+            pass
+
+        class A(Base):
+            def method():
+                a()
+
+        class B(Base):
+            pass
+
+        def something():
+            return [A, B]
+        """
+    )
+    expected = _clean(
+        """
+        class Base:
+            pass
+
+        def a():
+            pass
+
+        class A(Base):
+            def method():
+                a()
+
+        class B(Base):
+            pass
+
+        def something():
+            return [A, B]
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_single_dispatch():
+    original = _clean(
+        """
+        import functools
+
+        @functools.singledispatch
+        def fun(x):
+            ...
+
+        @fun.register(str)
+        def fun(x):
+            ...
+
+        @fun.register(int)
+        def fun(x):
+            ...
+
+        if __name__ == "__main__":
+            fun()
+        """
+    )
+    expected = _clean(
+        """
+        import functools
+
+        @functools.singledispatch
+        def fun(x):
+            ...
+
+        @fun.register(str)
+        def fun(x):
+            ...
+
+        @fun.register(int)
+        def fun(x):
+            ...
+
+        if __name__ == "__main__":
+            fun()
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
