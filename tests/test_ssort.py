@@ -185,11 +185,11 @@ def test_single_dispatch():
             ...
 
         @fun.register(str)
-        def fun(x):
+        def _fun_str(x):
             ...
 
         @fun.register(int)
-        def fun(x):
+        def _fun_int(x):
             ...
 
         if __name__ == "__main__":
@@ -205,11 +205,11 @@ def test_single_dispatch():
             ...
 
         @fun.register(str)
-        def fun(x):
+        def _fun_str(x):
             ...
 
         @fun.register(int)
-        def fun(x):
+        def _fun_int(x):
             ...
 
         if __name__ == "__main__":
