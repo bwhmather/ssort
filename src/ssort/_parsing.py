@@ -80,5 +80,8 @@ def split(root_text, *, filename="<unknown>"):
         end_offset = row_offsets[end_row] + end_col
 
         yield Statement(
-            text=root_text[start_offset:end_offset], node=this_node
+            text=root_text[start_offset:end_offset],
+            node=this_node,
+            start_row=start_row,
+            start_col=start_col,
         )

@@ -3,9 +3,11 @@ from ssort._requirements import get_requirements
 
 
 class Statement:
-    def __init__(self, *, text, node):
+    def __init__(self, *, text, node, start_row, start_col):
         self._text = text
         self._node = node
+        self._start_row = start_row
+        self._start_col = start_col
 
     def __repr__(self):
         return f"<Statement text={self._text!r}>"
@@ -17,6 +19,18 @@ def statement_node(statement):
 
 def statement_text(statement):
     return statement._text
+
+
+def statement_text_padded(statement):
+    """
+    Return the statement text padded with leading whitespace so that
+    coordinates in the ast match up with coordinates in the text.
+    """
+    return (
+        ("\n" * statement._start_row)
+        + (" " * statement._start_col)
+        + statement._text
+    )
 
 
 def statement_requirements(statement):
