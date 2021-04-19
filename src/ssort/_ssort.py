@@ -7,7 +7,6 @@ from ssort._graphs import (
     topological_sort,
 )
 from ssort._modules import Module, statement_text
-from ssort._presort import presort
 from ssort._utils import sort_key_from_iter
 
 
@@ -34,10 +33,8 @@ def _optimize(statements, graph, *, key=lambda value: value):
 def ssort(text, *, filename="<unknown>"):
     module = Module(text, filename=filename)
 
-    presorted = presort(module)
-
     graph = Graph.from_dependencies(
-        presorted,
+        module.statements(),
         lambda statement: statement_dependencies(module, statement),
     )
     replace_cycles(graph, key=sort_key_from_iter(module.statements()))
@@ -45,7 +42,7 @@ def ssort(text, *, filename="<unknown>"):
     toposorted = topological_sort(graph)
 
     sorted_statements = _optimize(
-        toposorted, graph, key=sort_key_from_iter(presorted)
+        toposorted, graph, key=sort_key_from_iter(module.statements())
     )
 
     assert is_topologically_sorted(sorted_statements, graph)
