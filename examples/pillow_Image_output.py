@@ -85,16 +85,91 @@ from . import (
 from ._binary import i8, i32le
 from ._util import deferred_error, isPath
 
+if sys.version_info >= (3, 7):
+
+    def __getattr__(name):
+        if name == "PILLOW_VERSION":
+            _raise_version_warning()
+            return __version__
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+
+else:
+
+    from . import PILLOW_VERSION
+
+    # Silence warning
+    assert PILLOW_VERSION
+
 
 logger = logging.getLogger(__name__)
+
+
+class DecompressionBombWarning(RuntimeWarning):
+    pass
+
+
+class DecompressionBombError(Exception):
+    pass
 
 
 # Limit to around a quarter gigabyte for a 24-bit (3 bpp) image
 MAX_IMAGE_PIXELS = int(1024 * 1024 * 1024 // 4 // 3)
 
 
+try:
+    # If the _imaging C module is not present, Pillow will not load.
+    # Note that other modules should not refer to _imaging directly;
+    # import Image and use the Image.core variable instead.
+    # Also note that Image.core is not a publicly documented interface,
+    # and should be considered private and subject to change.
+    from . import _imaging as core
+
+    if __version__ != getattr(core, "PILLOW_VERSION", None):
+        raise ImportError(
+            "The _imaging extension was built for another version of Pillow or PIL:\n"
+            f"Core version: {getattr(core, 'PILLOW_VERSION', None)}\n"
+            f"Pillow version: {__version__}"
+        )
+
+except ImportError as v:
+    core = deferred_error(ImportError("The _imaging C module is not installed."))
+    # Explanations for ways that we know we might have an import error
+    if str(v).startswith("Module use of python"):
+        # The _imaging C module is present, but not compiled for
+        # the right version (windows only).  Print a warning, if
+        # possible.
+        warnings.warn(
+            "The _imaging extension was built for another version of Python.",
+            RuntimeWarning,
+        )
+    elif str(v).startswith("The _imaging extension"):
+        warnings.warn(str(v), RuntimeWarning)
+    # Fail here anyway. Don't let people run with a mostly broken Pillow.
+    # see docs/porting.rst
+    raise
+
+
 # works everywhere, win for pypy, not cpython
 USE_CFFI_ACCESS = hasattr(sys, "pypy_version_info")
+try:
+    import cffi
+except ImportError:
+    cffi = None
+
+
+def isImageType(t):
+    """
+    Checks if an object is an image object.
+
+    .. warning::
+
+       This function is for internal use only.
+
+    :param t: object to check if it's an image
+    :returns: True if the object is an image
+    """
+    return hasattr(t, "im")
 
 
 #
@@ -148,6 +223,13 @@ LIBIMAGEQUANT = 3
 NORMAL = 0
 SEQUENCE = 1
 CONTAINER = 2
+
+if hasattr(core, "DEFAULT_STRATEGY"):
+    DEFAULT_STRATEGY = core.DEFAULT_STRATEGY
+    FILTERED = core.FILTERED
+    HUFFMAN_ONLY = core.HUFFMAN_ONLY
+    RLE = core.RLE
+    FIXED = core.FIXED
 
 
 # --------------------------------------------------------------------
@@ -222,134 +304,19 @@ _MODE_CONV = {
 }
 
 
-MODES = sorted(_MODEINFO)
-
-# raw modes that may be memory mapped.  NOTE: if you change this, you
-# may have to modify the stride calculation in map.c too!
-_MAPMODES = ("L", "P", "RGBX", "RGBA", "CMYK", "I;16", "I;16L", "I;16B")
-
-
-# --------------------------------------------------------------------
-# Helpers
-
-_initialized = 0
-
-
-_fromarray_typemap = {
-    # (shape, typestr) => mode, rawmode
-    # first two members of shape are set to one
-    ((1, 1), "|b1"): ("1", "1;8"),
-    ((1, 1), "|u1"): ("L", "L"),
-    ((1, 1), "|i1"): ("I", "I;8"),
-    ((1, 1), "<u2"): ("I", "I;16"),
-    ((1, 1), ">u2"): ("I", "I;16B"),
-    ((1, 1), "<i2"): ("I", "I;16S"),
-    ((1, 1), ">i2"): ("I", "I;16BS"),
-    ((1, 1), "<u4"): ("I", "I;32"),
-    ((1, 1), ">u4"): ("I", "I;32B"),
-    ((1, 1), "<i4"): ("I", "I;32S"),
-    ((1, 1), ">i4"): ("I", "I;32BS"),
-    ((1, 1), "<f4"): ("F", "F;32F"),
-    ((1, 1), ">f4"): ("F", "F;32BF"),
-    ((1, 1), "<f8"): ("F", "F;64F"),
-    ((1, 1), ">f8"): ("F", "F;64BF"),
-    ((1, 1, 2), "|u1"): ("LA", "LA"),
-    ((1, 1, 3), "|u1"): ("RGB", "RGB"),
-    ((1, 1, 4), "|u1"): ("RGBA", "RGBA"),
-}
-
-# shortcuts
-_fromarray_typemap[((1, 1), _ENDIAN + "i4")] = ("I", "I")
-_fromarray_typemap[((1, 1), _ENDIAN + "f4")] = ("F", "F")
-
-
-try:
-    # If the _imaging C module is not present, Pillow will not load.
-    # Note that other modules should not refer to _imaging directly;
-    # import Image and use the Image.core variable instead.
-    # Also note that Image.core is not a publicly documented interface,
-    # and should be considered private and subject to change.
-    from . import _imaging as core
-
-    if __version__ != getattr(core, "PILLOW_VERSION", None):
-        raise ImportError(
-            "The _imaging extension was built for another version of Pillow or PIL:\n"
-            f"Core version: {getattr(core, 'PILLOW_VERSION', None)}\n"
-            f"Pillow version: {__version__}"
-        )
-
-except ImportError as v:
-    core = deferred_error(ImportError("The _imaging C module is not installed."))
-    # Explanations for ways that we know we might have an import error
-    if str(v).startswith("Module use of python"):
-        # The _imaging C module is present, but not compiled for
-        # the right version (windows only).  Print a warning, if
-        # possible.
-        warnings.warn(
-            "The _imaging extension was built for another version of Python.",
-            RuntimeWarning,
-        )
-    elif str(v).startswith("The _imaging extension"):
-        warnings.warn(str(v), RuntimeWarning)
-    # Fail here anyway. Don't let people run with a mostly broken Pillow.
-    # see docs/porting.rst
-    raise
-
-if hasattr(core, "DEFAULT_STRATEGY"):
-    DEFAULT_STRATEGY = core.DEFAULT_STRATEGY
-    FILTERED = core.FILTERED
-    HUFFMAN_ONLY = core.HUFFMAN_ONLY
-    RLE = core.RLE
-    FIXED = core.FIXED
-
-
-def getmodebandnames(mode):
-    """
-    Gets a list of individual band names.  Given a mode, this function returns
-    a tuple containing the names of individual bands (use
-    :py:method:`~PIL.Image.getmodetype` to get the mode used to store each
-    individual band.
-
-    :param mode: Input mode.
-    :returns: A tuple containing band names.  The length of the tuple
-        gives the number of bands in an image of the given mode.
-    :exception KeyError: If the input mode was not a standard mode.
-    """
-    return ImageMode.getmode(mode).bands
-
-
-class DecompressionBombWarning(RuntimeWarning):
-    pass
-
-
-class DecompressionBombError(Exception):
-    pass
-try:
-    import cffi
-except ImportError:
-    cffi = None
-
-
-def isImageType(t):
-    """
-    Checks if an object is an image object.
-
-    .. warning::
-
-       This function is for internal use only.
-
-    :param t: object to check if it's an image
-    :returns: True if the object is an image
-    """
-    return hasattr(t, "im")
-
-
 def _conv_type_shape(im):
     typ, extra = _MODE_CONV[im.mode]
     if extra is None:
         return (im.size[1], im.size[0]), typ
     else:
         return (im.size[1], im.size[0], extra), typ
+
+
+MODES = sorted(_MODEINFO)
+
+# raw modes that may be memory mapped.  NOTE: if you change this, you
+# may have to modify the stride calculation in map.c too!
+_MAPMODES = ("L", "P", "RGBX", "RGBA", "CMYK", "I;16", "I;16L", "I;16B")
 
 
 def getmodebase(mode):
@@ -377,6 +344,21 @@ def getmodetype(mode):
     return ImageMode.getmode(mode).basetype
 
 
+def getmodebandnames(mode):
+    """
+    Gets a list of individual band names.  Given a mode, this function returns
+    a tuple containing the names of individual bands (use
+    :py:method:`~PIL.Image.getmodetype` to get the mode used to store each
+    individual band.
+
+    :param mode: Input mode.
+    :returns: A tuple containing band names.  The length of the tuple
+        gives the number of bands in an image of the given mode.
+    :exception KeyError: If the input mode was not a standard mode.
+    """
+    return ImageMode.getmode(mode).bands
+
+
 def getmodebands(mode):
     """
     Gets the number of individual bands for this mode.
@@ -386,6 +368,12 @@ def getmodebands(mode):
     :exception KeyError: If the input mode was not a standard mode.
     """
     return len(ImageMode.getmode(mode).bands)
+
+
+# --------------------------------------------------------------------
+# Helpers
+
+_initialized = 0
 
 
 def preinit():
@@ -3051,6 +3039,30 @@ def frombuffer(mode, size, data, decoder_name="raw", *args):
     return frombytes(mode, size, data, decoder_name, args)
 
 
+_fromarray_typemap = {
+    # (shape, typestr) => mode, rawmode
+    # first two members of shape are set to one
+    ((1, 1), "|b1"): ("1", "1;8"),
+    ((1, 1), "|u1"): ("L", "L"),
+    ((1, 1), "|i1"): ("I", "I;8"),
+    ((1, 1), "<u2"): ("I", "I;16"),
+    ((1, 1), ">u2"): ("I", "I;16B"),
+    ((1, 1), "<i2"): ("I", "I;16S"),
+    ((1, 1), ">i2"): ("I", "I;16BS"),
+    ((1, 1), "<u4"): ("I", "I;32"),
+    ((1, 1), ">u4"): ("I", "I;32B"),
+    ((1, 1), "<i4"): ("I", "I;32S"),
+    ((1, 1), ">i4"): ("I", "I;32BS"),
+    ((1, 1), "<f4"): ("F", "F;32F"),
+    ((1, 1), ">f4"): ("F", "F;32BF"),
+    ((1, 1), "<f8"): ("F", "F;64F"),
+    ((1, 1), ">f8"): ("F", "F;64BF"),
+    ((1, 1, 2), "|u1"): ("LA", "LA"),
+    ((1, 1, 3), "|u1"): ("RGB", "RGB"),
+    ((1, 1, 4), "|u1"): ("RGBA", "RGBA"),
+}
+
+
 def fromarray(obj, mode=None):
     """
     Creates an image memory from an object exporting the array interface
@@ -3127,6 +3139,10 @@ def fromqpixmap(im):
     if not ImageQt.qt_is_installed:
         raise ImportError("Qt bindings are not installed")
     return ImageQt.fromqpixmap(im)
+
+# shortcuts
+_fromarray_typemap[((1, 1), _ENDIAN + "i4")] = ("I", "I")
+_fromarray_typemap[((1, 1), _ENDIAN + "f4")] = ("F", "F")
 
 
 def open(fp, mode="r", formats=None):
@@ -3490,19 +3506,3 @@ def _apply_env_variables(env=None):
 
 _apply_env_variables()
 atexit.register(core.clear_cache)
-
-if sys.version_info >= (3, 7):
-
-    def __getattr__(name):
-        if name == "PILLOW_VERSION":
-            _raise_version_warning()
-            return __version__
-        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-
-
-else:
-
-    from . import PILLOW_VERSION
-
-    # Silence warning
-    assert PILLOW_VERSION

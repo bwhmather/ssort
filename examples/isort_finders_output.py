@@ -38,6 +38,26 @@ from glob import glob
 from .pie_slice import PY2
 from .utils import chdir, exists_case_sensitive
 
+try:
+    from pipreqs import pipreqs
+except ImportError:
+    pipreqs = None
+
+try:
+    from pip_api import parse_requirements
+except ImportError:
+    parse_requirements = None
+
+try:
+    from requirementslib import Pipfile
+except ImportError:
+    Pipfile = None
+
+try:
+    from functools import lru_cache
+except ImportError:
+    from backports.functools_lru_cache import lru_cache
+
 
 KNOWN_SECTION_MAPPING = {
     'STDLIB': 'STANDARD_LIBRARY',
@@ -69,16 +89,6 @@ class LocalFinder(BaseFinder):
     def find(self, module_name):
         if module_name.startswith("."):
             return self.sections.LOCALFOLDER
-
-try:
-    from requirementslib import Pipfile
-except ImportError:
-    Pipfile = None
-
-try:
-    from pipreqs import pipreqs
-except ImportError:
-    pipreqs = None
 
 
 class KnownPatternFinder(BaseFinder):
@@ -282,35 +292,6 @@ class ReqsBaseFinder(BaseFinder):
                 return self.sections.THIRDPARTY
 
 
-class PipfileFinder(ReqsBaseFinder):
-    enabled = bool(Pipfile)
-
-    def _get_names(self, path):
-        with chdir(path):
-            project = Pipfile.load(path)
-            for req in project.packages:
-                yield req.name
-
-    def _get_files_from_dir(self, path):
-        if 'Pipfile' in os.listdir(path):
-            yield path
-
-
-class DefaultFinder(BaseFinder):
-    def find(self, module_name):
-        return self.config['default_section']
-
-try:
-    from pip_api import parse_requirements
-except ImportError:
-    parse_requirements = None
-
-try:
-    from functools import lru_cache
-except ImportError:
-    from backports.functools_lru_cache import lru_cache
-
-
 class RequirementsFinder(ReqsBaseFinder):
     exts = ('.txt', '.in')
     enabled = bool(parse_requirements)
@@ -364,6 +345,25 @@ class RequirementsFinder(ReqsBaseFinder):
                     results.append(req.name)
 
         return results
+
+
+class PipfileFinder(ReqsBaseFinder):
+    enabled = bool(Pipfile)
+
+    def _get_names(self, path):
+        with chdir(path):
+            project = Pipfile.load(path)
+            for req in project.packages:
+                yield req.name
+
+    def _get_files_from_dir(self, path):
+        if 'Pipfile' in os.listdir(path):
+            yield path
+
+
+class DefaultFinder(BaseFinder):
+    def find(self, module_name):
+        return self.config['default_section']
 
 
 class FindersManager(object):

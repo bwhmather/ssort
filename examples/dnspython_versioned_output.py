@@ -21,6 +21,10 @@
 """DNS Versioned Zones."""
 
 import collections
+try:
+    import threading as _threading
+except ImportError:  # pragma: no cover
+    import dummy_threading as _threading    # type: ignore
 
 import dns.exception
 import dns.immutable
@@ -32,10 +36,10 @@ import dns.rdata
 import dns.rdtypes.ANY.SOA
 import dns.transaction
 import dns.zone
-try:
-    import threading as _threading
-except ImportError:  # pragma: no cover
-    import dummy_threading as _threading    # type: ignore
+
+
+class UseTransaction(dns.exception.DNSException):
+    """To alter a versioned zone, use a transaction."""
 
 
 class Version:
@@ -233,10 +237,6 @@ class Transaction(dns.transaction.Transaction):
         for (name, node) in self.version.items():
             for rdataset in node:
                 yield (name, rdataset)
-
-
-class UseTransaction(dns.exception.DNSException):
-    """To alter a versioned zone, use a transaction."""
 
 
 class Zone(dns.zone.Zone):

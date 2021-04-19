@@ -38,6 +38,8 @@ for older versions in distutils.msvc9compiler and distutils.msvccompiler.
 import os
 import subprocess
 import contextlib
+with contextlib.suppress(ImportError):
+    import winreg
 
 from distutils.errors import DistutilsExecError, DistutilsPlatformError, \
                              CompileError, LibError, LinkError
@@ -47,22 +49,33 @@ from distutils.util import get_platform
 
 from itertools import count
 
-PLAT_SPEC_TO_RUNTIME = {
-    'x86' : 'x86',
-    'x86_amd64' : 'x64',
-    'x86_arm' : 'arm',
-    'x86_arm64' : 'arm64'
-}
+def _find_vc2015():
+    try:
+        key = winreg.OpenKeyEx(
+            winreg.HKEY_LOCAL_MACHINE,
+            r"Software\Microsoft\VisualStudio\SxS\VC7",
+            access=winreg.KEY_READ | winreg.KEY_WOW64_32KEY
+        )
+    except OSError:
+        log.debug("Visual C++ is not registered")
+        return None, None
 
-# A map keyed by get_platform() return values to values accepted by
-# 'vcvarsall.bat'. Always cross-compile from x86 to work with the
-# lighter-weight MSVC installs that do not include native 64-bit tools.
-PLAT_TO_VCVARS = {
-    'win32' : 'x86',
-    'win-amd64' : 'x86_amd64',
-    'win-arm32' : 'x86_arm',
-    'win-arm64' : 'x86_arm64'
-}
+    best_version = 0
+    best_dir = None
+    with key:
+        for i in count():
+            try:
+                v, vc_dir, vt = winreg.EnumValue(key, i)
+            except OSError:
+                break
+            if v and vt == winreg.REG_SZ and os.path.isdir(vc_dir):
+                try:
+                    version = int(float(v))
+                except (ValueError, TypeError):
+                    continue
+                if version >= 14 and version > best_version:
+                    best_version, best_dir = version, vc_dir
+    return best_version, best_dir
 
 def _find_vc2017():
     """Returns "15, path" based on the result of invoking vswhere.exe
@@ -95,36 +108,13 @@ def _find_vc2017():
         return 15, path
 
     return None, None
-with contextlib.suppress(ImportError):
-    import winreg
 
-def _find_vc2015():
-    try:
-        key = winreg.OpenKeyEx(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"Software\Microsoft\VisualStudio\SxS\VC7",
-            access=winreg.KEY_READ | winreg.KEY_WOW64_32KEY
-        )
-    except OSError:
-        log.debug("Visual C++ is not registered")
-        return None, None
-
-    best_version = 0
-    best_dir = None
-    with key:
-        for i in count():
-            try:
-                v, vc_dir, vt = winreg.EnumValue(key, i)
-            except OSError:
-                break
-            if v and vt == winreg.REG_SZ and os.path.isdir(vc_dir):
-                try:
-                    version = int(float(v))
-                except (ValueError, TypeError):
-                    continue
-                if version >= 14 and version > best_version:
-                    best_version, best_dir = version, vc_dir
-    return best_version, best_dir
+PLAT_SPEC_TO_RUNTIME = {
+    'x86' : 'x86',
+    'x86_amd64' : 'x64',
+    'x86_arm' : 'arm',
+    'x86_arm64' : 'arm64'
+}
 
 def _find_vcvarsall(plat_spec):
     # bpo-38597: Removed vcruntime return value
@@ -190,6 +180,16 @@ def _find_exe(exe, paths=None):
         if os.path.isfile(fn):
             return fn
     return exe
+
+# A map keyed by get_platform() return values to values accepted by
+# 'vcvarsall.bat'. Always cross-compile from x86 to work with the
+# lighter-weight MSVC installs that do not include native 64-bit tools.
+PLAT_TO_VCVARS = {
+    'win32' : 'x86',
+    'win-amd64' : 'x86_amd64',
+    'win-arm32' : 'x86_arm',
+    'win-arm64' : 'x86_arm64'
+}
 
 class MSVCCompiler(CCompiler) :
     """Concrete class that implements an interface to Microsoft Visual C++,

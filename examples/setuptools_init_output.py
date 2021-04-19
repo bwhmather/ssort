@@ -55,6 +55,9 @@ __all__ = [
     'find_packages'
 ]
 
+if PY3:
+    __all__.append('find_namespace_packages')
+
 __version__ = setuptools.version.__version__
 
 bootstrap_install_from = None
@@ -136,22 +139,13 @@ class PackageFinder:
         return lambda name: any(fnmatchcase(name, pat=pat) for pat in patterns)
 
 
-find_packages = PackageFinder.find
-
-
-setup.__doc__ = distutils.core.setup.__doc__
-
-
-_Command = monkey.get_unpatched(distutils.core.Command)
-
-if PY3:
-    __all__.append('find_namespace_packages')
-
-
 class PEP420PackageFinder(PackageFinder):
     @staticmethod
     def _looks_like_package(path):
         return True
+
+
+find_packages = PackageFinder.find
 
 if PY3:
     find_namespace_packages = PEP420PackageFinder.find
@@ -191,6 +185,12 @@ def setup(**attrs):
     # Make sure we have any requirements needed to interpret 'attrs'.
     _install_setup_requires(attrs)
     return distutils.core.setup(**attrs)
+
+
+setup.__doc__ = distutils.core.setup.__doc__
+
+
+_Command = monkey.get_unpatched(distutils.core.Command)
 
 
 class Command(_Command):
