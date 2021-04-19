@@ -3,7 +3,7 @@ SSort
 
 |build-status|
 
-.. |build-status| image:: https://github.com/bwhmather/ssort/actions/workflows/ci.yaml/badge.svg?branch=develop
+.. |build-status| image:: https://github.com/bwhmather/ssort/actions/workflows/ci.yaml/badge.svg?branch=master
     :target: https://github.com/bwhmather/ssort/actions/workflows/ci.yaml
     :alt: Build Status
 
