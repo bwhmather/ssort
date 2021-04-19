@@ -104,6 +104,8 @@ def test_cycle_with_dependant():
 
 
 def test_depencency_order():
+    # TODO We previously tried to reorder dependencies to match the order they
+    # were required in.
     original = _clean(
         """
         def _step2():
@@ -117,9 +119,9 @@ def test_depencency_order():
     )
     expected = _clean(
         """
-        def _step1():
-            ...
         def _step2():
+            ...
+        def _step1():
             ...
         def main():
             _step1()
