@@ -57,6 +57,23 @@ jobs:
       run: |
         isort --check-only --diff src/ tests/ setup.py
 
+  ssort:
+    name: "SSort"
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+    - name: Run ssort
+      run: |
+        ssort --check --diff src/ tests/ setup.py
+
   pyflakes:
     name: "PyFlakes"
     runs-on: ubuntu-18.04
