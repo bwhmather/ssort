@@ -1,7 +1,7 @@
 import textwrap
 
-from ssort._dependencies import statement_dependencies
-from ssort._modules import Module
+from ssort._dependencies import statements_graph
+from ssort._parsing import split
 
 
 def _clean(source):
@@ -23,7 +23,7 @@ def test_dependencies_ordered_by_first_use():
             pass
         """
     )
-    module = Module(source, filename="<unknown>")
-    c, a, b = module.statements()
+    c, a, b = statements = list(split(source, filename="<unknown>"))
+    graph = statements_graph(statements)
 
-    assert list(statement_dependencies(module, a)) == [b, c]
+    assert list(graph.dependencies[a]) == [b, c]

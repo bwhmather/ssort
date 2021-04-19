@@ -1,8 +1,12 @@
 from ssort._parsing import split
+from ssort._statements import statement_text
 
 
 def _split_text(source):
-    return [text for text, ast in split(source, filename="<unknown>")]
+    return [
+        statement_text(statement)
+        for statement in split(source, filename="<unknown>")
+    ]
 
 
 def test_split_empty():

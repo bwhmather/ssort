@@ -1,12 +1,12 @@
 from ssort._bubble_sort import bubble_sort
-from ssort._dependencies import statement_dependencies
+from ssort._dependencies import statements_graph
 from ssort._graphs import (
-    Graph,
     is_topologically_sorted,
     replace_cycles,
     topological_sort,
 )
-from ssort._modules import Module, statement_text
+from ssort._parsing import split
+from ssort._statements import statement_text
 from ssort._utils import sort_key_from_iter
 
 
@@ -31,26 +31,21 @@ def _optimize(statements, graph, *, key=lambda value: value):
 
 
 def ssort(text, *, filename="<unknown>"):
-    module = Module(text, filename=filename)
+    statements = list(split(text, filename=filename))
 
-    graph = Graph.from_dependencies(
-        module.statements(),
-        lambda statement: statement_dependencies(module, statement),
-    )
-    replace_cycles(graph, key=sort_key_from_iter(module.statements()))
+    graph = statements_graph(statements)
 
-    toposorted = topological_sort(graph)
+    replace_cycles(graph, key=sort_key_from_iter(statements))
+
+    sorted_statements = topological_sort(graph)
 
     sorted_statements = _optimize(
-        toposorted, graph, key=sort_key_from_iter(module.statements())
+        sorted_statements, graph, key=sort_key_from_iter(statements)
     )
 
     assert is_topologically_sorted(sorted_statements, graph)
 
     return (
-        "\n".join(
-            statement_text(module, statement)
-            for statement in sorted_statements
-        )
+        "\n".join(statement_text(statement) for statement in sorted_statements)
         + "\n"
     )

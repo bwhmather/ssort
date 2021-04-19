@@ -1,5 +1,7 @@
 import ast
 
+from ssort._statements import Statement
+
 
 def _find_start(node):
     lineno, col = min(
@@ -77,4 +79,6 @@ def split(root_text, *, filename="<unknown>"):
         start_offset = row_offsets[start_row] + start_col
         end_offset = row_offsets[end_row] + end_col
 
-        yield root_text[start_offset:end_offset], this_node
+        yield Statement(
+            text=root_text[start_offset:end_offset], node=this_node
+        )

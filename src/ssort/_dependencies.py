@@ -1,8 +1,8 @@
 import builtins
 import sys
 
-from ssort._modules import statement_bindings, statement_requirements
-from ssort._utils import memoize_weak
+from ssort._graphs import Graph
+from ssort._statements import statement_bindings, statement_requirements
 
 DEFAULT_SCOPE = {
     *builtins.__dict__,
@@ -17,18 +17,7 @@ DEFAULT_SCOPE = {
 }
 
 
-def _dedup(values):
-    output = []
-    visited = set()
-    for value in values:
-        if value not in visited:
-            output.append(value)
-        visited.add(value)
-    return output
-
-
-@memoize_weak
-def _statement_graph(module):
+def statements_graph(statements):
     """
     Returns a dictionary mapping from statements to lists of other statements.
     """
@@ -38,8 +27,8 @@ def _statement_graph(module):
     unresolved = set()
     resolved = {}
 
-    for statement in module.statements():
-        for requirement in statement_requirements(module, statement):
+    for statement in statements:
+        for requirement in statement_requirements(statement):
             # TODO error if requirement is not deferred.
             if requirement.name in scope:
                 resolved[requirement] = scope[requirement.name]
@@ -51,7 +40,7 @@ def _statement_graph(module):
 
             unresolved.add(requirement)
 
-        for name in statement_bindings(module, statement):
+        for name in statement_bindings(statement):
             scope[name] = statement
 
     # Patch up dependencies that couldn't be resolved immediately.
@@ -70,33 +59,13 @@ def _statement_graph(module):
         for requirement in unresolved:
             raise Exception(f"Could not resolve requirement {requirement!r}")
 
-    dependencies = {}
-    dependants = {}
-    for statement in module.statements():
-        dependants[statement] = []
-        dependencies[statement] = []
+    graph = Graph()
+    for statement in statements:
+        graph.add_node(statement)
 
-    for statement in module.statements():
-        for requirement in statement_requirements(module, statement):
+    for statement in statements:
+        for requirement in statement_requirements(statement):
             if resolved[requirement] is not None:
-                dependencies[statement].append(resolved[requirement])
+                graph.add_dependency(statement, resolved[requirement])
 
-    for statement in module.statements():
-        for dependency in dependencies[statement]:
-            dependants[dependency].append(statement)
-
-    for statement in module.statements():
-        dependencies[statement] = _dedup(dependencies[statement])
-        dependants[statement] = _dedup(dependants[statement])
-
-    return dependencies, dependants
-
-
-def statement_dependencies(module, statement):
-    dependencies, dependants = _statement_graph(module)
-    yield from dependencies[statement]
-
-
-def statement_dependants(module, statement):
-    dependencies, dependants = _statement_graph(module)
-    yield from dependants[statement]
+    return graph

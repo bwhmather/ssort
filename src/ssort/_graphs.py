@@ -7,16 +7,6 @@ class Graph:
         self.dependencies = {}
         self.dependants = {}
 
-    @classmethod
-    def from_dependencies(cls, nodes, get_dependencies):
-        graph = cls()
-        for node in nodes:
-            graph.add_node(node)
-            for dependency in get_dependencies(node):
-                graph.add_node(dependency)
-                graph.add_dependency(node, dependency)
-        return graph
-
     def add_node(self, identifier):
         if identifier not in self.nodes:
             self.nodes.append(identifier)
@@ -60,9 +50,15 @@ class Graph:
             pass
 
     def copy(self):
-        return Graph.from_dependencies(
-            self.nodes, self.dependencies.__getitem__
-        )
+        dup = Graph()
+        for node in self.nodes:
+            dup.add_node(node)
+
+        for node in self.nodes:
+            for dependency in self.dependencies[node]:
+                dup.add_dependency(node, dependency)
+
+        return dup
 
 
 def _remove_self_references(graph):
