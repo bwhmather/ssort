@@ -813,14 +813,6 @@ class Exif(MutableMapping):
                     self._ifds[0x927C] = makernote
         return self._ifds.get(tag, {})
 
-    def __str__(self):
-        if self._info is not None:
-            # Load all keys into self._data
-            for tag in self._info.keys():
-                self[tag]
-
-        return str(self._data)
-
     def __len__(self):
         keys = set(self._data)
         if self._info is not None:
@@ -834,9 +826,6 @@ class Exif(MutableMapping):
                 self._data[tag] = self.get_ifd(tag)
             del self._info[tag]
         return self._data[tag]
-
-    def __contains__(self, tag):
-        return tag in self._data or (self._info is not None and tag in self._info)
 
     def __setitem__(self, tag, value):
         if self._info is not None and tag in self._info:
@@ -854,6 +843,17 @@ class Exif(MutableMapping):
         if self._info is not None:
             keys.update(self._info)
         return iter(keys)
+
+    def __contains__(self, tag):
+        return tag in self._data or (self._info is not None and tag in self._info)
+
+    def __str__(self):
+        if self._info is not None:
+            # Load all keys into self._data
+            for tag in self._info.keys():
+                self[tag]
+
+        return str(self._data)
 
 
 # --------------------------------------------------------------------
@@ -915,18 +915,6 @@ class Image:
                 new.palette = ImagePalette.ImagePalette()
         new.info = self.info.copy()
         return new
-
-    # Context manager support
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        if hasattr(self, "fp") and getattr(self, "_exclusive_fp", False):
-            if hasattr(self, "_close__fp"):
-                self._close__fp()
-            if self.fp:
-                self.fp.close()
-        self.fp = None
 
     def close(self):
         """
@@ -991,28 +979,6 @@ class Image:
 
         return filename
 
-    def __eq__(self, other):
-        return (
-            self.__class__ is other.__class__
-            and self.mode == other.mode
-            and self.size == other.size
-            and self.info == other.info
-            and self.category == other.category
-            and self.readonly == other.readonly
-            and self.getpalette() == other.getpalette()
-            and self.tobytes() == other.tobytes()
-        )
-
-    def __repr__(self):
-        return "<%s.%s image mode=%s size=%dx%d at 0x%X>" % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.mode,
-            self.size[0],
-            self.size[1],
-            id(self),
-        )
-
     def _repr_png_(self):
         """iPython display hook support
 
@@ -1021,37 +987,6 @@ class Image:
         b = io.BytesIO()
         self.save(b, "PNG")
         return b.getvalue()
-
-    @property
-    def __array_interface__(self):
-        # numpy array interface support
-        new = {}
-        shape, typestr = _conv_type_shape(self)
-        new["shape"] = shape
-        new["typestr"] = typestr
-        new["version"] = 3
-        if self.mode == "1":
-            # Binary images need to be extended from bits to bytes
-            # See: https://github.com/python-pillow/Pillow/issues/350
-            new["data"] = self.tobytes("raw", "L")
-        else:
-            new["data"] = self.tobytes()
-        return new
-
-    def __getstate__(self):
-        return [self.info, self.mode, self.size, self.getpalette(), self.tobytes()]
-
-    def __setstate__(self, state):
-        Image.__init__(self)
-        self.tile = []
-        info, mode, size, palette, data = state
-        self.info = info
-        self.mode = mode
-        self._size = size
-        self.im = core.new(mode, size)
-        if mode in ("L", "LA", "P", "PA") and palette:
-            self.putpalette(palette)
-        self.frombytes(data)
 
     def tobytes(self, encoder_name="raw", *args):
         """
@@ -1454,8 +1389,6 @@ class Image:
         """
         self.load()
         return self._new(self.im.copy())
-
-    __copy__ = copy
 
     def crop(self, box=None):
         """
@@ -2876,6 +2809,73 @@ class Image:
         if not ImageQt.qt_is_installed:
             raise ImportError("Qt bindings are not installed")
         return ImageQt.toqpixmap(self)
+
+    def __eq__(self, other):
+        return (
+            self.__class__ is other.__class__
+            and self.mode == other.mode
+            and self.size == other.size
+            and self.info == other.info
+            and self.category == other.category
+            and self.readonly == other.readonly
+            and self.getpalette() == other.getpalette()
+            and self.tobytes() == other.tobytes()
+        )
+
+    # Context manager support
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        if hasattr(self, "fp") and getattr(self, "_exclusive_fp", False):
+            if hasattr(self, "_close__fp"):
+                self._close__fp()
+            if self.fp:
+                self.fp.close()
+        self.fp = None
+
+    def __repr__(self):
+        return "<%s.%s image mode=%s size=%dx%d at 0x%X>" % (
+            self.__class__.__module__,
+            self.__class__.__name__,
+            self.mode,
+            self.size[0],
+            self.size[1],
+            id(self),
+        )
+
+    @property
+    def __array_interface__(self):
+        # numpy array interface support
+        new = {}
+        shape, typestr = _conv_type_shape(self)
+        new["shape"] = shape
+        new["typestr"] = typestr
+        new["version"] = 3
+        if self.mode == "1":
+            # Binary images need to be extended from bits to bytes
+            # See: https://github.com/python-pillow/Pillow/issues/350
+            new["data"] = self.tobytes("raw", "L")
+        else:
+            new["data"] = self.tobytes()
+        return new
+
+    def __getstate__(self):
+        return [self.info, self.mode, self.size, self.getpalette(), self.tobytes()]
+
+    def __setstate__(self, state):
+        Image.__init__(self)
+        self.tile = []
+        info, mode, size, palette, data = state
+        self.info = info
+        self.mode = mode
+        self._size = size
+        self.im = core.new(mode, size)
+        if mode in ("L", "LA", "P", "PA") and palette:
+            self.putpalette(palette)
+        self.frombytes(data)
+
+    __copy__ = copy
 
 
 # --------------------------------------------------------------------

@@ -85,6 +85,12 @@ class _DialectArgView(util.collections_abc.MutableMapping):
         else:
             return dialect, value_key
 
+    def __len__(self):
+        return sum(
+            len(args._non_defaults)
+            for args in self.obj.dialect_options.values()
+        )
+
     def __getitem__(self, key):
         dialect, value_key = self._key(key)
 
@@ -112,12 +118,6 @@ class _DialectArgView(util.collections_abc.MutableMapping):
         dialect, value_key = self._key(key)
         del self.obj.dialect_options[dialect][value_key]
 
-    def __len__(self):
-        return sum(
-            len(args._non_defaults)
-            for args in self.obj.dialect_options.values()
-        )
-
     def __iter__(self):
         return (
             util.safe_kwarg("%s_%s" % (dialect_name, value_name))
@@ -144,9 +144,6 @@ class _DialectArgDict(util.collections_abc.MutableMapping):
     def __len__(self):
         return len(set(self._non_defaults).union(self._defaults))
 
-    def __iter__(self):
-        return iter(set(self._non_defaults).union(self._defaults))
-
     def __getitem__(self, key):
         if key in self._non_defaults:
             return self._non_defaults[key]
@@ -158,6 +155,9 @@ class _DialectArgDict(util.collections_abc.MutableMapping):
 
     def __delitem__(self, key):
         del self._non_defaults[key]
+
+    def __iter__(self):
+        return iter(set(self._non_defaults).union(self._defaults))
 
 
 class DialectKWArgs(object):
@@ -507,9 +507,6 @@ class ColumnCollection(util.OrderedProperties):
         for c in columns:
             self.add(c)
 
-    def __str__(self):
-        return repr([str(c) for c in self])
-
     def replace(self, column):
         """add the given column to this collection, removing unaliased
            versions of this column  as well as existing columns with the
@@ -557,8 +554,34 @@ class ColumnCollection(util.OrderedProperties):
             )
         self[column.key] = column
 
-    def __delitem__(self, key):
+    def clear(self):
         raise NotImplementedError()
+
+    def remove(self, column):
+        del self._data[column.key]
+        self._all_columns[:] = [
+            c for c in self._all_columns if c is not column
+        ]
+
+    def update(self, iter_):
+        cols = list(iter_)
+        all_col_set = set(self._all_columns)
+        self._all_columns.extend(
+            c for label, c in cols if c not in all_col_set
+        )
+        self._data.update((label, c) for label, c in cols)
+
+    def extend(self, iter_):
+        cols = list(iter_)
+        all_col_set = set(self._all_columns)
+        self._all_columns.extend(c for c in cols if c not in all_col_set)
+        self._data.update((c.key, c) for c in cols)
+
+    def contains_column(self, col):
+        return col in set(self._all_columns)
+
+    def as_immutable(self):
+        return ImmutableColumnCollection(self._data, self._all_columns)
 
     def __setattr__(self, key, obj):
         raise NotImplementedError()
@@ -591,30 +614,13 @@ class ColumnCollection(util.OrderedProperties):
         self._all_columns.append(value)
         self._data[key] = value
 
-    def clear(self):
+    def __delitem__(self, key):
         raise NotImplementedError()
 
-    def remove(self, column):
-        del self._data[column.key]
-        self._all_columns[:] = [
-            c for c in self._all_columns if c is not column
-        ]
-
-    def update(self, iter_):
-        cols = list(iter_)
-        all_col_set = set(self._all_columns)
-        self._all_columns.extend(
-            c for label, c in cols if c not in all_col_set
-        )
-        self._data.update((label, c) for label, c in cols)
-
-    def extend(self, iter_):
-        cols = list(iter_)
-        all_col_set = set(self._all_columns)
-        self._all_columns.extend(c for c in cols if c not in all_col_set)
-        self._data.update((c.key, c) for c in cols)
-
-    __hash__ = None
+    def __contains__(self, other):
+        if not isinstance(other, util.string_types):
+            raise exc.ArgumentError("__contains__ requires a string argument")
+        return util.OrderedProperties.__contains__(self, other)
 
     @util.dependencies("sqlalchemy.sql.elements")
     def __eq__(self, elements, other):
@@ -625,10 +631,10 @@ class ColumnCollection(util.OrderedProperties):
                     l.append(c == local)
         return elements.and_(*l)
 
-    def __contains__(self, other):
-        if not isinstance(other, util.string_types):
-            raise exc.ArgumentError("__contains__ requires a string argument")
-        return util.OrderedProperties.__contains__(self, other)
+    __hash__ = None
+
+    def __str__(self):
+        return repr([str(c) for c in self])
 
     def __getstate__(self):
         return {"_data": self._data, "_all_columns": self._all_columns}
@@ -637,19 +643,13 @@ class ColumnCollection(util.OrderedProperties):
         object.__setattr__(self, "_data", state["_data"])
         object.__setattr__(self, "_all_columns", state["_all_columns"])
 
-    def contains_column(self, col):
-        return col in set(self._all_columns)
-
-    def as_immutable(self):
-        return ImmutableColumnCollection(self._data, self._all_columns)
-
 
 class ImmutableColumnCollection(util.ImmutableProperties, ColumnCollection):
+
+    extend = remove = util.ImmutableProperties._immutable
     def __init__(self, data, all_columns):
         util.ImmutableProperties.__init__(self, data)
         object.__setattr__(self, "_all_columns", all_columns)
-
-    extend = remove = util.ImmutableProperties._immutable
 
 
 class ColumnSet(util.ordered_column_set):

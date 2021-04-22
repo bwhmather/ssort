@@ -1,3 +1,4 @@
+from ssort._bubble_sort import bubble_sort
 from ssort._utils import sort_key_from_iter
 
 
@@ -159,3 +160,35 @@ def topological_sort(graph):
     assert is_topologically_sorted(result, graph)
 
     return result
+
+
+def _optimize(statements, graph, *, key=lambda value: value):
+    statements = statements.copy()
+
+    def _swap(a, b):
+        if a in graph.dependencies[b]:
+            return False
+
+        if key(a) < key(b):
+            return False
+        return True
+
+    # Bubble sort will only move items one step at a time, meaning that we can
+    # make sure nothing ever moves past something that depends on it.  The
+    # builtin `sorted` function, while much faster, might result in us breaking
+    # the topological sort.
+    bubble_sort(statements, _swap)
+
+    return statements
+
+
+def stable_topological_sort(nodes, graph):
+    # TODO this function came about in an extremely path dependent way.  It can
+    # definitely be done without the bubble sort.
+    sorted_nodes = [node for node in topological_sort(graph) if node in nodes]
+
+    sorted_nodes = _optimize(
+        sorted_nodes, graph, key=sort_key_from_iter(nodes)
+    )
+
+    return sorted_nodes

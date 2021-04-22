@@ -69,3 +69,31 @@ def statements_graph(statements):
                 graph.add_dependency(statement, resolved[requirement])
 
     return graph
+
+
+def class_statements_initialisation_graph(statements):
+    scope = {}
+
+    graph = Graph()
+
+    for statement in statements:
+        graph.add_node(statement)
+
+        for requirement in statement_requirements(statement):
+            if requirement.deferred:
+                continue
+
+            if requirement.name not in scope:
+                continue
+
+            graph.add_dependency(statement, scope[requirement.name])
+
+        for name in statement_bindings(statement):
+            scope[name] = statement
+
+    return graph
+
+
+def class_statements_runtime_graph(statements):
+    # TODO
+    pass
