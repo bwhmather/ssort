@@ -11,7 +11,10 @@ SSort
 
 The python statement sorter.
 
-Sorts top level python statements in dependency order.
+Enforces topological sorting of top level python statements.
+Groups class members by types and enforces topological sorting of methods.
+
+Compatible with and intended to complement `isort <https://pycqa.github.io/isort/>`_ and `black <https://black.readthedocs.io/en/stable/`_.
 
 
 Installation
