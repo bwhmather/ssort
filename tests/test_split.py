@@ -1,4 +1,4 @@
-from ssort._parsing import split
+from ssort._parsing import split, split_class
 from ssort._statements import statement_text
 
 
@@ -75,3 +75,57 @@ def test_split_function_def():
         "def decorated(arg, *args, kwarg, **kwargs):\n"
         "    pass"
     ]
+
+
+def _split_class(source, index=-1):
+    statements = list(split(source))
+    head, body = split_class(statements[index])
+    return head, [statement_text(child) for child in body]
+
+
+def test_split_class_simple():
+    actual = _split_class("class A:\n    attr = 2")
+    expected = "class A:", ["    attr = 2"]
+    assert actual == expected
+
+
+def test_split_class_single_line():
+    actual = _split_class("class A: attr = 3")
+    expected = "class A:", ["    attr = 3"]
+    assert actual == expected
+
+
+def test_split_class_single_line_multiple_statements():
+    actual = _split_class("class A: a = 2; b = 3")
+    expected = "class A:", ["    a = 2", "    b = 3"]
+    assert actual == expected
+
+
+def test_split_class_single_line_body_multiple_statements():
+    actual = _split_class("class A:\n   a = 2; b = 3")
+    expected = "class A:", ["   a = 2", "   b = 3"]
+    assert actual == expected
+
+
+def test_split_class_header_comment():
+    actual = _split_class("class A:  # Something witty.\n    a = 1")
+    expected = "class A:  # Something witty.", ["    a = 1"]
+    assert actual == expected
+
+
+def test_split_class_decorators():
+    actual = _split_class("@decorator()\nclass A:\n    key: int")
+    expected = "@decorator()\nclass A:", ["    key: int"]
+    assert actual == expected
+
+
+def test_split_class_leading_comment():
+    actual = _split_class("# Comment.\nclass A:\n    pass")
+    expected = "# Comment.\nclass A:", ["    pass"]
+    assert actual == expected
+
+
+def test_split_class_multiple():
+    actual = _split_class("def a():\n    pass\n\nclass A:\n    pass")
+    expected = "\nclass A:", ["    pass"]
+    assert actual == expected

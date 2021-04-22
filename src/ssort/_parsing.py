@@ -1,6 +1,14 @@
 import ast
+from io import StringIO
+from token import NAME
+from tokenize import generate_tokens
 
-from ssort._statements import Statement
+from ssort._statements import (
+    Statement,
+    statement_node,
+    statement_text,
+    statement_text_padded,
+)
 
 
 def _find_start(node):
@@ -100,3 +108,98 @@ def split(
             start_row=start_row,
             start_col=start_col,
         )
+
+
+def split_class(statement):
+    node = statement_node(statement)
+    text = statement_text(statement)
+    text_padded = statement_text_padded(statement)
+
+    # Build an index of row lengths and start offsets to enable fast string
+    # indexing using ast row/column coordinates.
+    row_lengths = []
+    row_offsets = [0]
+    for offset, char in enumerate(text_padded):
+        if char == "\n":
+            row_lengths.append(offset - row_offsets[-1])
+            row_offsets.append(offset + 1)
+    row_lengths.append(len(text_padded) - row_offsets[-1])
+
+    tokens = iter(generate_tokens(StringIO(text_padded).readline))
+
+    for token in tokens:
+        lineno, col_offset = token.start
+        if lineno == node.lineno and col_offset == node.col_offset:
+            assert token.string == "class"
+            break
+
+    token = next(tokens)
+    assert token.type == NAME
+
+    token = next(tokens)
+    if token.string == "(":
+        token = next(tokens)
+        depth = 1
+        while depth:
+            if token.string == "(":
+                depth += 1
+            if token.string == ")":
+                depth -= 1
+            token = next(tokens)
+
+    assert token.string == ":"
+
+    if node.body[0].lineno == token.end[0]:
+        # All tokens are on the same line.  `split` won't know how to indent
+        # them so we do it ourselves.
+        head_end_lineno, head_end_col = token.end
+        head_end_row = head_end_lineno - 1
+
+        head_end_offset = row_offsets[head_end_row] + head_end_col
+        head_text_padded = text_padded[:head_end_offset].rstrip()
+        head_text = head_text_padded[len(text_padded) - len(text) :]
+
+        body_statements = []
+        for child_node in node.body:
+            child_start_row, child_start_col = _find_start(child_node)
+            child_end_row, child_end_col = _find_end(child_node)
+
+            assert child_start_row == head_end_row
+            assert child_end_row == head_end_row
+
+            start_offset = row_offsets[child_start_row] + child_start_col
+            end_offset = row_offsets[child_end_row] + child_end_col
+
+            body_statements.append(
+                Statement(
+                    text="    " + text_padded[start_offset:end_offset],
+                    node=child_node,
+                    start_row=child_start_row,
+                    start_col=child_start_col,
+                )
+            )
+
+    else:
+        head_end_lineno, head_end_col = token.end[0] + 1, 0
+        head_end_row = head_end_lineno - 1
+
+        head_end_offset = row_offsets[head_end_row] + head_end_col
+        head_text_padded = text_padded[:head_end_offset].rstrip()
+        head_text = head_text_padded[len(text_padded) - len(text) :]
+
+        body_text_padded = (
+            (head_end_row) * "\n"
+            + head_end_col * " "
+            + text_padded[head_end_offset:]
+        )
+
+        body_statements = list(
+            split(
+                body_text_padded,
+                nodes=node.body,
+                next_row=head_end_row,
+                next_col=head_end_col,
+            )
+        )
+
+    return head_text, body_statements
