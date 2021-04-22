@@ -1,3 +1,5 @@
+import ast
+
 from ssort._bubble_sort import bubble_sort
 from ssort._dependencies import statements_graph
 from ssort._graphs import (
@@ -5,8 +7,8 @@ from ssort._graphs import (
     replace_cycles,
     topological_sort,
 )
-from ssort._parsing import split
-from ssort._statements import statement_text
+from ssort._parsing import split, split_class
+from ssort._statements import statement_node, statement_text
 from ssort._utils import sort_key_from_iter
 
 
@@ -30,6 +32,25 @@ def _optimize(statements, graph, *, key=lambda value: value):
     return statements
 
 
+def _statement_text_sorted_class(statement):
+    head_text, body_statements = split_class(statement)
+    return (
+        head_text
+        + "\n"
+        + "\n".join(
+            statement_text(body_statement)
+            for body_statement in body_statements
+        )
+    )
+
+
+def statement_text_sorted(statement):
+    node = statement_node(statement)
+    if isinstance(node, ast.ClassDef):
+        return _statement_text_sorted_class(statement)
+    return statement_text(statement)
+
+
 def ssort(text, *, filename="<unknown>"):
     statements = list(split(text, filename=filename))
 
@@ -46,6 +67,8 @@ def ssort(text, *, filename="<unknown>"):
     assert is_topologically_sorted(sorted_statements, graph)
 
     return (
-        "\n".join(statement_text(statement) for statement in sorted_statements)
+        "\n".join(
+            statement_text_sorted(statement) for statement in sorted_statements
+        )
         + "\n"
     )
