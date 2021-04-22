@@ -137,6 +137,25 @@ REGULAR_OPERATIONS = [
 ]
 
 
+def _statement_text_sorted_class(statement):
+    head_text, body_statements = split_class(statement)
+    return (
+        head_text
+        + "\n"
+        + "\n".join(
+            statement_text(body_statement)
+            for body_statement in body_statements
+        )
+    )
+
+
+def statement_text_sorted(statement):
+    node = statement_node(statement)
+    if isinstance(node, ast.ClassDef):
+        return _statement_text_sorted_class(statement)
+    return statement_text(statement)
+
+
 def _optimize(statements, graph, *, key=lambda value: value):
     statements = statements.copy()
 
@@ -155,25 +174,6 @@ def _optimize(statements, graph, *, key=lambda value: value):
     bubble_sort(statements, _swap)
 
     return statements
-
-
-def _statement_text_sorted_class(statement):
-    head_text, body_statements = split_class(statement)
-    return (
-        head_text
-        + "\n"
-        + "\n".join(
-            statement_text(body_statement)
-            for body_statement in body_statements
-        )
-    )
-
-
-def statement_text_sorted(statement):
-    node = statement_node(statement)
-    if isinstance(node, ast.ClassDef):
-        return _statement_text_sorted_class(statement)
-    return statement_text(statement)
 
 
 def ssort(text, *, filename="<unknown>"):
