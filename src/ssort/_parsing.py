@@ -22,9 +22,15 @@ def _find_end(node):
     return lineno - 1, col
 
 
-def split(root_text, *, filename="<unknown>"):
-    root_node = ast.parse(root_text, filename)
-
+def split(
+    root_text,
+    *,
+    nodes=None,
+    next_row=0,
+    next_col=0,
+    indent=0,
+    filename="<unknown>"
+):
     # Build an index of row lengths and start offsets to enable fast string
     # indexing using ast row/column coordinates.
     row_lengths = []
@@ -35,10 +41,11 @@ def split(root_text, *, filename="<unknown>"):
             row_offsets.append(offset + 1)
     row_lengths.append(len(root_text) - row_offsets[-1])
 
-    nodes = iter(root_node.body)
-
-    next_row = 0
-    next_col = 0
+    if nodes is None:
+        root_node = ast.parse(root_text, filename)
+        nodes = iter(root_node.body)
+    else:
+        nodes = iter(nodes)
 
     next_node = next(nodes, None)
 
@@ -46,9 +53,13 @@ def split(root_text, *, filename="<unknown>"):
         next_start_row, next_start_col = _find_start(next_node)
         next_end_row, next_end_col = _find_end(next_node)
 
+        indent_text = " " * next_node.col_offset
+        next_indent_text = ""
+
     while next_node:
         this_node, next_node = next_node, next(nodes, None)
         this_end_row, this_end_col = next_end_row, next_end_col
+        this_indent_text = next_indent_text
 
         if next_node is not None:
             next_start_row, next_start_col = _find_start(next_node)
@@ -67,6 +78,8 @@ def split(root_text, *, filename="<unknown>"):
 
             next_row = next_start_row
             next_col = next_start_col
+
+            next_indent_text = indent_text
         else:
             # No other statements on the same line.  Assume that everything up
             # until the end of the line is comments attached to this statement.
@@ -76,11 +89,13 @@ def split(root_text, *, filename="<unknown>"):
             next_row = this_end_row + 1
             next_col = 0
 
+            next_indent_text = ""
+
         start_offset = row_offsets[start_row] + start_col
         end_offset = row_offsets[end_row] + end_col
 
         yield Statement(
-            text=root_text[start_offset:end_offset],
+            text=this_indent_text + root_text[start_offset:end_offset],
             node=this_node,
             start_row=start_row,
             start_col=start_col,
