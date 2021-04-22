@@ -11,6 +11,131 @@ from ssort._parsing import split, split_class
 from ssort._statements import statement_node, statement_text
 from ssort._utils import sort_key_from_iter
 
+SPECIAL_PROPERTIES = [
+    "__slots__",
+]
+
+LIFECYCLE_OPERATIONS = [
+    # Lifecycle.
+    "__new__",
+    "__init__",
+    "__del__",
+    # Metaclasses.
+    # TODO "__prepare__", ?
+    "__init_subclass__",
+    "__instancecheck__",
+    "__subclasscheck__",
+    # Generics.
+    "__class_getitem__",
+    # Descriptors.
+    "__get__",
+    "__set__",
+    "__delete__",
+    "__set_name__",
+]
+
+REGULAR_OPERATIONS = [
+    # Callables.
+    "__call__",
+    # Attribute Access.
+    "__getattr__",
+    "__getattribute__",
+    "__setattr__",
+    "__delattr__",
+    "__dir__",
+    # Container Operations.
+    "__len__",
+    "__length_hint__",
+    "__getitem__",
+    "__setitem__",
+    "__delitem__",
+    "__missing__",
+    "__iter__",
+    "__reversed__",
+    "__contains__",
+    # Binary Operators.
+    "__add__",
+    "__radd__",
+    "__iadd__",
+    "__sub__",
+    "__rsub__",
+    "__isub__",
+    "__mul__",
+    "__rmul__",
+    "__imul__",
+    "__matmul__",
+    "__rmatmul__",
+    "__imatmul__",
+    "__truediv__",
+    "__rtruediv__",
+    "__itruediv__",
+    "__floordiv__",
+    "__rfloordiv__",
+    "__ifloordiv__",
+    "__mod__",
+    "__rmod__",
+    "__imod__",
+    "__divmod__",
+    "__rdivmod__",
+    "__pow__",
+    "__rpow__",
+    "__ipow__",
+    "__lshift__",
+    "__rlshift__",
+    "__ilshift__",
+    "__rshift__",
+    "__rrshift__",
+    "__irshift__",
+    "__and__",
+    "__rand__",
+    "__iand__",
+    "__xor__",
+    "__rxor__",
+    "__ixor__",
+    "__or__",
+    "__ror__",
+    "__ior__",
+    # Unary operators.
+    "__neg__",
+    "__pos__",
+    "__abs__",
+    "__invert__",
+    # Rich comparison operators.
+    "__lt__",
+    "__le__",
+    "__eq__",
+    "__ne__",
+    "__gt__",
+    "__ge__",
+    "__hash__",
+    # Numeric conversions
+    "__bool__",
+    "__complex__",
+    "__int__",
+    "__float__",
+    "__index__",
+    "__round__",
+    "__trunc__",
+    "__floor__",
+    "__ceil__",
+    # Context managers.
+    "__enter__",
+    "__exit__",
+    # Async tasks.
+    "__await__",
+    # Async iterators.
+    "__aiter__",
+    "__anext__",
+    # Async context managers.
+    "__aenter__",
+    "__aexit__",
+    # Formatting.
+    "__repr__",
+    "__str__",
+    "__bytes__",
+    "__format__",
+]
+
 
 def _optimize(statements, graph, *, key=lambda value: value):
     statements = statements.copy()
