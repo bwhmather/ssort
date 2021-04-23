@@ -85,12 +85,6 @@ class _DialectArgView(util.collections_abc.MutableMapping):
         else:
             return dialect, value_key
 
-    def __len__(self):
-        return sum(
-            len(args._non_defaults)
-            for args in self.obj.dialect_options.values()
-        )
-
     def __getitem__(self, key):
         dialect, value_key = self._key(key)
 
@@ -127,6 +121,12 @@ class _DialectArgView(util.collections_abc.MutableMapping):
             ]._non_defaults
         )
 
+    def __len__(self):
+        return sum(
+            len(args._non_defaults)
+            for args in self.obj.dialect_options.values()
+        )
+
 
 class _DialectArgDict(util.collections_abc.MutableMapping):
     """A dictionary view of dialect-level arguments for a specific
@@ -140,9 +140,6 @@ class _DialectArgDict(util.collections_abc.MutableMapping):
     def __init__(self):
         self._non_defaults = {}
         self._defaults = {}
-
-    def __len__(self):
-        return len(set(self._non_defaults).union(self._defaults))
 
     def __getitem__(self, key):
         if key in self._non_defaults:
@@ -158,6 +155,9 @@ class _DialectArgDict(util.collections_abc.MutableMapping):
 
     def __iter__(self):
         return iter(set(self._non_defaults).union(self._defaults))
+
+    def __len__(self):
+        return len(set(self._non_defaults).union(self._defaults))
 
 
 class DialectKWArgs(object):

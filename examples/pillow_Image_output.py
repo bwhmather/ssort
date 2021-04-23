@@ -813,12 +813,6 @@ class Exif(MutableMapping):
                     self._ifds[0x927C] = makernote
         return self._ifds.get(tag, {})
 
-    def __len__(self):
-        keys = set(self._data)
-        if self._info is not None:
-            keys.update(self._info)
-        return len(keys)
-
     def __getitem__(self, tag):
         if self._info is not None and tag not in self._data and tag in self._info:
             self._data[tag] = self._fixup(self._info[tag])
@@ -846,6 +840,12 @@ class Exif(MutableMapping):
 
     def __contains__(self, tag):
         return tag in self._data or (self._info is not None and tag in self._info)
+
+    def __len__(self):
+        keys = set(self._data)
+        if self._info is not None:
+            keys.update(self._info)
+        return len(keys)
 
     def __str__(self):
         if self._info is not None:

@@ -52,8 +52,6 @@ REGULAR_OPERATIONS = [
     "__delattr__",
     "__dir__",
     # Container Operations.
-    "__len__",
-    "__length_hint__",
     "__getitem__",
     "__setitem__",
     "__delitem__",
@@ -61,6 +59,8 @@ REGULAR_OPERATIONS = [
     "__iter__",
     "__reversed__",
     "__contains__",
+    "__len__",
+    "__length_hint__",
     # Binary Operators.
     "__add__",
     "__radd__",
