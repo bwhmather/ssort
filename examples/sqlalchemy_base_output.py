@@ -173,6 +173,15 @@ class DialectKWArgs(object):
 
     """
 
+    @util.dependencies("sqlalchemy.dialects")
+    def _kw_reg_for_dialect(dialects, dialect_name):
+        dialect_cls = dialects.registry.load(dialect_name)
+        if dialect_cls.construct_arguments is None:
+            return None
+        return dict(dialect_cls.construct_arguments)
+
+    _kw_registry = util.PopulateDict(_kw_reg_for_dialect)
+
     @classmethod
     def argument_for(cls, dialect_name, argument_name, default):
         """Add a new kind of dialect-specific keyword argument for this class.
@@ -253,15 +262,6 @@ class DialectKWArgs(object):
     def kwargs(self):
         """A synonym for :attr:`.DialectKWArgs.dialect_kwargs`."""
         return self.dialect_kwargs
-
-    @util.dependencies("sqlalchemy.dialects")
-    def _kw_reg_for_dialect(dialects, dialect_name):
-        dialect_cls = dialects.registry.load(dialect_name)
-        if dialect_cls.construct_arguments is None:
-            return None
-        return dict(dialect_cls.construct_arguments)
-
-    _kw_registry = util.PopulateDict(_kw_reg_for_dialect)
 
     def _kw_reg_for_dialect_cls(self, dialect_name):
         construct_arg_dictionary = DialectKWArgs._kw_registry[dialect_name]
@@ -421,28 +421,6 @@ class Executable(Generative):
         """
         return self._execution_options
 
-    def execute(self, *multiparams, **params):
-        """Compile and execute this :class:`.Executable`.
-
-        """
-        e = self.bind
-        if e is None:
-            label = getattr(self, "description", self.__class__.__name__)
-            msg = (
-                "This %s is not directly bound to a Connection or Engine. "
-                "Use the .execute() method of a Connection or Engine "
-                "to execute this construct." % label
-            )
-            raise exc.UnboundExecutionError(msg)
-        return e._execute_clauseelement(self, multiparams, params)
-
-    def scalar(self, *multiparams, **params):
-        """Compile and execute this :class:`.Executable`, returning the
-        result's scalar representation.
-
-        """
-        return self.execute(*multiparams, **params).scalar()
-
     @property
     def bind(self):
         """Returns the :class:`_engine.Engine` or :class:`_engine.Connection`
@@ -465,6 +443,28 @@ class Executable(Generative):
                 return engine
         else:
             return None
+
+    def execute(self, *multiparams, **params):
+        """Compile and execute this :class:`.Executable`.
+
+        """
+        e = self.bind
+        if e is None:
+            label = getattr(self, "description", self.__class__.__name__)
+            msg = (
+                "This %s is not directly bound to a Connection or Engine. "
+                "Use the .execute() method of a Connection or Engine "
+                "to execute this construct." % label
+            )
+            raise exc.UnboundExecutionError(msg)
+        return e._execute_clauseelement(self, multiparams, params)
+
+    def scalar(self, *multiparams, **params):
+        """Compile and execute this :class:`.Executable`, returning the
+        result's scalar representation.
+
+        """
+        return self.execute(*multiparams, **params).scalar()
 
 
 class SchemaEventTarget(object):
@@ -500,6 +500,19 @@ class ColumnCollection(util.OrderedProperties):
     """
 
     __slots__ = "_all_columns"
+
+    def add(self, column):
+        """Add a column to this collection.
+
+        The key attribute of the column will be used as the hash key
+        for this dictionary.
+
+        """
+        if not column.key:
+            raise exc.ArgumentError(
+                "Can't add unnamed column to column collection"
+            )
+        self[column.key] = column
 
     def __init__(self, *columns):
         super(ColumnCollection, self).__init__()
@@ -540,19 +553,6 @@ class ColumnCollection(util.OrderedProperties):
             ]
         else:
             self._all_columns.append(column)
-
-    def add(self, column):
-        """Add a column to this collection.
-
-        The key attribute of the column will be used as the hash key
-        for this dictionary.
-
-        """
-        if not column.key:
-            raise exc.ArgumentError(
-                "Can't add unnamed column to column collection"
-            )
-        self[column.key] = column
 
     def clear(self):
         raise NotImplementedError()

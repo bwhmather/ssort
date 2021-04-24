@@ -247,6 +247,48 @@ class Zone(dns.zone.Zone):
 
     node_factory = Node
 
+    def _maybe_wakeup_one_waiter_unlocked(self):
+        if len(self._write_waiters) > 0:
+            self._write_event = self._write_waiters.popleft()
+            self._write_event.set()
+
+    # pylint: disable=unused-argument
+    def _default_pruning_policy(self, zone, version):
+        return True
+    # pylint: enable=unused-argument
+
+    def _prune_versions_unlocked(self):
+        assert len(self._versions) > 0
+        # Don't ever prune a version greater than or equal to one that
+        # a reader has open.  This pins versions in memory while the
+        # reader is open, and importantly lets the reader open a txn on
+        # a successor version (e.g. if generating an IXFR).
+        #
+        # Note our definition of least_kept also ensures we do not try to
+        # delete the greatest version.
+        if len(self._readers) > 0:
+            least_kept = min(txn.version.id for txn in self._readers)
+        else:
+            least_kept = self._versions[-1].id
+        while self._versions[0].id < least_kept and \
+              self._pruning_policy(self, self._versions[0]):
+            self._versions.popleft()
+
+    def _end_write_unlocked(self, txn):
+        assert self._write_txn == txn
+        self._write_txn = None
+        self._maybe_wakeup_one_waiter_unlocked()
+
+    def _commit_version_unlocked(self, txn, version, origin):
+        self._versions.append(version)
+        self._prune_versions_unlocked()
+        self.nodes = version.nodes
+        if self.origin is None:
+            self.origin = origin
+        # txn can be None in __init__ when we make the empty version.
+        if txn is not None:
+            self._end_write_unlocked(txn)
+
     def __init__(self, origin, rdclass=dns.rdataclass.IN, relativize=True,
                  pruning_policy=None):
         """Initialize a versioned zone object.
@@ -357,47 +399,6 @@ class Zone(dns.zone.Zone):
         self._write_txn._setup_version()
         return self._write_txn
 
-    def _maybe_wakeup_one_waiter_unlocked(self):
-        if len(self._write_waiters) > 0:
-            self._write_event = self._write_waiters.popleft()
-            self._write_event.set()
-
-    # pylint: disable=unused-argument
-    def _default_pruning_policy(self, zone, version):
-        return True
-    # pylint: enable=unused-argument
-
-    def _prune_versions_unlocked(self):
-        assert len(self._versions) > 0
-        # Don't ever prune a version greater than or equal to one that
-        # a reader has open.  This pins versions in memory while the
-        # reader is open, and importantly lets the reader open a txn on
-        # a successor version (e.g. if generating an IXFR).
-        #
-        # Note our definition of least_kept also ensures we do not try to
-        # delete the greatest version.
-        if len(self._readers) > 0:
-            least_kept = min(txn.version.id for txn in self._readers)
-        else:
-            least_kept = self._versions[-1].id
-        while self._versions[0].id < least_kept and \
-              self._pruning_policy(self, self._versions[0]):
-            self._versions.popleft()
-
-    def set_max_versions(self, max_versions):
-        """Set a pruning policy that retains up to the specified number
-        of versions
-        """
-        if max_versions is not None and max_versions < 1:
-            raise ValueError('max versions must be at least 1')
-        if max_versions is None:
-            def policy(*_):
-                return False
-        else:
-            def policy(zone, _):
-                return len(zone._versions) > max_versions
-        self.set_pruning_policy(policy)
-
     def set_pruning_policy(self, policy):
         """Set the pruning policy for the zone.
 
@@ -416,28 +417,27 @@ class Zone(dns.zone.Zone):
             self._pruning_policy = policy
             self._prune_versions_unlocked()
 
+    def set_max_versions(self, max_versions):
+        """Set a pruning policy that retains up to the specified number
+        of versions
+        """
+        if max_versions is not None and max_versions < 1:
+            raise ValueError('max versions must be at least 1')
+        if max_versions is None:
+            def policy(*_):
+                return False
+        else:
+            def policy(zone, _):
+                return len(zone._versions) > max_versions
+        self.set_pruning_policy(policy)
+
     def _end_read(self, txn):
         with self._version_lock:
             self._readers.remove(txn)
             self._prune_versions_unlocked()
 
-    def _end_write_unlocked(self, txn):
-        assert self._write_txn == txn
-        self._write_txn = None
-        self._maybe_wakeup_one_waiter_unlocked()
-
     def _end_write(self, txn):
         with self._version_lock:
-            self._end_write_unlocked(txn)
-
-    def _commit_version_unlocked(self, txn, version, origin):
-        self._versions.append(version)
-        self._prune_versions_unlocked()
-        self.nodes = version.nodes
-        if self.origin is None:
-            self.origin = origin
-        # txn can be None in __init__ when we make the empty version.
-        if txn is not None:
             self._end_write_unlocked(txn)
 
     def _commit_version(self, txn, version, origin):

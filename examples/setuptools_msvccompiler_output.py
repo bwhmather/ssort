@@ -338,6 +338,10 @@ class MSVCCompiler(CCompiler) :
 
         return list(map(make_out_path, source_filenames))
 
+    def spawn(self, cmd):
+        env = dict(os.environ, PATH=self._paths)
+        return super().spawn(cmd, env=env)
+
 
     def compile(self, sources,
                 output_dir=None, macros=None, include_dirs=None, debug=0,
@@ -523,10 +527,6 @@ class MSVCCompiler(CCompiler) :
                 raise LinkError(msg)
         else:
             log.debug("skipping %s (up-to-date)", output_filename)
-
-    def spawn(self, cmd):
-        env = dict(os.environ, PATH=self._paths)
-        return super().spawn(cmd, env=env)
 
     # -- Miscellaneous methods -----------------------------------------
     # These are all used by the 'gen_lib_options() function, in

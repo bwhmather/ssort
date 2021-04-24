@@ -92,22 +92,6 @@ class LocalFinder(BaseFinder):
 
 
 class KnownPatternFinder(BaseFinder):
-    def __init__(self, config, sections):
-        super(KnownPatternFinder, self).__init__(config, sections)
-
-        self.known_patterns = []
-        for placement in reversed(self.sections):
-            known_placement = KNOWN_SECTION_MAPPING.get(placement, placement)
-            config_key = 'known_{0}'.format(known_placement.lower())
-            known_patterns = self.config.get(config_key, [])
-            known_patterns = [
-                pattern
-                for known_pattern in known_patterns
-                for pattern in self._parse_known_pattern(known_pattern)
-            ]
-            for known_pattern in known_patterns:
-                regexp = '^' + known_pattern.replace('*', '.*').replace('?', '.?') + '$'
-                self.known_patterns.append((re.compile(regexp), placement))
 
     @staticmethod
     def _is_package(path):
@@ -133,6 +117,22 @@ class KnownPatternFinder(BaseFinder):
             patterns = [pattern]
 
         return patterns
+    def __init__(self, config, sections):
+        super(KnownPatternFinder, self).__init__(config, sections)
+
+        self.known_patterns = []
+        for placement in reversed(self.sections):
+            known_placement = KNOWN_SECTION_MAPPING.get(placement, placement)
+            config_key = 'known_{0}'.format(known_placement.lower())
+            known_patterns = self.config.get(config_key, [])
+            known_patterns = [
+                pattern
+                for known_pattern in known_patterns
+                for pattern in self._parse_known_pattern(known_pattern)
+            ]
+            for known_pattern in known_patterns:
+                regexp = '^' + known_pattern.replace('*', '.*').replace('?', '.?') + '$'
+                self.known_patterns.append((re.compile(regexp), placement))
 
     def find(self, module_name):
         # Try to find most specific placement instruction match (if any)
@@ -215,12 +215,6 @@ class PathFinder(BaseFinder):
 
 
 class ReqsBaseFinder(BaseFinder):
-    def __init__(self, config, sections, path='.'):
-        super(ReqsBaseFinder, self).__init__(config, sections)
-        self.path = path
-        if self.enabled:
-            self.mapping = self._load_mapping()
-            self.names = self._load_names()
 
     @staticmethod
     def _load_mapping():
@@ -236,15 +230,6 @@ class ReqsBaseFinder(BaseFinder):
         with open(path) as f:
             # pypi_name: import_name
             return dict(line.strip().split(":")[::-1] for line in f)
-
-    def _load_names(self):
-        """Return list of thirdparty modules from requirements
-        """
-        names = []
-        for path in self._get_files():
-            for name in self._get_names(path):
-                names.append(self._normalize_name(name))
-        return names
 
     @staticmethod
     def _get_parents(path):
@@ -276,6 +261,21 @@ class ReqsBaseFinder(BaseFinder):
         if self.mapping:
             name = self.mapping.get(name, name)
         return name.lower().replace('-', '_')
+
+    def _load_names(self):
+        """Return list of thirdparty modules from requirements
+        """
+        names = []
+        for path in self._get_files():
+            for name in self._get_names(path):
+                names.append(self._normalize_name(name))
+        return names
+    def __init__(self, config, sections, path='.'):
+        super(ReqsBaseFinder, self).__init__(config, sections)
+        self.path = path
+        if self.enabled:
+            self.mapping = self._load_mapping()
+            self.names = self._load_names()
 
     def find(self, module_name):
         # required lib not installed yet
