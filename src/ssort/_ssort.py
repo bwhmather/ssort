@@ -9,7 +9,7 @@ from ssort._dependencies import (
 from ssort._graphs import (
     is_topologically_sorted,
     replace_cycles,
-    stable_topological_sort,
+    topological_sort,
 )
 from ssort._parsing import split, split_class
 from ssort._statements import (
@@ -274,12 +274,12 @@ def _statement_text_sorted_class(statement):
     # but it will move some methods above any lifecycle methods that depend on
     # them.
     replace_cycles(runtime_graph, key=sort_key_from_iter(sorted_statements))
-    sorted_statements = stable_topological_sort(
-        sorted_statements, runtime_graph
+    sorted_statements = topological_sort(
+        sorted_statements, graph=runtime_graph
     )
 
-    sorted_statements = stable_topological_sort(
-        sorted_statements, initialisation_graph
+    sorted_statements = topological_sort(
+        sorted_statements, graph=initialisation_graph
     )
 
     return (
@@ -306,9 +306,9 @@ def ssort(text, *, filename="<unknown>"):
 
     replace_cycles(graph, key=sort_key_from_iter(statements))
 
-    sorted_statements = stable_topological_sort(statements, graph)
+    sorted_statements = topological_sort(statements, graph=graph)
 
-    assert is_topologically_sorted(sorted_statements, graph)
+    assert is_topologically_sorted(sorted_statements, graph=graph)
 
     return (
         "\n".join(

@@ -130,13 +130,17 @@ def is_topologically_sorted(nodes, graph):
     return True
 
 
-def topological_sort(graph, nodes=None):
+def topological_sort(target, /, *, graph=None):
+    if graph is None:
+        graph = target
+        nodes = target.nodes
+    else:
+        nodes = target
+
     # Create a mutable copy of the graph so that we can pop edges from it as we
     # traverse.
     remaining = graph.copy()
 
-    if nodes is None:
-        nodes = graph.nodes
     key = sort_key_from_iter(nodes)
 
     pending = [node for node in graph.nodes if not graph.dependants[node]]
@@ -161,9 +165,3 @@ def topological_sort(graph, nodes=None):
     assert is_topologically_sorted(result, graph)
 
     return [node for node in result if node in nodes]
-
-
-def stable_topological_sort(nodes, graph):
-    # TODO this function came about in an extremely path dependent way.  It can
-    # definitely be done without the bubble sort.
-    return topological_sort(graph, nodes=nodes)
