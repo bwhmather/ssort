@@ -3,6 +3,7 @@ import sys
 
 from ssort._dependencies import (
     class_statements_initialisation_graph,
+    class_statements_runtime_graph,
     statements_graph,
 )
 from ssort._graphs import (
@@ -216,6 +217,7 @@ def _statement_text_sorted_class(statement):
     head_text, statements = split_class(statement)
 
     initialisation_graph = class_statements_initialisation_graph(statements)
+    runtime_graph = class_statements_runtime_graph(statements)
 
     if _is_string(statements[0]):
         docstrings, statements = statements[:1], statements[1:]
@@ -257,9 +259,8 @@ def _statement_text_sorted_class(statement):
         ),
     )
 
-    # Regular methods in topographical order.
+    # Regular methods.
     sorted_statements += methods
-    # TODO sorted_statements += stable_topological_sort(methods)
 
     # Special operations (in hard-coded order).
     sorted_statements += sorted(
@@ -267,6 +268,14 @@ def _statement_text_sorted_class(statement):
         key=_statement_binding_sort_key(
             sort_key_from_iter(REGULAR_OPERATIONS)
         ),
+    )
+
+    # Sort everything by runtime dependencies.  This won't impact properties,
+    # but it will move some methods above any lifecycle methods that depend on
+    # them.
+    replace_cycles(runtime_graph, key=sort_key_from_iter(sorted_statements))
+    sorted_statements = stable_topological_sort(
+        sorted_statements, runtime_graph
     )
 
     sorted_statements = stable_topological_sort(

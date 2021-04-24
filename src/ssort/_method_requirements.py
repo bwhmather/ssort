@@ -422,7 +422,8 @@ def _get_attribute_accesses_for_dict(node, variable):
         Dict(expr* keys, expr* values)
     """
     for key, value in zip(node.keys, node.values):
-        yield from _get_attribute_accesses(key, variable)
+        if key is not None:
+            yield from _get_attribute_accesses(key, variable)
         yield from _get_attribute_accesses(value, variable)
 
 

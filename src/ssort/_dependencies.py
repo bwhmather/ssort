@@ -2,7 +2,11 @@ import builtins
 import sys
 
 from ssort._graphs import Graph
-from ssort._statements import statement_bindings, statement_requirements
+from ssort._statements import (
+    statement_bindings,
+    statement_method_requirements,
+    statement_requirements,
+)
 
 DEFAULT_SCOPE = {
     *builtins.__dict__,
@@ -95,5 +99,19 @@ def class_statements_initialisation_graph(statements):
 
 
 def class_statements_runtime_graph(statements):
-    # TODO
-    pass
+    scope = {}
+
+    graph = Graph()
+
+    for statement in statements:
+        graph.add_node(statement)
+
+        for name in statement_bindings(statement):
+            scope[name] = statement
+
+    for statement in statements:
+        for name in statement_method_requirements(statement):
+            if name in scope:
+                graph.add_dependency(statement, scope[name])
+
+    return graph

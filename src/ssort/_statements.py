@@ -1,4 +1,5 @@
 from ssort._bindings import get_bindings
+from ssort._method_requirements import get_method_requirements
 from ssort._requirements import get_requirements
 
 
@@ -39,6 +40,14 @@ def statement_requirements(statement):
     that a statement references.
     """
     return get_requirements(statement_node(statement))
+
+
+def statement_method_requirements(statement):
+    """
+    Returns an iterable yielding the names of attributes of the `self` parameter
+    that a statement depends on.
+    """
+    return get_method_requirements(statement_node(statement))
 
 
 def statement_bindings(statement):
