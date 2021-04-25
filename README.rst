@@ -54,6 +54,27 @@ We recommend that you reformat using `isort <https://pycqa.github.io/isort/>`_ a
 .. end-usage
 
 
+Output
+------
+.. begin-output
+
+`ssort` will sort top level statements and statements in classes.
+
+When sorting top level statements, `ssort` follows three simple rules:
+  - Statements must always be moved after the statements that they depend on, unless there is a cycle.
+  - If there is a cycle, the order of statements within the cycle must not be changed.
+  - If there is no dependency between statements then, to the greatest extent possible, the original order should be kept.
+
+
+`ssort` is more opinionated about the order of statements in classes:
+  - Class attributes should be moved to the top of the class and must always be kept in their original order.
+  - Lifecycle (`__init__`, `__new__`, etc) methods, and the methods they depend on, should go next.
+  - Regular methods follow, dependencies always ahead of the methods that depend on them.
+  - Other d'under methods should go at the end in a fixed order.
+
+.. end-output
+
+
 Links
 -----
 
