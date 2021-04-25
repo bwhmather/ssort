@@ -82,4 +82,6 @@ def main():
         if errors:
             sys.exit(1)
         else:
-            sys.stderr.write(f"{len(paths)} files would be left unchanged")
+            sys.stderr.write(
+                f"SUCCESS: {len(paths)} files would be left unchanged.\n"
+            )
