@@ -52,6 +52,26 @@ def test_function_def_requirements_arg_shadows():
     assert _dep_names(node) == []
 
 
+def test_function_def_requirements_positional_only_arg_shadows():
+    node = _parse(
+        """
+        def function(arg, /):
+            arg
+        """
+    )
+    assert _dep_names(node) == []
+
+
+def test_function_def_requirements_keyword_only_arg_shadows():
+    node = _parse(
+        """
+        def function(*, arg):
+            arg
+        """
+    )
+    assert _dep_names(node) == []
+
+
 def test_function_def_requirements_assignment_shadows():
     node = _parse(
         """

@@ -32,6 +32,7 @@ def get_requirements(node):
 
 def _get_scope_from_arguments(args):
     scope = set()
+    scope.update(arg.arg for arg in args.posonlyargs)
     scope.update(arg.arg for arg in args.args)  # Arghhh.
     if args.vararg:
         scope.add(args.vararg.arg)
