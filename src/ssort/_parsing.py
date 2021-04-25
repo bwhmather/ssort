@@ -12,22 +12,18 @@ from ssort._statements import (
 
 
 def _find_start(node):
-    lineno, col = min(
-        (descendant.lineno, descendant.col_offset)
-        for descendant in ast.walk(node)
-        if hasattr(descendant, "lineno") and hasattr(descendant, "col_offset")
-    )
-    return lineno - 1, col
+    if (
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and node.decorator_list
+    ):
+        decorator = node.decorator_list[0]
+        return decorator.lineno - 1, decorator.col_offset
+    else:
+        return node.lineno - 1, node.col_offset
 
 
 def _find_end(node):
-    lineno, col = max(
-        (descendant.end_lineno, descendant.end_col_offset)
-        for descendant in ast.walk(node)
-        if hasattr(descendant, "end_lineno")
-        and hasattr(descendant, "end_col_offset")
-    )
-    return lineno - 1, col
+    return node.end_lineno - 1, node.end_col_offset
 
 
 def split(
