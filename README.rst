@@ -14,7 +14,7 @@ The python statement sorter.
 Enforces topological sorting of top level python statements.
 Groups class members by types and enforces topological sorting of methods.
 
-Compatible with and intended to complement `isort <https://pycqa.github.io/isort/>`_ and `black <https://black.readthedocs.io/en/stable/`_.
+Compatible with and intended to complement `isort <https://pycqa.github.io/isort/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
 
 
 Installation
@@ -34,10 +34,22 @@ Usage
 -----
 .. begin-usage
 
+To check that a file is correctly sorted use the `--check` flag.
+`--diff` can be passed to see what changes ``ssort`` would make.
+
 .. code:: bash
 
-    $ ssort path/to/python_module.py
+    $ ssort --check --diff path/to/python_module.py
 
+
+To allow ``ssort`` to rearrange your file, simply invoke with no extra flags.
+If ``ssort`` needs to make changes to a `black <https://black.readthedocs.io/en/stable/>`_ conformant file, the result will not necessarily be `black <https://black.readthedocs.io/en/stable/>`_ conformant.
+The result of running `black <https://black.readthedocs.io/en/stable/>`_ on an ``ssort`` conformant file will always be ``ssort`` conformant.
+We recommend that you reformat using `isort <https://pycqa.github.io/isort/>`_ and `black <https://black.readthedocs.io/en/stable/>`_ immediately _after_ running ``ssort``.
+
+.. code:: bash
+
+    $ ssort src/ tests/ setup.py; isort src/ tests/ setup.py; black src/ tests/ setup.py
 
 .. end-usage
 
