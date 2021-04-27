@@ -310,9 +310,9 @@ def ssort(text, *, filename="<unknown>"):
 
     assert is_topologically_sorted(sorted_statements, graph=graph)
 
-    return (
-        "\n".join(
-            statement_text_sorted(statement) for statement in sorted_statements
-        )
-        + "\n"
+    output = "\n".join(
+        statement_text_sorted(statement) for statement in sorted_statements
     )
+    if output:
+        output += "\n"
+    return output

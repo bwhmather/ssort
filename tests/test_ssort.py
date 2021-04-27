@@ -9,7 +9,7 @@ def _clean(text):
 
 def test_empty():
     original = ""
-    expected = "\n"
+    expected = ""
     actual = ssort(original)
     assert actual == expected
 
