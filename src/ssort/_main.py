@@ -89,7 +89,7 @@ def main():
                     f"ERROR: {str(path)!r} is incorrectly sorted\n"
                 )
             else:
-                sys.stderr.write(f"Fixing {str(path)!r}\n")
+                sys.stderr.write(f"Sorting {str(path)!r}\n")
                 path.write_text(updated)
         else:
             unchanged += 1
@@ -120,4 +120,25 @@ def main():
         sys.stderr.write(", ".join(summary) + "\n")
 
         if unsorted or unsortable:
+            sys.exit(1)
+
+    else:
+
+        def _fmt_count_were(count):
+            if count == 1:
+                return f"{count} file was"
+            else:
+                return f"{count} files were"
+
+        summary = []
+        if unsorted:
+            summary.append(f"{_fmt_count_were(unsorted)} resorted")
+        if unchanged:
+            summary.append(f"{_fmt_count_were(unchanged)} left unchanged")
+        if unsortable:
+            summary.append(f"{_fmt_count_were(unsortable)} not sortable")
+
+        sys.stderr.write(", ".join(summary) + "\n")
+
+        if unsortable:
             sys.exit(1)
