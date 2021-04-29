@@ -51,6 +51,15 @@ def _check(dirpath):
     return result.stderr.splitlines(keepends=True), result.returncode
 
 
+def _ssort(dirpath):
+    result = subprocess.run(
+        ["ssort", str(dirpath)],
+        capture_output=True,
+        encoding="utf-8",
+    )
+    return result.stderr.splitlines(keepends=True), result.returncode
+
+
 def test_check_all_well(tmpdir):
     _write_fixtures(tmpdir, [_good, _good, _good])
     expected_msgs = [
@@ -129,4 +138,106 @@ def test_check_one_unsorted_one_syntax_error(tmpdir):
     ]
     expected_status = 1
     actual_msgs, actual_status = _check(tmpdir)
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_all_well(tmpdir):
+    _write_fixtures(tmpdir, [_good, _good, _good])
+
+    expected_msgs = [
+        "3 files were left unchanged\n",
+    ]
+    expected_status = 0
+
+    actual_msgs, actual_status = _ssort(tmpdir)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_one_unsorted(tmpdir):
+    paths = _write_fixtures(tmpdir, [_unsorted, _good, _good])
+
+    expected_msgs = [
+        f"Sorting {paths[0]!r}\n",
+        "1 file was resorted, 2 files were left unchanged\n",
+    ]
+    expected_status = 0
+
+    actual_msgs, actual_status = _ssort(tmpdir)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_all_unsorted(tmpdir):
+    paths = _write_fixtures(tmpdir, [_unsorted, _unsorted, _unsorted])
+
+    expected_msgs = [
+        f"Sorting {paths[0]!r}\n",
+        f"Sorting {paths[1]!r}\n",
+        f"Sorting {paths[2]!r}\n",
+        "3 files were resorted\n",
+    ]
+    expected_status = 0
+
+    actual_msgs, actual_status = _ssort(tmpdir)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_one_syntax_error(tmpdir):
+    paths = _write_fixtures(tmpdir, [_syntax, _good, _good])
+
+    expected_msgs = [
+        f"ERROR: syntax error in {paths[0]!r}: line 3, column 5\n",
+        "2 files were left unchanged, 1 file was not sortable\n",
+    ]
+    expected_status = 1
+
+    actual_msgs, actual_status = _ssort(tmpdir)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_all_syntax_error(tmpdir):
+    paths = _write_fixtures(tmpdir, [_syntax, _syntax, _syntax])
+
+    expected_msgs = [
+        f"ERROR: syntax error in {paths[0]!r}: line 3, column 5\n",
+        f"ERROR: syntax error in {paths[1]!r}: line 3, column 5\n",
+        f"ERROR: syntax error in {paths[2]!r}: line 3, column 5\n",
+        "3 files were not sortable\n",
+    ]
+    expected_status = 1
+
+    actual_msgs, actual_status = _ssort(tmpdir)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_resolution_error(tmpdir):
+    paths = _write_fixtures(tmpdir, [_resolution, _good, _good])
+
+    expected_msgs = [
+        f"ERROR: unresolved dependency '_other' in {paths[0]!r}: line 6, column 11\n",
+        "2 files were left unchanged, 1 file was not sortable\n",
+    ]
+    expected_status = 1
+
+    actual_msgs, actual_status = _ssort(tmpdir)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_one_unsorted_one_syntax_error(tmpdir):
+    paths = _write_fixtures(tmpdir, [_syntax, _unsorted, _good])
+
+    expected_msgs = [
+        f"ERROR: syntax error in {paths[0]!r}: line 3, column 5\n",
+        f"Sorting {paths[1]!r}\n",
+        "1 file was resorted, 1 file was left unchanged, 1 file was not sortable\n",
+    ]
+    expected_status = 1
+
+    actual_msgs, actual_status = _ssort(tmpdir)
+
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
