@@ -18,6 +18,7 @@ DEFAULT_SCOPE = {
     "bytearray",
     "basestring",
     "WindowsError",
+    "raw_input",
 }
 
 
