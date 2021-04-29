@@ -3,6 +3,7 @@ import difflib
 import pathlib
 import sys
 
+from ssort._dependencies import ResolutionError
 from ssort._ssort import ssort
 
 
@@ -51,22 +52,47 @@ def main():
 
     args = parser.parse_args()
 
-    errors = False
+    unsorted = 0
+    unsortable = 0
+    unchanged = 0
+
     paths = _find_files(args.files)
     for path in paths:
         original = path.read_text()
 
         try:
             updated = ssort(original, filename=str(path))
+
+        except ResolutionError as e:
+            sys.stderr.write(
+                f"ERROR: unresolved dependency {e.name!r} in {str(path)!r}: "
+                + f"line {e.lineno}, column {e.col_offset}\n"
+            )
+            unsortable += 1
+            continue
+
+        except SyntaxError as e:
+            sys.stderr.write(
+                f"ERROR: syntax error in {str(path)!r}: "
+                + f"line {e.lineno}, column {e.offset}\n"
+            )
+            unsortable += 1
+            continue
+
         except Exception as e:
             raise Exception(f"ERROR while sorting {path}\n") from e
 
-        if args.check:
-            if original != updated:
-                sys.stderr.write(f"ERROR: {path} is incorrectly sorted.\n")
-                errors = True
+        if original != updated:
+            unsorted += 1
+            if args.check:
+                sys.stderr.write(
+                    f"ERROR: {str(path)!r} is incorrectly sorted\n"
+                )
+            else:
+                sys.stderr.write(f"Fixing {str(path)!r}\n")
+                path.write_text(updated)
         else:
-            path.write_text(updated)
+            unchanged += 1
 
         if args.show_diff:
             sys.stderr.writelines(
@@ -79,9 +105,19 @@ def main():
             )
 
     if args.check:
-        if errors:
+
+        def _fmt_count(count):
+            return f"{count} file" if count == 1 else f"{count} files"
+
+        summary = []
+        if unsorted:
+            summary.append(f"{_fmt_count(unsorted)} would be resorted")
+        if unchanged:
+            summary.append(f"{_fmt_count(unchanged)} would be left unchanged")
+        if unsortable:
+            summary.append(f"{_fmt_count(unsortable)} would not be sortable")
+
+        sys.stderr.write(", ".join(summary) + "\n")
+
+        if unsorted or unsortable:
             sys.exit(1)
-        else:
-            sys.stderr.write(
-                f"SUCCESS: {len(paths)} files would be left unchanged.\n"
-            )

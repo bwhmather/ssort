@@ -22,6 +22,14 @@ DEFAULT_SCOPE = {
 }
 
 
+class ResolutionError(Exception):
+    def __init__(self, msg, *, lineno, col_offset, name):
+        super().__init__(msg)
+        self.lineno = lineno
+        self.col_offset = col_offset
+        self.name = name
+
+
 def statements_graph(statements):
     """
     Returns a dictionary mapping from statements to lists of other statements.
@@ -55,14 +63,19 @@ def statements_graph(statements):
             unresolved.remove(requirement)
 
     if "*" in scope:
-        sys.stderr.write("WARNING: can't determine dependencies on * import")
+        sys.stderr.write("WARNING: can't determine dependencies on * import\n")
 
         for requirement in unresolved:
             resolved[requirement] = scope["*"]
 
     else:
         for requirement in unresolved:
-            raise Exception(f"Could not resolve requirement {requirement!r}")
+            raise ResolutionError(
+                f"Could not resolve requirement {requirement.name!r}",
+                name=requirement.name,
+                lineno=requirement.lineno,
+                col_offset=requirement.col_offset,
+            )
 
     graph = Graph()
     for statement in statements:
