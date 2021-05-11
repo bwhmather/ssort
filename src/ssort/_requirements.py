@@ -707,6 +707,7 @@ def _get_requirements_for_attribute(node):
         # the following expression can appear in assignment context
         Attribute(expr value, identifier attr, expr_context ctx)
     """
+    assert isinstance(node.ctx, (ast.Load, ast.Del))
     yield from get_requirements(node.value)
 
 
@@ -717,6 +718,7 @@ def _get_requirements_for_subscript(node):
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
+    assert isinstance(node.ctx, (ast.Load, ast.Del))
     yield from get_requirements(node.value)
     yield from get_requirements(node.slice)
 
@@ -728,7 +730,7 @@ def _get_requirements_for_starred(node):
 
         Starred(expr value, expr_context ctx)
     """
-    assert isinstance(node.ctx, ast.Load)
+    assert isinstance(node.ctx, (ast.Load, ast.Del))
     yield from get_requirements(node.value)
 
 
@@ -740,6 +742,7 @@ def _get_requirements_for_name(node):
 
         Name(identifier id, expr_context ctx)
     """
+    assert isinstance(node.ctx, (ast.Load, ast.Del))
     yield Requirement(
         name=node.id, lineno=node.lineno, col_offset=node.col_offset
     )
@@ -753,7 +756,7 @@ def _get_requirements_for_list(node):
 
         List(expr* elts, expr_context ctx)
     """
-    assert isinstance(node.ctx, ast.Load)
+    assert isinstance(node.ctx, (ast.Load, ast.Del))
     for element in node.elts:
         yield from get_requirements(element)
 
@@ -766,7 +769,7 @@ def _get_requirements_for_tuple(node):
         Tuple(expr* elts, expr_context ctx)
 
     """
-    assert isinstance(node.ctx, ast.Load)
+    assert isinstance(node.ctx, (ast.Load, ast.Del))
     for element in node.elts:
         yield from get_requirements(element)
 
