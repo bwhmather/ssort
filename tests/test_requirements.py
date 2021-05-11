@@ -253,6 +253,18 @@ def test_class_def_requirements():
     ]
 
 
+def test_class_def_builtin_requirements():
+    node = _parse(
+        """
+        class A:
+            name = __qualname__
+            def method(self):
+                return __module__
+        """
+    )
+    assert _dep_names(node) == ["__module__"]
+
+
 def test_return_requirements():
     """
     ..code:: python

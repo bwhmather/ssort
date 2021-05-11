@@ -5,6 +5,7 @@ import functools
 import sys
 
 from ssort._bindings import get_bindings
+from ssort._builtins import CLASS_BUILTINS
 
 
 class Scope(enum.Enum):
@@ -113,7 +114,7 @@ def _get_requirements_for_class_def(node):
     for base in node.bases:
         yield from get_requirements(base)
 
-    scope = set()
+    scope = set(CLASS_BUILTINS)
 
     for statement in node.body:
         for stmt_dep in get_requirements(statement):

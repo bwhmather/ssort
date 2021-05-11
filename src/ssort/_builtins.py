@@ -171,3 +171,8 @@ MODULE_BUILTINS = {
     "xrange",
     "zip",
 }
+
+CLASS_BUILTINS = {
+    "__module__",
+    "__qualname__",
+}
