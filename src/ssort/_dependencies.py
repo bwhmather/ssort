@@ -1,25 +1,12 @@
-import builtins
 import sys
 
+from ssort._builtins import MODULE_BUILTINS
 from ssort._graphs import Graph
 from ssort._statements import (
     statement_bindings,
     statement_method_requirements,
     statement_requirements,
 )
-
-DEFAULT_SCOPE = {
-    *builtins.__dict__,
-    "__file__",
-    "unicode",
-    "long",
-    "xrange",
-    "buffer",
-    "bytearray",
-    "basestring",
-    "WindowsError",
-    "raw_input",
-}
 
 
 class ResolutionError(Exception):
@@ -47,7 +34,7 @@ def statements_graph(statements):
                 resolved[requirement] = scope[requirement.name]
                 continue
 
-            if requirement.name in DEFAULT_SCOPE:
+            if requirement.name in MODULE_BUILTINS:
                 resolved[requirement] = None
                 continue
 
