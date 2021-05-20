@@ -291,6 +291,11 @@ def test_delete_requirements_multiple():
     assert _dep_names(node) == ["a", "b"]
 
 
+def test_delete_requirements_tuple():
+    node = _parse("del (a, b)")
+    assert _dep_names(node) == ["a", "b"]
+
+
 def test_delete_requirements_subscript():
     node = _parse("del a[b:c]")
     assert _dep_names(node) == ["a", "b", "c"]
@@ -299,6 +304,11 @@ def test_delete_requirements_subscript():
 def test_delete_requirements_attribute():
     node = _parse("del obj.attr")
     assert _dep_names(node) == ["obj"]
+
+
+def test_delete_requirements_mixed():
+    node = _parse("del (a[b:c], d.f)")
+    assert _dep_names(node) == ["a", "b", "c", "d"]
 
 
 def test_assign_requirements():
