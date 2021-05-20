@@ -64,10 +64,12 @@ def main():
             updated = ssort(original, filename=str(path))
 
         except ResolutionError as e:
-            sys.stderr.write(
-                f"ERROR: unresolved dependency {e.name!r} in {str(path)!r}: "
-                + f"line {e.lineno}, column {e.col_offset}\n"
-            )
+            for req in e.unresolved:
+                sys.stderr.write(
+                    f"ERROR: unresolved dependency {req.name!r} "
+                    + f"in {str(path)!r}: "
+                    + f"line {req.lineno}, column {req.col_offset}\n"
+                )
             unsortable += 1
             continue
 

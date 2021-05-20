@@ -10,11 +10,9 @@ from ssort._statements import (
 
 
 class ResolutionError(Exception):
-    def __init__(self, msg, *, lineno, col_offset, name):
+    def __init__(self, msg, *, unresolved):
         super().__init__(msg)
-        self.lineno = lineno
-        self.col_offset = col_offset
-        self.name = name
+        self.unresolved = unresolved
 
 
 def statements_graph(statements):
@@ -56,12 +54,9 @@ def statements_graph(statements):
             resolved[requirement] = scope["*"]
 
     else:
-        for requirement in unresolved:
+        if unresolved:
             raise ResolutionError(
-                f"Could not resolve requirement {requirement.name!r}",
-                name=requirement.name,
-                lineno=requirement.lineno,
-                col_offset=requirement.col_offset,
+                "Could not resolve all requirements", unresolved=unresolved
             )
 
     graph = Graph()

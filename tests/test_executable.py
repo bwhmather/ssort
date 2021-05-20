@@ -32,6 +32,14 @@ def public():
     return _other()
 """
 
+_double_resolution = """
+def _private():
+    pass
+
+def public():
+    return _other() + _same()
+"""
+
 
 def _write_fixtures(dirpath, texts):
     paths = []
@@ -122,6 +130,18 @@ def test_check_resolution_error(tmpdir):
     paths = _write_fixtures(tmpdir, [_resolution, _good, _good])
     expected_msgs = [
         f"ERROR: unresolved dependency '_other' in {paths[0]!r}: line 6, column 11\n",
+        "2 files would be left unchanged, 1 file would not be sortable\n",
+    ]
+    expected_status = 1
+    actual_msgs, actual_status = _check(tmpdir)
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_check_double_resolution_error(tmpdir):
+    paths = _write_fixtures(tmpdir, [_double_resolution, _good, _good])
+    expected_msgs = [
+        f"ERROR: unresolved dependency '_other' in {paths[0]!r}: line 6, column 11\n",
+        f"ERROR: unresolved dependency '_same' in {paths[0]!r}: line 6, column 22\n",
         "2 files would be left unchanged, 1 file would not be sortable\n",
     ]
     expected_status = 1
