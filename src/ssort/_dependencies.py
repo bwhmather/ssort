@@ -22,11 +22,13 @@ def statements_graph(statements):
     # A dictionary mapping from names to the statements which bind them.
     scope = {}
 
-    unresolved = set()
+    all_requirements = []
     resolved = {}
 
     for statement in statements:
         for requirement in statement_requirements(statement):
+            all_requirements.append(requirement)
+
             # TODO error if requirement is not deferred.
             if requirement.name in scope:
                 resolved[requirement] = scope[requirement.name]
@@ -36,24 +38,35 @@ def statements_graph(statements):
                 resolved[requirement] = None
                 continue
 
-            unresolved.add(requirement)
-
         for name in statement_bindings(statement):
             scope[name] = statement
 
     # Patch up dependencies that couldn't be resolved immediately.
-    for requirement in list(unresolved):
-        if requirement.name in scope:
-            resolved[requirement] = scope[requirement.name]
-            unresolved.remove(requirement)
+    for requirement in all_requirements:
+        if requirement in resolved:
+            continue
+
+        if requirement.name not in scope:
+            continue
+
+        resolved[requirement] = scope[requirement.name]
 
     if "*" in scope:
         sys.stderr.write("WARNING: can't determine dependencies on * import\n")
 
-        for requirement in unresolved:
+        for requirement in all_requirements:
+            if requirement in resolved:
+                continue
+
             resolved[requirement] = scope["*"]
 
     else:
+        unresolved = [
+            requirement
+            for requirement in all_requirements
+            if requirement not in resolved
+        ]
+
         if unresolved:
             raise ResolutionError(
                 "Could not resolve all requirements", unresolved=unresolved
