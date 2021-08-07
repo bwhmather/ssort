@@ -49,15 +49,17 @@ class Graph:
         except ValueError:
             pass
 
+    def update(self, other):
+        for node in other.nodes:
+            self.add_node(node)
+
+        for node in other.nodes:
+            for dependency in other.dependencies[node]:
+                self.add_dependency(node, dependency)
+
     def copy(self):
         dup = Graph()
-        for node in self.nodes:
-            dup.add_node(node)
-
-        for node in self.nodes:
-            for dependency in self.dependencies[node]:
-                dup.add_dependency(node, dependency)
-
+        dup.update(self)
         return dup
 
 
