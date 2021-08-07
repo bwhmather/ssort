@@ -224,9 +224,11 @@ def _statement_binding_sort_key(binding_key):
 def _statement_text_sorted_class(statement):
     head_text, statements = split_class(statement)
 
+    # Take a snapshot of any hard dependencies between statements so that we can
+    # restore them later.
     initialisation_graph = class_statements_initialisation_graph(statements)
-    runtime_graph = class_statements_runtime_graph(statements)
 
+    # === Split up the statements into high level groups =======================
     if _is_string(statements[0]):
         docstrings, statements = statements[:1], statements[1:]
     else:
@@ -250,6 +252,7 @@ def _statement_text_sorted_class(statement):
 
     sorted_statements = []
 
+    # === Join groups back together in the correct order =======================
     sorted_statements += docstrings
 
     # Special properties (in hard-coded order).
@@ -282,16 +285,21 @@ def _statement_text_sorted_class(statement):
         ),
     )
 
-    # Sort everything by runtime dependencies.  This won't impact properties,
-    # but it will move some methods above any lifecycle methods that depend on
-    # them.
-    replace_cycles(runtime_graph, key=sort_key_from_iter(sorted_statements))
-    sorted_statements = topological_sort(
-        sorted_statements, graph=runtime_graph
-    )
+    # === Re-sort based on dependencies between statements =====================
 
+    # Fix any hard dependencies.
     sorted_statements = topological_sort(
         sorted_statements, graph=initialisation_graph
+    )
+
+    # Attempt to resolve soft dependencies, but with hard dependencies taking
+    # priority, and keeping existing order where there are cycles.
+    runtime_graph = class_statements_runtime_graph(sorted_statements)
+    runtime_graph.update(initialisation_graph)
+    replace_cycles(runtime_graph, key=sort_key_from_iter(sorted_statements))
+
+    sorted_statements = topological_sort(
+        sorted_statements, graph=runtime_graph
     )
 
     return (
