@@ -255,9 +255,41 @@ def test_pretend_dunder_properties():
         """
         class Table:
             __slots__ = ("column", "other_column")
-            __tablename__ = "table"
             column = None
+            __tablename__ = "table"
             other_column = None
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_mixed_runtime_initialisation():
+    original = _clean(
+        """
+        class Loopy:
+
+            def method(self):
+                return self._method()
+
+            attr = method
+
+            def _method(self):
+                pass
+        """
+    )
+
+    expected = _clean(
+        """
+        class Loopy:
+
+            def _method(self):
+                pass
+
+            def method(self):
+                return self._method()
+
+            attr = method
         """
     )
     actual = ssort(original)

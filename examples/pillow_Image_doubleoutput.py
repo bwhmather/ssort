@@ -872,6 +872,19 @@ class Image:
     * :py:func:`~PIL.Image.frombytes`
     """
 
+    def copy(self):
+        """
+        Copies this image. Use this method if you wish to paste things
+        into an image, but still retain the original.
+
+        :rtype: :py:class:`~PIL.Image.Image`
+        :returns: An :py:class:`~PIL.Image.Image` object.
+        """
+        self.load()
+        return self._new(self.im.copy())
+
+    __copy__ = copy
+
     format = None
     format_description = None
     _close_exclusive_fp_after_loading = True
@@ -942,19 +955,6 @@ class Image:
                 if self.pyaccess:
                     return self.pyaccess
             return self.im.pixel_access(self.readonly)
-
-    def copy(self):
-        """
-        Copies this image. Use this method if you wish to paste things
-        into an image, but still retain the original.
-
-        :rtype: :py:class:`~PIL.Image.Image`
-        :returns: An :py:class:`~PIL.Image.Image` object.
-        """
-        self.load()
-        return self._new(self.im.copy())
-
-    __copy__ = copy
 
     @property
     def size(self):
@@ -1165,22 +1165,6 @@ class Image:
             raise RuntimeError(f"encoder error {s} in tobytes")
 
         return b"".join(data)
-
-    @property
-    def __array_interface__(self):
-        # numpy array interface support
-        new = {}
-        shape, typestr = _conv_type_shape(self)
-        new["shape"] = shape
-        new["typestr"] = typestr
-        new["version"] = 3
-        if self.mode == "1":
-            # Binary images need to be extended from bits to bytes
-            # See: https://github.com/python-pillow/Pillow/issues/350
-            new["data"] = self.tobytes("raw", "L")
-        else:
-            new["data"] = self.tobytes()
-        return new
 
     def tobitmap(self, name="image"):
         """
@@ -2852,6 +2836,32 @@ class Image:
                 self.fp.close()
         self.fp = None
 
+    def __repr__(self):
+        return "<%s.%s image mode=%s size=%dx%d at 0x%X>" % (
+            self.__class__.__module__,
+            self.__class__.__name__,
+            self.mode,
+            self.size[0],
+            self.size[1],
+            id(self),
+        )
+
+    @property
+    def __array_interface__(self):
+        # numpy array interface support
+        new = {}
+        shape, typestr = _conv_type_shape(self)
+        new["shape"] = shape
+        new["typestr"] = typestr
+        new["version"] = 3
+        if self.mode == "1":
+            # Binary images need to be extended from bits to bytes
+            # See: https://github.com/python-pillow/Pillow/issues/350
+            new["data"] = self.tobytes("raw", "L")
+        else:
+            new["data"] = self.tobytes()
+        return new
+
     def __getstate__(self):
         return [self.info, self.mode, self.size, self.getpalette(), self.tobytes()]
 
@@ -2866,16 +2876,6 @@ class Image:
         if mode in ("L", "LA", "P", "PA") and palette:
             self.putpalette(palette)
         self.frombytes(data)
-
-    def __repr__(self):
-        return "<%s.%s image mode=%s size=%dx%d at 0x%X>" % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.mode,
-            self.size[0],
-            self.size[1],
-            id(self),
-        )
 
 
 # --------------------------------------------------------------------
