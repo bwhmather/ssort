@@ -2,7 +2,14 @@ import ast
 import sys
 import textwrap
 
+import pytest
+
 from ssort._bindings import get_bindings
+
+walrus_operator = pytest.mark.skipif(
+    sys.version_info < (3, 9),
+    reason="walrus operator was introduced in python 3.9",
+)
 
 
 def _parse(source):
@@ -27,6 +34,65 @@ def test_function_def_bindings():
     assert list(get_bindings(node)) == ["function"]
 
 
+@walrus_operator
+def test_function_def_bindings_walrus_default():
+    node = _parse(
+        """
+        def function(a, b = (b_binding := 2)):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["function", "b_binding"]
+
+
+@walrus_operator
+def test_function_def_bindings_walrus_kw_default():
+    node = _parse(
+        """
+        def function(*, kw1 = (kw1_binding := 1), kw2):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["function", "kw1_binding"]
+
+
+@walrus_operator
+def test_function_def_bindings_walrus_type():
+    node = _parse(
+        """
+        def function(
+            posonly: (posonly_type := int), / ,
+            arg: (arg_type := int),
+            *args: (args_type := int),
+            kwarg: (kwarg_type := int),
+            **kwargs: (kwargs_type := int)
+        ) -> (return_type := int):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == [
+        "function",
+        "posonly_type",
+        "arg_type",
+        "args_type",
+        "kwarg_type",
+        "kwargs_type",
+        "return_type",
+    ]
+
+
+@walrus_operator
+def test_function_def_bindings_walrus_decorator():
+    node = _parse(
+        """
+        @(p := property)
+        def prop(self):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["p", "prop"]
+
+
 def test_async_function_def_bindings():
     """
     ..code:: python
@@ -41,7 +107,61 @@ def test_async_function_def_bindings():
         )
 
     """
-    pass
+    node = _parse(
+        """
+        async def function():
+            name
+        """
+    )
+    assert list(get_bindings(node)) == ["function"]
+
+
+@walrus_operator
+def test_async_function_def_bindings_walrus_kw_default():
+    node = _parse(
+        """
+        async def function(*, kw1 = (kw1_binding := 1), kw2):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["function", "kw1_binding"]
+
+
+@walrus_operator
+def test_async_function_def_bindings_walrus_type():
+    node = _parse(
+        """
+        async def function(
+            posonly: (posonly_type := int), / ,
+            arg: (arg_type := int),
+            *args: (args_type := int),
+            kwarg: (kwarg_type := int),
+            **kwargs: (kwargs_type := int)
+        ) -> (return_type := int):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == [
+        "function",
+        "posonly_type",
+        "arg_type",
+        "args_type",
+        "kwarg_type",
+        "kwargs_type",
+        "return_type",
+    ]
+
+
+@walrus_operator
+def test_async_function_def_bindings_walrus_decorator():
+    node = _parse(
+        """
+        @(p := property)
+        async def prop(self):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["p", "prop"]
 
 
 def test_class_def_bindings():

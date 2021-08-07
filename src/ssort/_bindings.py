@@ -10,6 +10,38 @@ def get_bindings(node):
     )
 
 
+def _get_bindings_from_arguments(args):
+    for arg in args.posonlyargs:
+        if arg.annotation is None:
+            continue
+        yield from get_bindings(arg.annotation)
+
+    for arg in args.args:
+        if arg.annotation is None:
+            continue
+        yield from get_bindings(arg.annotation)
+
+    if args.vararg is not None and args.vararg.annotation is not None:
+        yield from get_bindings(args.vararg.annotation)
+
+    for arg in args.kwonlyargs:
+        if arg.annotation is None:
+            continue
+        yield from get_bindings(arg.annotation)
+
+    if args.kwarg is not None and args.kwarg.annotation is not None:
+        yield from get_bindings(args.kwarg.annotation)
+
+    for default in args.defaults:
+        yield from get_bindings(default)
+
+    for default in args.kw_defaults:
+        if default is None:
+            continue
+
+        yield from get_bindings(default)
+
+
 @get_bindings.register(ast.FunctionDef)
 @get_bindings.register(ast.AsyncFunctionDef)
 def _get_bindings_for_function_def(node):
@@ -37,7 +69,15 @@ def _get_bindings_for_function_def(node):
         )
 
     """
+    for decorator in node.decorator_list:
+        yield from get_bindings(decorator)
+
     yield node.name
+
+    yield from _get_bindings_from_arguments(node.args)
+
+    if node.returns is not None:
+        yield from get_bindings(node.returns)
 
 
 @get_bindings.register(ast.ClassDef)
@@ -393,7 +433,8 @@ def _get_bindings_for_named_expr(node):
 
         NamedExpr(expr target, expr value)
     """
-    raise NotImplementedError("TODO")
+    yield from _flatten_target(node.target)
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.BinOp)
