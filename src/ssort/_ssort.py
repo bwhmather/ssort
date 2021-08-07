@@ -166,32 +166,6 @@ def _partition(values, predicate):
     return passed, failed
 
 
-def _binds_dunder_attribute(statement):
-    bindings = statement_bindings(statement)
-    return any(
-        binding.startswith("__") and binding.endswith("__")
-        for binding in bindings
-    )
-
-
-def _is_dunder_property(statement):
-    bindings = statement_bindings(statement)
-    return any(binding in SPECIAL_PROPERTIES for binding in bindings)
-
-
-def _is_dunder_lifecycle_method(statement):
-    bindings = statement_bindings(statement)
-    return any(binding in LIFECYCLE_OPERATIONS for binding in bindings)
-
-
-def _is_property(statement):
-    node = statement_node(statement)
-    if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
-        return False
-
-    return True
-
-
 def _is_string(statement):
     expr_node = statement_node(statement)
     if not isinstance(expr_node, ast.Expr):
@@ -202,6 +176,32 @@ def _is_string(statement):
         return False
 
     if not isinstance(node.value, str):
+        return False
+
+    return True
+
+
+def _is_special_property(statement):
+    bindings = statement_bindings(statement)
+
+    return any(binding in SPECIAL_PROPERTIES for binding in bindings)
+
+
+def _is_lifecycle_operation(statement):
+    bindings = statement_bindings(statement)
+
+    return any(binding in LIFECYCLE_OPERATIONS for binding in bindings)
+
+
+def _is_regular_operation(statement):
+    bindings = statement_bindings(statement)
+
+    return any(binding in REGULAR_OPERATIONS for binding in bindings)
+
+
+def _is_property(statement):
+    node = statement_node(statement)
+    if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
         return False
 
     return True
@@ -232,17 +232,21 @@ def _statement_text_sorted_class(statement):
     else:
         docstrings = []
 
-    dunder_statements, statements = _partition(
-        statements, _binds_dunder_attribute
-    )
-    dunder_properties, dunder_methods = _partition(
-        dunder_statements, _is_dunder_property
-    )
-    lifecycle_operations, regular_operations = _partition(
-        dunder_methods, _is_dunder_lifecycle_method
+    special_properties, statements = _partition(
+        statements, _is_special_property
     )
 
-    properties, methods = _partition(statements, _is_property)
+    lifecycle_operations, statements = _partition(
+        statements, _is_lifecycle_operation
+    )
+
+    regular_operations, statements = _partition(
+        statements, _is_regular_operation
+    )
+
+    properties, statements = _partition(statements, _is_property)
+
+    methods, statements = statements, []
 
     sorted_statements = []
 
@@ -250,7 +254,7 @@ def _statement_text_sorted_class(statement):
 
     # Special properties (in hard-coded order).
     sorted_statements += sorted(
-        dunder_properties,
+        special_properties,
         key=_statement_binding_sort_key(
             sort_key_from_iter(SPECIAL_PROPERTIES)
         ),

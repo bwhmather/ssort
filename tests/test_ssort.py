@@ -218,3 +218,47 @@ def test_single_dispatch():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_slots():
+    original = _clean(
+        """
+        class Struct:
+            int_attr: int
+            __slots__ = ("int_attr", "str_attr")
+            str_attr: str
+        """
+    )
+    expected = _clean(
+        """
+        class Struct:
+            __slots__ = ("int_attr", "str_attr")
+            int_attr: int
+            str_attr: str
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_pretend_dunder_properties():
+    original = _clean(
+        """
+        class Table:
+            column = None
+            __tablename__ = "table"
+            __slots__ = ("column", "other_column")
+            other_column = None
+        """
+    )
+    expected = _clean(
+        """
+        class Table:
+            __slots__ = ("column", "other_column")
+            __tablename__ = "table"
+            column = None
+            other_column = None
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
