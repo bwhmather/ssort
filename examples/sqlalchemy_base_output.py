@@ -633,15 +633,15 @@ class ColumnCollection(util.OrderedProperties):
 
     __hash__ = None
 
-    def __str__(self):
-        return repr([str(c) for c in self])
-
     def __getstate__(self):
         return {"_data": self._data, "_all_columns": self._all_columns}
 
     def __setstate__(self, state):
         object.__setattr__(self, "_data", state["_data"])
         object.__setattr__(self, "_all_columns", state["_all_columns"])
+
+    def __str__(self):
+        return repr([str(c) for c in self])
 
 
 class ImmutableColumnCollection(util.ImmutableProperties, ColumnCollection):

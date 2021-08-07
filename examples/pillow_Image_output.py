@@ -889,18 +889,6 @@ class Image:
         self.pyaccess = None
         self._exif = None
 
-    @property
-    def size(self):
-        return self._size
-
-    @property
-    def width(self):
-        return self.size[0]
-
-    @property
-    def height(self):
-        return self.size[1]
-
     def _new(self, im):
         new = Image()
         new.im = im
@@ -915,35 +903,6 @@ class Image:
                 new.palette = ImagePalette.ImagePalette()
         new.info = self.info.copy()
         return new
-
-    def close(self):
-        """
-        Closes the file pointer, if possible.
-
-        This operation will destroy the image core and release its memory.
-        The image data will be unusable afterward.
-
-        This function is only required to close images that have not
-        had their file read and closed by the
-        :py:meth:`~PIL.Image.Image.load` method. See
-        :ref:`file-handling` for more information.
-        """
-        try:
-            if hasattr(self, "_close__fp"):
-                self._close__fp()
-            if self.fp:
-                self.fp.close()
-            self.fp = None
-        except Exception as msg:
-            logger.debug("Error closing: %s", msg)
-
-        if getattr(self, "map", None):
-            self.map = None
-
-        # Instead of simply setting to None, we're setting up a
-        # deferred error that will better explain that the core image
-        # object is gone.
-        self.im = deferred_error(ValueError("Operation on closed image"))
 
     def load(self):
         """
@@ -983,6 +942,60 @@ class Image:
                 if self.pyaccess:
                     return self.pyaccess
             return self.im.pixel_access(self.readonly)
+
+    def copy(self):
+        """
+        Copies this image. Use this method if you wish to paste things
+        into an image, but still retain the original.
+
+        :rtype: :py:class:`~PIL.Image.Image`
+        :returns: An :py:class:`~PIL.Image.Image` object.
+        """
+        self.load()
+        return self._new(self.im.copy())
+
+    __copy__ = copy
+
+    @property
+    def size(self):
+        return self._size
+
+    @property
+    def width(self):
+        return self.size[0]
+
+    @property
+    def height(self):
+        return self.size[1]
+
+    def close(self):
+        """
+        Closes the file pointer, if possible.
+
+        This operation will destroy the image core and release its memory.
+        The image data will be unusable afterward.
+
+        This function is only required to close images that have not
+        had their file read and closed by the
+        :py:meth:`~PIL.Image.Image.load` method. See
+        :ref:`file-handling` for more information.
+        """
+        try:
+            if hasattr(self, "_close__fp"):
+                self._close__fp()
+            if self.fp:
+                self.fp.close()
+            self.fp = None
+        except Exception as msg:
+            logger.debug("Error closing: %s", msg)
+
+        if getattr(self, "map", None):
+            self.map = None
+
+        # Instead of simply setting to None, we're setting up a
+        # deferred error that will better explain that the core image
+        # object is gone.
+        self.im = deferred_error(ValueError("Operation on closed image"))
 
     def _copy(self):
         self.load()
@@ -1153,6 +1166,22 @@ class Image:
 
         return b"".join(data)
 
+    @property
+    def __array_interface__(self):
+        # numpy array interface support
+        new = {}
+        shape, typestr = _conv_type_shape(self)
+        new["shape"] = shape
+        new["typestr"] = typestr
+        new["version"] = 3
+        if self.mode == "1":
+            # Binary images need to be extended from bits to bytes
+            # See: https://github.com/python-pillow/Pillow/issues/350
+            new["data"] = self.tobytes("raw", "L")
+        else:
+            new["data"] = self.tobytes()
+        return new
+
     def tobitmap(self, name="image"):
         """
         Returns the image converted to an X11 bitmap.
@@ -1273,17 +1302,6 @@ class Image:
         im.palette = ImagePalette.ImagePalette(mode, im.im.getpalette(mode, mode))
 
         return im
-
-    def copy(self):
-        """
-        Copies this image. Use this method if you wish to paste things
-        into an image, but still retain the original.
-
-        :rtype: :py:class:`~PIL.Image.Image`
-        :returns: An :py:class:`~PIL.Image.Image` object.
-        """
-        self.load()
-        return self._new(self.im.copy())
 
     def convert(self, mode=None, matrix=None, dither=None, palette=WEB, colors=256):
         """
@@ -2834,32 +2852,6 @@ class Image:
                 self.fp.close()
         self.fp = None
 
-    def __repr__(self):
-        return "<%s.%s image mode=%s size=%dx%d at 0x%X>" % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.mode,
-            self.size[0],
-            self.size[1],
-            id(self),
-        )
-
-    @property
-    def __array_interface__(self):
-        # numpy array interface support
-        new = {}
-        shape, typestr = _conv_type_shape(self)
-        new["shape"] = shape
-        new["typestr"] = typestr
-        new["version"] = 3
-        if self.mode == "1":
-            # Binary images need to be extended from bits to bytes
-            # See: https://github.com/python-pillow/Pillow/issues/350
-            new["data"] = self.tobytes("raw", "L")
-        else:
-            new["data"] = self.tobytes()
-        return new
-
     def __getstate__(self):
         return [self.info, self.mode, self.size, self.getpalette(), self.tobytes()]
 
@@ -2875,7 +2867,15 @@ class Image:
             self.putpalette(palette)
         self.frombytes(data)
 
-    __copy__ = copy
+    def __repr__(self):
+        return "<%s.%s image mode=%s size=%dx%d at 0x%X>" % (
+            self.__class__.__module__,
+            self.__class__.__name__,
+            self.mode,
+            self.size[0],
+            self.size[1],
+            id(self),
+        )
 
 
 # --------------------------------------------------------------------
