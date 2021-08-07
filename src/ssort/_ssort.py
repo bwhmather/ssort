@@ -29,6 +29,9 @@ LIFECYCLE_OPERATIONS = [
     "__new__",
     "__init__",
     "__del__",
+    # Copying.
+    "__copy__",
+    "__deepcopy__",
     # Metaclasses.
     # TODO "__prepare__", ?
     "__init_subclass__",
@@ -138,6 +141,11 @@ REGULAR_OPERATIONS = [
     # Async context managers.
     "__aenter__",
     "__aexit__",
+    # Pickling.
+    "__getnewargs_ex__",
+    "__reduce__",
+    "__getstate__",
+    "__setstate__",
     # Formatting.
     "__repr__",
     "__str__",
