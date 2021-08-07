@@ -20,8 +20,8 @@ from ssort._statements import (
 from ssort._utils import sort_key_from_iter
 
 SPECIAL_PROPERTIES = [
-    "__slots__",
     "__doc__",
+    "__slots__",
 ]
 
 LIFECYCLE_OPERATIONS = [
