@@ -596,7 +596,12 @@ def _get_bindings_for_generator_exp(node):
         GeneratorExp(expr elt, comprehension* generators)
     """
     for generator in node.generators:
+        yield from get_bindings(generator.iter)
         yield from _flatten_target(generator.target)
+        for condition in generator.ifs:
+            yield from get_bindings(condition)
+
+    yield from get_bindings(node.elt)
 
 
 @get_bindings.register(ast.Await)
