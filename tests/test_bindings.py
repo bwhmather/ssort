@@ -735,7 +735,13 @@ def test_global_bindings():
 
         Global(identifier* names)
     """
-    pass
+    node = _parse("global name")
+    assert list(get_bindings(node)) == ["name"]
+
+
+def test_global_bindings_multiple():
+    node = _parse("global a, b")
+    assert list(get_bindings(node)) == ["a", "b"]
 
 
 def test_non_local_bindings():
@@ -744,7 +750,13 @@ def test_non_local_bindings():
 
         Nonlocal(identifier* names)
     """
-    pass
+    node = _parse("nonlocal name")
+    assert list(get_bindings(node)) == ["name"]
+
+
+def test_nonlocal_bindings_multiple():
+    node = _parse("nonlocal a, b")
+    assert list(get_bindings(node)) == ["a", "b"]
 
 
 def test_expr_bindings():
