@@ -453,8 +453,8 @@ def _get_bindings_for_bool_op(node):
         # expr
         BoolOp(boolop op, expr* values)
     """
-    return
-    yield
+    for expr in node.values:
+        yield from get_bindings(expr)
 
 
 @get_bindings.register(ast.NamedExpr)
@@ -476,8 +476,8 @@ def _get_bindings_for_bin_op(node):
 
         BinOp(expr left, operator op, expr right)
     """
-    return
-    yield
+    yield from get_bindings(node.left)
+    yield from get_bindings(node.right)
 
 
 @get_bindings.register(ast.UnaryOp)

@@ -800,7 +800,32 @@ def test_bool_op_bindings():
         # expr
         BoolOp(boolop op, expr* values)
     """
-    pass
+    node = _parse("a and b")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_bool_op_bindings_walrus_left():
+    node = _parse("(left := a) and b")
+    assert list(get_bindings(node)) == ["left"]
+
+
+@walrus_operator
+def test_bool_op_bindings_walrus_right():
+    node = _parse("a or (right := b)")
+    assert list(get_bindings(node)) == ["right"]
+
+
+@walrus_operator
+def test_bool_op_bindings_walrus_both():
+    node = _parse("(left := a) and (right := b)")
+    assert list(get_bindings(node)) == ["left", "right"]
+
+
+@walrus_operator
+def test_bool_op_bindings_walrus_multiple():
+    node = _parse("(a := 1) and (b := 2) and (c := 3)")
+    assert list(get_bindings(node)) == ["a", "b", "c"]
 
 
 def test_named_expr_bindings():
@@ -819,7 +844,26 @@ def test_bin_op_bindings():
 
         BinOp(expr left, operator op, expr right)
     """
-    pass
+    node = _parse("a and b")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_bin_op_bindings_walrus_left():
+    node = _parse("(left := a) | b")
+    assert list(get_bindings(node)) == ["left"]
+
+
+@walrus_operator
+def test_bin_op_bindings_walrus_right():
+    node = _parse("a ^ (right := b)")
+    assert list(get_bindings(node)) == ["right"]
+
+
+@walrus_operator
+def test_bin_op_bindings_walrus_both():
+    node = _parse("(left := a) + (right := b)")
+    assert list(get_bindings(node)) == ["left", "right"]
 
 
 def test_unary_op_bindings():
