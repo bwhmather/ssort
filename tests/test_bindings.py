@@ -1305,7 +1305,14 @@ def test_attribute_bindings():
         # the following expression can appear in assignment context
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    pass
+    node = _parse("a.b.c")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_attribute_bindings_walrus():
+    node = _parse("(a_binding := a).b")
+    assert list(get_bindings(node)) == ["a_binding"]
 
 
 def test_subscript_bindings():
