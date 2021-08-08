@@ -318,8 +318,11 @@ def _get_bindings_for_raise(node):
 
         Raise(expr? exc, expr? cause)
     """
-    return
-    yield
+    if node.cause is not None:
+        yield from get_bindings(node.cause)
+
+    if node.exc is not None:
+        yield from get_bindings(node.exc)
 
 
 @get_bindings.register(ast.Try)

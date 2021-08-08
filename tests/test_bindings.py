@@ -611,10 +611,32 @@ def test_raise_bindings():
     """
     ..code:: python
 
-
         Raise(expr? exc, expr? cause)
     """
-    pass
+    node = _parse("raise TypeError()")
+    assert list(get_bindings(node)) == []
+
+
+def test_raise_bindings_reraise():
+    node = _parse("raise")
+    assert list(get_bindings(node)) == []
+
+
+def test_raise_bindings_with_cause():
+    node = _parse("raise TypeError() from exc")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_raise_bindings_walrus():
+    node = _parse("raise (exc := TypeError())")
+    assert list(get_bindings(node)) == ["exc"]
+
+
+@walrus_operator
+def test_raise_bindings_walrus_in_cause():
+    node = _parse("raise TypeError() from (original := exc)")
+    assert list(get_bindings(node)) == ["original"]
 
 
 def test_try_bindings():
