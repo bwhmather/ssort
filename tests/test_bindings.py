@@ -885,7 +885,14 @@ def test_unary_op_bindings():
 
         UnaryOp(unaryop op, expr operand)
     """
-    pass
+    node = _parse("-a")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_unary_op_bindings_walrus():
+    node = _parse("-(a := b)")
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_lambda_bindings():

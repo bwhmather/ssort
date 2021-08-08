@@ -487,8 +487,7 @@ def _get_bindings_for_unary_op(node):
 
         UnaryOp(unaryop op, expr operand)
     """
-    return
-    yield
+    yield from get_bindings(node.operand)
 
 
 @get_bindings.register(ast.Lambda)
