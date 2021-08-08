@@ -1365,12 +1365,17 @@ def test_starred_bindings():
 
         Starred(expr value, expr_context ctx)
     """
+    node = _parse("*a")
+    assert list(get_bindings(node)) == []
 
-    pass
+
+@walrus_operator
+def test_starred_bindings_walrus():
+    node = _parse("*(a_binding := a)")
+    assert list(get_bindings(node)) == ["a_binding"]
 
 
 def test_name_bindings():
-
     """
     ..code:: python
 
@@ -1381,7 +1386,6 @@ def test_name_bindings():
 
 
 def test_list_bindings():
-
     """
     ..code:: python
 
