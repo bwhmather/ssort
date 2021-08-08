@@ -1294,7 +1294,8 @@ def test_constant_bindings():
 
         Constant(constant value, string? kind)
     """
-    pass
+    node = _parse("1")
+    assert list(get_bindings(node)) == []
 
 
 def test_attribute_bindings():
