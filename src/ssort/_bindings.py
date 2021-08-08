@@ -542,10 +542,16 @@ def _get_bindings_for_list_comp(node):
     """
     ..code:: python
 
+        comprehension = (expr target, expr iter, expr* ifs, int is_async)
         ListComp(expr elt, comprehension* generators)
     """
     for generator in node.generators:
+        yield from get_bindings(generator.iter)
         yield from _flatten_target(generator.target)
+        for condition in generator.ifs:
+            yield from get_bindings(condition)
+
+    yield from get_bindings(node.elt)
 
 
 @get_bindings.register(ast.SetComp)
