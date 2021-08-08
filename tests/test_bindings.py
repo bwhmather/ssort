@@ -368,7 +368,26 @@ def test_for_bindings():
             string? type_comment,
         )
     """
-    pass
+    node = _parse(
+        """
+        for i in range(10):
+            a += i
+        else:
+            b = 4
+        """
+    )
+    assert list(get_bindings(node)) == ["i", "a", "b"]
+
+
+@walrus_operator
+def test_for_bindings_walrus():
+    node = _parse(
+        """
+        for i in (r := range(10)):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["r", "i"]
 
 
 def test_async_for_bindings():
@@ -383,7 +402,26 @@ def test_async_for_bindings():
             string? type_comment,
         )
     """
-    pass
+    node = _parse(
+        """
+        async for i in range(10):
+            a += i
+        else:
+            b = 4
+        """
+    )
+    assert list(get_bindings(node)) == ["i", "a", "b"]
+
+
+@walrus_operator
+def test_async_for_bindings_walrus():
+    node = _parse(
+        """
+        async for i in (r := range(10)):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["r", "i"]
 
 
 def test_while_bindings():

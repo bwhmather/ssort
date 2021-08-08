@@ -245,6 +245,8 @@ def _get_bindings_for_for(node):
             string? type_comment,
         )
     """
+    yield from get_bindings(node.iter)
+
     yield from _flatten_target(node.target)
 
     for stmt in node.body:
