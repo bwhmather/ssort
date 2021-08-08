@@ -458,7 +458,28 @@ def test_if_bindings():
 
         If(expr test, stmt* body, stmt* orelse)
     """
-    pass
+    node = _parse(
+        """
+        if predicate_one():
+            a = 1
+        elif predicate_two():
+            b = 2
+        else:
+            c = 3
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b", "c"]
+
+
+@walrus_operator
+def test_if_bindings_walrus_test():
+    node = _parse(
+        """
+        if (result := predicate()):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["result"]
 
 
 def test_with_bindings():
