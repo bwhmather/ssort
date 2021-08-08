@@ -1,5 +1,6 @@
 import ast
 import functools
+import sys
 
 
 @functools.singledispatch
@@ -8,6 +9,38 @@ def get_bindings(node):
         f"could not find bindings for unsupported node {node!r} "
         f"at line {node.lineno}, column: {node.col_offset}"
     )
+
+
+def _get_bindings_from_arguments(args):
+    for arg in args.posonlyargs:
+        if arg.annotation is None:
+            continue
+        yield from get_bindings(arg.annotation)
+
+    for arg in args.args:
+        if arg.annotation is None:
+            continue
+        yield from get_bindings(arg.annotation)
+
+    if args.vararg is not None and args.vararg.annotation is not None:
+        yield from get_bindings(args.vararg.annotation)
+
+    for arg in args.kwonlyargs:
+        if arg.annotation is None:
+            continue
+        yield from get_bindings(arg.annotation)
+
+    if args.kwarg is not None and args.kwarg.annotation is not None:
+        yield from get_bindings(args.kwarg.annotation)
+
+    for default in args.defaults:
+        yield from get_bindings(default)
+
+    for default in args.kw_defaults:
+        if default is None:
+            continue
+
+        yield from get_bindings(default)
 
 
 @get_bindings.register(ast.FunctionDef)
@@ -37,7 +70,15 @@ def _get_bindings_for_function_def(node):
         )
 
     """
+    for decorator in node.decorator_list:
+        yield from get_bindings(decorator)
+
     yield node.name
+
+    yield from _get_bindings_from_arguments(node.args)
+
+    if node.returns is not None:
+        yield from get_bindings(node.returns)
 
 
 @get_bindings.register(ast.ClassDef)
@@ -53,6 +94,15 @@ def _get_bindings_for_class_def(node):
             expr* decorator_list,
         )
     """
+    for decorator in node.decorator_list:
+        yield from get_bindings(decorator)
+
+    for base in node.bases:
+        yield from get_bindings(base)
+
+    for keyword in node.keywords:
+        yield from get_bindings(keyword.value)
+
     yield node.name
 
 
@@ -136,6 +186,8 @@ def _get_bindings_for_assign(node):
 
         Assign(expr* targets, expr value, string? type_comment)
     """
+    yield from get_bindings(node.value)
+
     for target in node.targets:
         yield from _flatten_target(target)
 
@@ -147,6 +199,8 @@ def _get_bindings_for_aug_assign(node):
 
         AugAssign(expr target, operator op, expr value)
     """
+    yield from get_bindings(node.value)
+
     yield from _flatten_target(node.target)
 
 
@@ -159,6 +213,11 @@ def _get_bindings_for_ann_assign(node):
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
+    yield from get_bindings(node.annotation)
+
+    if node.value is not None:
+        yield from get_bindings(node.value)
+
     yield from _flatten_target(node.target)
 
 
@@ -187,6 +246,8 @@ def _get_bindings_for_for(node):
             string? type_comment,
         )
     """
+    yield from get_bindings(node.iter)
+
     yield from _flatten_target(node.target)
 
     for stmt in node.body:
@@ -203,6 +264,8 @@ def _get_bindings_for_while(node):
 
         While(expr test, stmt* body, stmt* orelse)
     """
+    yield from get_bindings(node.test)
+
     for stmt in node.body:
         yield from get_bindings(stmt)
 
@@ -217,6 +280,8 @@ def _get_bindings_for_if(node):
 
         If(expr test, stmt* body, stmt* orelse)
     """
+    yield from get_bindings(node.test)
+
     for stmt in node.body:
         yield from get_bindings(stmt)
 
@@ -237,6 +302,8 @@ def _get_bindings_for_with(node):
         AsyncWith(withitem* items, stmt* body, string? type_comment)
     """
     for item in node.items:
+        yield from get_bindings(item.context_expr)
+
         if item.optional_vars:
             yield from _flatten_target(item.optional_vars)
 
@@ -252,8 +319,11 @@ def _get_bindings_for_raise(node):
 
         Raise(expr? exc, expr? cause)
     """
-    return
-    yield
+    if node.cause is not None:
+        yield from get_bindings(node.cause)
+
+    if node.exc is not None:
+        yield from get_bindings(node.exc)
 
 
 @get_bindings.register(ast.Try)
@@ -296,8 +366,10 @@ def _get_bindings_for_assert(node):
         Assert(expr test, expr? msg)
 
     """
-    return
-    yield
+    yield from get_bindings(node.test)
+
+    if node.msg is not None:
+        yield from get_bindings(node.msg)
 
 
 @get_bindings.register(ast.Import)
@@ -373,6 +445,17 @@ def _get_bindings_for_control_flow(node):
     yield
 
 
+@get_bindings.register(ast.NamedExpr)
+def _get_bindings_for_named_expr(node):
+    """
+    ..code:: python
+
+        NamedExpr(expr target, expr value)
+    """
+    yield from get_bindings(node.value)
+    yield from _flatten_target(node.target)
+
+
 @get_bindings.register(ast.BoolOp)
 def _get_bindings_for_bool_op(node):
     """
@@ -382,18 +465,8 @@ def _get_bindings_for_bool_op(node):
         # expr
         BoolOp(boolop op, expr* values)
     """
-    return
-    yield
-
-
-@get_bindings.register(ast.NamedExpr)
-def _get_bindings_for_named_expr(node):
-    """
-    ..code:: python
-
-        NamedExpr(expr target, expr value)
-    """
-    raise NotImplementedError("TODO")
+    for expr in node.values:
+        yield from get_bindings(expr)
 
 
 @get_bindings.register(ast.BinOp)
@@ -404,8 +477,8 @@ def _get_bindings_for_bin_op(node):
 
         BinOp(expr left, operator op, expr right)
     """
-    return
-    yield
+    yield from get_bindings(node.left)
+    yield from get_bindings(node.right)
 
 
 @get_bindings.register(ast.UnaryOp)
@@ -415,8 +488,7 @@ def _get_bindings_for_unary_op(node):
 
         UnaryOp(unaryop op, expr operand)
     """
-    return
-    yield
+    yield from get_bindings(node.operand)
 
 
 @get_bindings.register(ast.Lambda)
@@ -426,8 +498,7 @@ def _get_bindings_for_lambda(node):
 
         Lambda(arguments args, expr body)
     """
-    return
-    yield
+    yield from _get_bindings_from_arguments(node.args)
 
 
 @get_bindings.register(ast.IfExp)
@@ -437,8 +508,9 @@ def _get_bindings_for_if_exp(node):
 
         IfExp(expr test, expr body, expr orelse)
     """
-    return
-    yield
+    yield from get_bindings(node.test)
+    yield from get_bindings(node.body)
+    yield from get_bindings(node.orelse)
 
 
 @get_bindings.register(ast.Dict)
@@ -448,8 +520,11 @@ def _get_bindings_for_dict(node):
 
         Dict(expr* keys, expr* values)
     """
-    return
-    yield
+    for key, value in zip(node.keys, node.values):
+        if key is not None:
+            yield from get_bindings(key)
+        if value is not None:
+            yield from get_bindings(value)
 
 
 @get_bindings.register(ast.Set)
@@ -459,8 +534,8 @@ def _get_bindings_for_set(node):
 
         Set(expr* elts)
     """
-    return
-    yield
+    for elt in node.elts:
+        yield from get_bindings(elt)
 
 
 @get_bindings.register(ast.ListComp)
@@ -468,10 +543,16 @@ def _get_bindings_for_list_comp(node):
     """
     ..code:: python
 
+        comprehension = (expr target, expr iter, expr* ifs, int is_async)
         ListComp(expr elt, comprehension* generators)
     """
     for generator in node.generators:
+        yield from get_bindings(generator.iter)
         yield from _flatten_target(generator.target)
+        for condition in generator.ifs:
+            yield from get_bindings(condition)
+
+    yield from get_bindings(node.elt)
 
 
 @get_bindings.register(ast.SetComp)
@@ -479,10 +560,16 @@ def _get_bindings_for_set_comp(node):
     """
     ..code:: python
 
+        comprehension = (expr target, expr iter, expr* ifs, int is_async)
         SetComp(expr elt, comprehension* generators)
     """
     for generator in node.generators:
+        yield from get_bindings(generator.iter)
         yield from _flatten_target(generator.target)
+        for condition in generator.ifs:
+            yield from get_bindings(condition)
+
+    yield from get_bindings(node.elt)
 
 
 @get_bindings.register(ast.DictComp)
@@ -493,7 +580,13 @@ def _get_bindings_for_dict_comp(node):
         DictComp(expr key, expr value, comprehension* generators)
     """
     for generator in node.generators:
+        yield from get_bindings(generator.iter)
         yield from _flatten_target(generator.target)
+        for condition in generator.ifs:
+            yield from get_bindings(condition)
+
+    yield from get_bindings(node.key)
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.GeneratorExp)
@@ -504,7 +597,12 @@ def _get_bindings_for_generator_exp(node):
         GeneratorExp(expr elt, comprehension* generators)
     """
     for generator in node.generators:
+        yield from get_bindings(generator.iter)
         yield from _flatten_target(generator.target)
+        for condition in generator.ifs:
+            yield from get_bindings(condition)
+
+    yield from get_bindings(node.elt)
 
 
 @get_bindings.register(ast.Await)
@@ -515,8 +613,7 @@ def _get_bindings_for_await(node):
         # the grammar constrains where yield expressions can occur
         Await(expr value)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.Yield)
@@ -526,8 +623,8 @@ def _get_bindings_for_yield(node):
 
         Yield(expr? value)
     """
-    return
-    yield
+    if node.value is not None:
+        yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.YieldFrom)
@@ -537,8 +634,7 @@ def _get_bindings_for_yield_from(node):
 
         YieldFrom(expr value)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.Compare)
@@ -550,8 +646,9 @@ def _get_bindings_for_compare(node):
         # x < 4 < 3 and (x < 4) < 3
         Compare(expr left, cmpop* ops, expr* comparators)
     """
-    return
-    yield
+    yield from get_bindings(node.left)
+    for comparator in node.comparators:
+        yield from get_bindings(comparator)
 
 
 @get_bindings.register(ast.Call)
@@ -559,10 +656,16 @@ def _get_bindings_for_call(node):
     """
     ..code:: python
 
+        keyword = (identifier? arg, expr value)
         Call(expr func, expr* args, keyword* keywords)
     """
-    return
-    yield
+    yield from get_bindings(node.func)
+
+    for arg in node.args:
+        yield from get_bindings(arg)
+
+    for kwarg in node.keywords:
+        yield from get_bindings(kwarg.value)
 
 
 @get_bindings.register(ast.FormattedValue)
@@ -572,8 +675,7 @@ def _get_bindings_for_formatted_value(node):
 
         FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.JoinedStr)
@@ -583,8 +685,8 @@ def _get_bindings_for_joined_str(node):
 
         JoinedStr(expr* values)
     """
-    return
-    yield
+    for value in node.values:
+        yield from get_bindings(value)
 
 
 @get_bindings.register(ast.Constant)
@@ -605,8 +707,39 @@ def _get_bindings_for_attribute(node):
 
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
+
+
+@get_bindings.register(ast.Slice)
+def _get_bindings_for_slice(node):
+    """
+    ..code:: python
+
+        # can appear only in Subscript
+        Slice(expr? lower, expr? upper, expr? step)
+
+    """
+    if node.lower is not None:
+        yield from get_bindings(node.lower)
+
+    if node.upper is not None:
+        yield from get_bindings(node.upper)
+
+    if node.step is not None:
+        yield from get_bindings(node.step)
+
+
+if sys.version_info < (3, 9):
+
+    @get_bindings.register(ast.Index)
+    def _get_bindings_for_index(node):
+        """
+        ..code:: python
+
+            # can appear only in Subscript
+            Index(expr value)
+        """
+        yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.Subscript)
@@ -616,8 +749,8 @@ def _get_bindings_for_subscript(node):
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
+    yield from get_bindings(node.slice)
 
 
 @get_bindings.register(ast.Starred)
@@ -650,8 +783,8 @@ def _get_bindings_for_list(node):
 
         List(expr* elts, expr_context ctx)
     """
-    return
-    yield
+    for elt in node.elts:
+        yield from get_bindings(elt)
 
 
 @get_bindings.register(ast.Tuple)
@@ -662,18 +795,5 @@ def _get_bindings_for_tuple(node):
         Tuple(expr* elts, expr_context ctx)
 
     """
-    return
-    yield
-
-
-@get_bindings.register(ast.Slice)
-def _get_bindings_for_slice(node):
-    """
-    ..code:: python
-
-        # can appear only in Subscript
-        Slice(expr? lower, expr? upper, expr? step)
-
-    """
-    return
-    yield
+    for elt in node.elts:
+        yield from get_bindings(elt)

@@ -2,7 +2,14 @@ import ast
 import sys
 import textwrap
 
+import pytest
+
 from ssort._bindings import get_bindings
+
+walrus_operator = pytest.mark.skipif(
+    sys.version_info < (3, 9),
+    reason="walrus operator was introduced in python 3.9",
+)
 
 
 def _parse(source):
@@ -27,6 +34,65 @@ def test_function_def_bindings():
     assert list(get_bindings(node)) == ["function"]
 
 
+@walrus_operator
+def test_function_def_bindings_walrus_default():
+    node = _parse(
+        """
+        def function(a, b = (b_binding := 2)):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["function", "b_binding"]
+
+
+@walrus_operator
+def test_function_def_bindings_walrus_kw_default():
+    node = _parse(
+        """
+        def function(*, kw1 = (kw1_binding := 1), kw2):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["function", "kw1_binding"]
+
+
+@walrus_operator
+def test_function_def_bindings_walrus_type():
+    node = _parse(
+        """
+        def function(
+            posonly: (posonly_type := int), / ,
+            arg: (arg_type := int),
+            *args: (args_type := int),
+            kwarg: (kwarg_type := int),
+            **kwargs: (kwargs_type := int)
+        ) -> (return_type := int):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == [
+        "function",
+        "posonly_type",
+        "arg_type",
+        "args_type",
+        "kwarg_type",
+        "kwargs_type",
+        "return_type",
+    ]
+
+
+@walrus_operator
+def test_function_def_bindings_walrus_decorator():
+    node = _parse(
+        """
+        @(p := property)
+        def prop(self):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["p", "prop"]
+
+
 def test_async_function_def_bindings():
     """
     ..code:: python
@@ -41,7 +107,61 @@ def test_async_function_def_bindings():
         )
 
     """
-    pass
+    node = _parse(
+        """
+        async def function():
+            name
+        """
+    )
+    assert list(get_bindings(node)) == ["function"]
+
+
+@walrus_operator
+def test_async_function_def_bindings_walrus_kw_default():
+    node = _parse(
+        """
+        async def function(*, kw1 = (kw1_binding := 1), kw2):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["function", "kw1_binding"]
+
+
+@walrus_operator
+def test_async_function_def_bindings_walrus_type():
+    node = _parse(
+        """
+        async def function(
+            posonly: (posonly_type := int), / ,
+            arg: (arg_type := int),
+            *args: (args_type := int),
+            kwarg: (kwarg_type := int),
+            **kwargs: (kwargs_type := int)
+        ) -> (return_type := int):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == [
+        "function",
+        "posonly_type",
+        "arg_type",
+        "args_type",
+        "kwarg_type",
+        "kwargs_type",
+        "return_type",
+    ]
+
+
+@walrus_operator
+def test_async_function_def_bindings_walrus_decorator():
+    node = _parse(
+        """
+        @(p := property)
+        async def prop(self):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["p", "prop"]
 
 
 def test_class_def_bindings():
@@ -56,7 +176,61 @@ def test_class_def_bindings():
             expr* decorator_list,
         )
     """
-    pass
+    node = _parse(
+        """
+        @decorator
+        class ClassName:
+            a = 1
+            def b(self):
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["ClassName"]
+
+
+@walrus_operator
+def test_class_def_bindings_walrus_decorator():
+    node = _parse(
+        """
+        @(d := decorator())
+        class ClassName:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["d", "ClassName"]
+
+
+@walrus_operator
+def test_class_def_bindings_walrus_base():
+    node = _parse(
+        """
+        class ClassName(BaseClass, (OtherBase := namedtuple())):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["OtherBase", "ClassName"]
+
+
+@walrus_operator
+def test_class_def_bindings_walrus_metaclass():
+    node = _parse(
+        """
+        class Class(metaclass=(class_meta := MetaClass)):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["class_meta", "Class"]
+
+
+@walrus_operator
+def test_class_def_bindings_walrus_body():
+    node = _parse(
+        """
+        class Class:
+            a = (prop := 2)
+        """
+    )
+    assert list(get_bindings(node)) == ["Class"]
 
 
 def test_return_bindings():
@@ -124,6 +298,12 @@ def test_assign_bindings_list_star():
     assert list(get_bindings(node)) == ["first", "rest"]
 
 
+@walrus_operator
+def test_assign_bindings_walrus_value():
+    node = _parse("a = (b := c)")
+    assert list(get_bindings(node)) == ["b", "a"]
+
+
 def test_aug_assign_bindings():
     """
     ..code:: python
@@ -132,6 +312,17 @@ def test_aug_assign_bindings():
     """
     node = _parse("a += b")
     assert list(get_bindings(node)) == ["a"]
+
+
+def test_aug_assign_bindings_attribute():
+    node = _parse("obj.attr /= value")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_aug_assign_bindings_walrus_value():
+    node = _parse("a ^= (b := c)")
+    assert list(get_bindings(node)) == ["b", "a"]
 
 
 def test_ann_assign_bindings():
@@ -144,6 +335,24 @@ def test_ann_assign_bindings():
     """
     node = _parse("a: int = b")
     assert list(get_bindings(node)) == ["a"]
+
+
+def test_ann_assign_bindings_no_value():
+    # TODO this expression doesn't technically bind `a`.
+    node = _parse("a: int")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_ann_assign_bindings_walrus_value():
+    node = _parse("a: int = (b := c)")
+    assert list(get_bindings(node)) == ["b", "a"]
+
+
+@walrus_operator
+def test_ann_assign_bindings_walrus_type():
+    node = _parse("a: (a_type := int) = 4")
+    assert list(get_bindings(node)) == ["a_type", "a"]
 
 
 def test_for_bindings():
@@ -159,7 +368,26 @@ def test_for_bindings():
             string? type_comment,
         )
     """
-    pass
+    node = _parse(
+        """
+        for i in range(10):
+            a += i
+        else:
+            b = 4
+        """
+    )
+    assert list(get_bindings(node)) == ["i", "a", "b"]
+
+
+@walrus_operator
+def test_for_bindings_walrus():
+    node = _parse(
+        """
+        for i in (r := range(10)):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["r", "i"]
 
 
 def test_async_for_bindings():
@@ -174,7 +402,26 @@ def test_async_for_bindings():
             string? type_comment,
         )
     """
-    pass
+    node = _parse(
+        """
+        async for i in range(10):
+            a += i
+        else:
+            b = 4
+        """
+    )
+    assert list(get_bindings(node)) == ["i", "a", "b"]
+
+
+@walrus_operator
+def test_async_for_bindings_walrus():
+    node = _parse(
+        """
+        async for i in (r := range(10)):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["r", "i"]
 
 
 def test_while_bindings():
@@ -183,7 +430,26 @@ def test_while_bindings():
 
         While(expr test, stmt* body, stmt* orelse)
     """
-    pass
+    node = _parse(
+        """
+        while test():
+            a = 1
+        else:
+            b = 2
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+@walrus_operator
+def test_while_bindings_walrus_test():
+    node = _parse(
+        """
+        while (value := test):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["value"]
 
 
 def test_if_bindings():
@@ -192,7 +458,28 @@ def test_if_bindings():
 
         If(expr test, stmt* body, stmt* orelse)
     """
-    pass
+    node = _parse(
+        """
+        if predicate_one():
+            a = 1
+        elif predicate_two():
+            b = 2
+        else:
+            c = 3
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b", "c"]
+
+
+@walrus_operator
+def test_if_bindings_walrus_test():
+    node = _parse(
+        """
+        if (result := predicate()):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["result"]
 
 
 def test_with_bindings():
@@ -204,14 +491,13 @@ def test_with_bindings():
     node = _parse(
         """
         with A() as a:
-            a()
-            b()
+            b = 4
         """
     )
-    assert list(get_bindings(node)) == ["a"]
+    assert list(get_bindings(node)) == ["a", "b"]
 
 
-def test_with_requirements_bindings():
+def test_with_bindings_requirements_example():
     node = _parse(
         """
         with chdir(os.path.dirname(path)):
@@ -224,23 +510,133 @@ def test_with_requirements_bindings():
     assert list(get_bindings(node)) == ["requirements", "req"]
 
 
+def test_with_bindings_multiple():
+    node = _parse(
+        """
+        with A() as a, B() as b:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+def test_with_bindings_unbound():
+    node = _parse(
+        """
+        with A():
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+def test_with_bindings_tuple():
+    node = _parse(
+        """
+        with A() as (a, b):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+@walrus_operator
+def test_with_bindings_walrus():
+    node = _parse(
+        """
+        with (ctx := A()) as a:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["ctx", "a"]
+
+
 def test_async_with_bindings():
     """
     ..code:: python
 
         AsyncWith(withitem* items, stmt* body, string? type_comment)
     """
-    pass
+    node = _parse(
+        """
+        async with A() as a:
+            b = 4
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+def test_async_with_bindings_multiple():
+    node = _parse(
+        """
+        async with A() as a, B() as b:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+def test_async_with_bindings_unbound():
+    node = _parse(
+        """
+        async with A():
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+def test_async_with_bindings_tuple():
+    node = _parse(
+        """
+        async with A() as (a, b):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+@walrus_operator
+def test_async_with_bindings_walrus():
+    node = _parse(
+        """
+        async with (ctx := A()) as a:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["ctx", "a"]
 
 
 def test_raise_bindings():
     """
     ..code:: python
 
-
         Raise(expr? exc, expr? cause)
     """
-    pass
+    node = _parse("raise TypeError()")
+    assert list(get_bindings(node)) == []
+
+
+def test_raise_bindings_reraise():
+    node = _parse("raise")
+    assert list(get_bindings(node)) == []
+
+
+def test_raise_bindings_with_cause():
+    node = _parse("raise TypeError() from exc")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_raise_bindings_walrus():
+    node = _parse("raise (exc := TypeError())")
+    assert list(get_bindings(node)) == ["exc"]
+
+
+@walrus_operator
+def test_raise_bindings_walrus_in_cause():
+    node = _parse("raise TypeError() from (original := exc)")
+    assert list(get_bindings(node)) == ["original"]
 
 
 def test_try_bindings():
@@ -276,7 +672,25 @@ def test_assert_bindings():
         Assert(expr test, expr? msg)
 
     """
-    pass
+    node = _parse("assert condition()")
+    assert list(get_bindings(node)) == []
+
+
+def test_assert_bindings_with_message():
+    node = _parse('assert condition(), "message"')
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_assert_bindings_walrus_condition():
+    node = _parse("assert (result := condition())")
+    assert list(get_bindings(node)) == ["result"]
+
+
+@walrus_operator
+def test_assert_bindings_walrus_message():
+    node = _parse('assert condition, (message := "message")')
+    assert list(get_bindings(node)) == ["message"]
 
 
 def test_import_bindings():
@@ -321,7 +735,13 @@ def test_global_bindings():
 
         Global(identifier* names)
     """
-    pass
+    node = _parse("global name")
+    assert list(get_bindings(node)) == ["name"]
+
+
+def test_global_bindings_multiple():
+    node = _parse("global a, b")
+    assert list(get_bindings(node)) == ["a", "b"]
 
 
 def test_non_local_bindings():
@@ -330,26 +750,46 @@ def test_non_local_bindings():
 
         Nonlocal(identifier* names)
     """
-    pass
+    node = _parse("nonlocal name")
+    assert list(get_bindings(node)) == ["name"]
 
 
-def test_expr_bindings():
+def test_nonlocal_bindings_multiple():
+    node = _parse("nonlocal a, b")
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+def test_pass_bindings():
     """
     ..code:: python
 
-        Expr(expr value)
+        Pass
+
     """
-    pass
+    node = _parse("pass")
+    assert list(get_bindings(node)) == []
 
 
-def test_control_flow_bindings():
+def test_break_bindings():
     """
     ..code:: python
 
-        Pass | Break | Continue
+        Break
 
     """
-    pass
+    node = _parse("break")
+    assert list(get_bindings(node)) == []
+
+
+def test_continue_bindings():
+    """
+    ..code:: python
+
+        Continue
+
+    """
+    node = _parse("continue")
+    assert list(get_bindings(node)) == []
 
 
 def test_bool_op_bindings():
@@ -360,16 +800,54 @@ def test_bool_op_bindings():
         # expr
         BoolOp(boolop op, expr* values)
     """
-    pass
+    node = _parse("a and b")
+    assert list(get_bindings(node)) == []
 
 
+@walrus_operator
 def test_named_expr_bindings():
     """
     ..code:: python
 
         NamedExpr(expr target, expr value)
     """
-    pass
+    node = _parse("(a := b)")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_named_expr_bindings_recursive():
+    """
+    ..code:: python
+
+        NamedExpr(expr target, expr value)
+    """
+    node = _parse("(a := (b := (c := d)))")
+    assert list(get_bindings(node)) == ["c", "b", "a"]
+
+
+@walrus_operator
+def test_bool_op_bindings_walrus_left():
+    node = _parse("(left := a) and b")
+    assert list(get_bindings(node)) == ["left"]
+
+
+@walrus_operator
+def test_bool_op_bindings_walrus_right():
+    node = _parse("a or (right := b)")
+    assert list(get_bindings(node)) == ["right"]
+
+
+@walrus_operator
+def test_bool_op_bindings_walrus_both():
+    node = _parse("(left := a) and (right := b)")
+    assert list(get_bindings(node)) == ["left", "right"]
+
+
+@walrus_operator
+def test_bool_op_bindings_walrus_multiple():
+    node = _parse("(a := 1) and (b := 2) and (c := 3)")
+    assert list(get_bindings(node)) == ["a", "b", "c"]
 
 
 def test_bin_op_bindings():
@@ -379,7 +857,26 @@ def test_bin_op_bindings():
 
         BinOp(expr left, operator op, expr right)
     """
-    pass
+    node = _parse("a and b")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_bin_op_bindings_walrus_left():
+    node = _parse("(left := a) | b")
+    assert list(get_bindings(node)) == ["left"]
+
+
+@walrus_operator
+def test_bin_op_bindings_walrus_right():
+    node = _parse("a ^ (right := b)")
+    assert list(get_bindings(node)) == ["right"]
+
+
+@walrus_operator
+def test_bin_op_bindings_walrus_both():
+    node = _parse("(left := a) + (right := b)")
+    assert list(get_bindings(node)) == ["left", "right"]
 
 
 def test_unary_op_bindings():
@@ -388,7 +885,14 @@ def test_unary_op_bindings():
 
         UnaryOp(unaryop op, expr operand)
     """
-    pass
+    node = _parse("-a")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_unary_op_bindings_walrus():
+    node = _parse("-(a := b)")
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_lambda_bindings():
@@ -400,13 +904,58 @@ def test_lambda_bindings():
     pass
 
 
+@walrus_operator
+def test_lambda_bindings_walrus_default():
+    node = _parse("(lambda a, b = (b_binding := 2): None)")
+    assert list(get_bindings(node)) == ["b_binding"]
+
+
+@walrus_operator
+def test_lambda_bindings_walrus_kw_default():
+    node = _parse("(lambda *, kw1 = (kw1_binding := 1), kw2: None)")
+    assert list(get_bindings(node)) == ["kw1_binding"]
+
+
+@walrus_operator
+def test_lambda_bindings_walrus_body():
+    node = _parse("(lambda : (a := 1) + a)")
+    assert list(get_bindings(node)) == []
+
+
 def test_if_exp_bindings():
     """
     ..code:: python
 
         IfExp(expr test, expr body, expr orelse)
     """
-    pass
+    node = _parse("subsequent() if predicate() else alternate()")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_if_exp_bindings_walrus_subsequent():
+    node = _parse("(a := subsequent()) if predicate() else alternate()")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_if_exp_bindings_walrus_predicate():
+    node = _parse("subsequent() if (a := predicate()) else alternate()")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_if_exp_bindings_walrus_alternate():
+    node = _parse("subsequent() if predicate() else (a := alternate())")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_if_exp_bindings_walrus():
+    node = _parse(
+        "(a := subsequent()) if (b := predicate()) else (c := alternate())"
+    )
+    assert list(get_bindings(node)) == ["b", "a", "c"]
 
 
 def test_dict_bindings():
@@ -429,31 +978,107 @@ def test_dict_bindings_unpack():
     assert list(get_bindings(node)) == []
 
 
+@walrus_operator
+def test_dict_bindings_walrus_key():
+    node = _parse("{(key := genkey()): value}")
+    assert list(get_bindings(node)) == ["key"]
+
+
+@walrus_operator
+def test_dict_bindings_walrus_value():
+    node = _parse("{key: (value := genvalue())}")
+    assert list(get_bindings(node)) == ["value"]
+
+
+@walrus_operator
+def test_dict_bindings_walrus_unpack():
+    node = _parse("{key: value, **(rest := other)}")
+    assert list(get_bindings(node)) == ["rest"]
+
+
 def test_set_bindings():
     """
     ..code:: python
 
         Set(expr* elts)
     """
-    pass
+    node = _parse("{a, b, c}")
+    assert list(get_bindings(node)) == []
+
+
+def test_set_bindings_unpack():
+    node = _parse("{a, b, *rest}")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_set_bindings_walrus():
+    node = _parse("{a, {b := genb()}, c}")
+    assert list(get_bindings(node)) == ["b"]
+
+
+@walrus_operator
+def test_set_bindings_walrus_unpack():
+    node = _parse("{a, b, *(rest := other)}")
+    assert list(get_bindings(node)) == ["rest"]
 
 
 def test_list_comp_bindings():
     """
     ..code:: python
 
+        comprehension = (expr target, expr iter, expr* ifs, int is_async)
         ListComp(expr elt, comprehension* generators)
     """
-    pass
+    node = _parse("[item for item in iterator if condition(item)]")
+    assert list(get_bindings(node)) == ["item"]
+
+
+@walrus_operator
+def test_list_comp_bindings_walrus_target():
+    node = _parse("[( a:= item) for item in iterator if condition(item)]")
+    assert list(get_bindings(node)) == ["item", "a"]
+
+
+@walrus_operator
+def test_list_comp_bindings_walrus_iter():
+    node = _parse("[item for item in (it := iterator) if condition(item)]")
+    assert list(get_bindings(node)) == ["it", "item"]
+
+
+@walrus_operator
+def test_list_comp_bindings_walrus_condition():
+    node = _parse("[item for item in iterator if (c := condition(item))]")
+    assert list(get_bindings(node)) == ["item", "c"]
 
 
 def test_set_comp_bindings():
     """
     ..code:: python
 
+        comprehension = (expr target, expr iter, expr* ifs, int is_async)
         SetComp(expr elt, comprehension* generators)
     """
-    pass
+    node = _parse("{item for item in iterator if condition(item)}")
+    assert list(get_bindings(node)) == ["item"]
+
+
+@walrus_operator
+def test_set_comp_bindings_walrus_target():
+    node = _parse("{( a:= item) for item in iterator if condition(item)}")
+    assert list(get_bindings(node)) == ["item", "a"]
+
+
+@walrus_operator
+def test_set_comp_bindings_walrus_iter():
+    node = _parse("{item for item in (it := iterator) if condition(item)}")
+    assert list(get_bindings(node)) == ["it", "item"]
+
+
+@walrus_operator
+def test_set_comp_bindings_walrus_condition():
+    node = _parse("{item for item in iterator if (c := condition(item))}")
+    assert list(get_bindings(node)) == ["item", "c"]
 
 
 def test_dict_comp_bindings():
@@ -462,7 +1087,45 @@ def test_dict_comp_bindings():
 
         DictComp(expr key, expr value, comprehension* generators)
     """
-    pass
+    node = _parse("{item[0]: item[1] for item in iterator if check(item)}")
+    assert list(get_bindings(node)) == ["item"]
+
+
+def test_dict_comp_bindings_unpack():
+    node = _parse("{key: value for key, value in iterator}")
+    assert list(get_bindings(node)) == ["key", "value"]
+
+
+@walrus_operator
+def test_dict_comp_bindings_walrus_key():
+    node = _parse(
+        "{(key := item[0]): item[1] for item in iterator if check(item)}"
+    )
+    assert list(get_bindings(node)) == ["item", "key"]
+
+
+@walrus_operator
+def test_dict_comp_bindings_walrus_value():
+    node = _parse(
+        "{item[0]: (value := item[1]) for item in iterator if check(item)}"
+    )
+    assert list(get_bindings(node)) == ["item", "value"]
+
+
+@walrus_operator
+def test_dict_comp_bindings_walrus_iter():
+    node = _parse(
+        "{item[0]: item[1] for item in (it := iterator) if check(item)}"
+    )
+    assert list(get_bindings(node)) == ["it", "item"]
+
+
+@walrus_operator
+def test_dict_comp_bindings_walrus_condition():
+    node = _parse(
+        "{item[0]: item[1] for item in iterator if (c := check(item))}"
+    )
+    assert list(get_bindings(node)) == ["item", "c"]
 
 
 def test_generator_exp_bindings():
@@ -471,7 +1134,26 @@ def test_generator_exp_bindings():
 
         GeneratorExp(expr elt, comprehension* generators)
     """
-    pass
+    node = _parse("(item for item in iterator if condition(item))")
+    assert list(get_bindings(node)) == ["item"]
+
+
+@walrus_operator
+def test_generator_exp_bindings_walrus_target():
+    node = _parse("(( a:= item) for item in iterator if condition(item))")
+    assert list(get_bindings(node)) == ["item", "a"]
+
+
+@walrus_operator
+def test_generator_exp_bindings_walrus_iter():
+    node = _parse("(item for item in (it := iterator) if condition(item))")
+    assert list(get_bindings(node)) == ["it", "item"]
+
+
+@walrus_operator
+def test_generator_exp_bindings_walrus_condition():
+    node = _parse("(item for item in iterator if (c := condition(item)))")
+    assert list(get_bindings(node)) == ["item", "c"]
 
 
 def test_await_bindings():
@@ -481,7 +1163,14 @@ def test_await_bindings():
         # the grammar constrains where yield expressions can occur
         Await(expr value)
     """
-    pass
+    node = _parse("await fun()")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_await_bindings_walrus():
+    node = _parse("await (r := fun())")
+    assert list(get_bindings(node)) == ["r"]
 
 
 def test_yield_bindings():
@@ -490,7 +1179,19 @@ def test_yield_bindings():
 
         Yield(expr? value)
     """
-    pass
+    node = _parse("yield fun()")
+    assert list(get_bindings(node)) == []
+
+
+def test_yield_bindings_no_result():
+    node = _parse("yield")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_yield_bindings_walrus():
+    node = _parse("yield (r := fun())")
+    assert list(get_bindings(node)) == ["r"]
 
 
 def test_yield_from_bindings():
@@ -499,7 +1200,14 @@ def test_yield_from_bindings():
 
         YieldFrom(expr value)
     """
-    pass
+    node = _parse("yield from fun()")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_yield_from_bindings_walrus():
+    node = _parse("yield from (r := fun())")
+    assert list(get_bindings(node)) == ["r"]
 
 
 def test_compare_bindings():
@@ -510,25 +1218,51 @@ def test_compare_bindings():
         # x < 4 < 3 and (x < 4) < 3
         Compare(expr left, cmpop* ops, expr* comparators)
     """
-    pass
+    node = _parse("0 < value < 5")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_compare_bindings_walrus():
+    node = _parse("(a := 0) < (b := value) < (c := 5)")
+    assert list(get_bindings(node)) == ["a", "b", "c"]
 
 
 def test_call_bindings():
     """
     ..code:: python
 
+        keyword = (identifier? arg, expr value)
         Call(expr func, expr* args, keyword* keywords)
     """
-    pass
+    node = _parse("fun(arg, *args, kwarg=kwarg, **kwargs)")
+    assert list(get_bindings(node)) == []
 
 
-def test_formatted_value_bindings():
-    """
-    ..code:: python
+@walrus_operator
+def test_call_bindings_walrus_function():
+    node = _parse("(f := fun)()")
+    assert list(get_bindings(node)) == ["f"]
 
-        FormattedValue(expr value, int? conversion, expr? format_spec)
-    """
-    pass
+
+@walrus_operator
+def test_call_bindings_walrus_args():
+    node = _parse(
+        """
+        fun(
+            (arg_binding := arg),
+            *(args_binding := args),
+            kwarg=(kwarg_binding := kwarg),
+            **(kwargs_binding := kwargs),
+        )
+        """
+    )
+    assert list(get_bindings(node)) == [
+        "arg_binding",
+        "args_binding",
+        "kwarg_binding",
+        "kwargs_binding",
+    ]
 
 
 def test_joined_str_bindings():
@@ -536,8 +1270,22 @@ def test_joined_str_bindings():
     ..code:: python
 
         JoinedStr(expr* values)
+        FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    pass
+    node = _parse('f"a: {a}"')
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_joined_str_bindings_walrus():
+    """
+    ..code:: python
+
+        JoinedStr(expr* values)
+        FormattedValue(expr value, int? conversion, expr? format_spec)
+    """
+    node = _parse('f"a: {(a := get_a())}"')
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_constant_bindings():
@@ -546,7 +1294,8 @@ def test_constant_bindings():
 
         Constant(constant value, string? kind)
     """
-    pass
+    node = _parse("1")
+    assert list(get_bindings(node)) == []
 
 
 def test_attribute_bindings():
@@ -556,7 +1305,14 @@ def test_attribute_bindings():
         # the following expression can appear in assignment context
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    pass
+    node = _parse("a.b.c")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_attribute_bindings_walrus():
+    node = _parse("(a_binding := a).b")
+    assert list(get_bindings(node)) == ["a_binding"]
 
 
 def test_subscript_bindings():
@@ -565,7 +1321,42 @@ def test_subscript_bindings():
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    pass
+    node = _parse("a[b]")
+    assert list(get_bindings(node)) == []
+
+
+def test_subscript_bindings_slice():
+    node = _parse("a[b:c]")
+    assert list(get_bindings(node)) == []
+
+
+def test_subscript_bindings_slice_with_step():
+    node = _parse("a[b:c:d]")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_subscript_bindings_walrus_value():
+    node = _parse("(a_binding := a)[b]")
+    assert list(get_bindings(node)) == ["a_binding"]
+
+
+@walrus_operator
+def test_subscript_bindings_walrus_index():
+    node = _parse("a[(b_binding := b)]")
+    assert list(get_bindings(node)) == ["b_binding"]
+
+
+@walrus_operator
+def test_subscript_bindings_walrus_slice():
+    node = _parse("a[(b_binding := b):(c_binding := c)]")
+    assert list(get_bindings(node)) == ["b_binding", "c_binding"]
+
+
+@walrus_operator
+def test_subscript_bindings_walrus_slice_with_step():
+    node = _parse("a[(b_binding := b):(c_binding := c):(d_binding := d)]")
+    assert list(get_bindings(node)) == ["b_binding", "c_binding", "d_binding"]
 
 
 def test_starred_bindings():
@@ -574,12 +1365,17 @@ def test_starred_bindings():
 
         Starred(expr value, expr_context ctx)
     """
+    node = _parse("*a")
+    assert list(get_bindings(node)) == []
 
-    pass
+
+@walrus_operator
+def test_starred_bindings_walrus():
+    node = _parse("*(a_binding := a)")
+    assert list(get_bindings(node)) == ["a_binding"]
 
 
 def test_name_bindings():
-
     """
     ..code:: python
 
@@ -590,13 +1386,30 @@ def test_name_bindings():
 
 
 def test_list_bindings():
-
     """
     ..code:: python
 
         List(expr* elts, expr_context ctx)
     """
-    pass
+    node = _parse("[a, b, c]")
+    assert list(get_bindings(node)) == []
+
+
+def test_list_bindings_unpack():
+    node = _parse("{a, b, *rest}")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_list_bindings_walrus():
+    node = _parse("[a, (b := genb()), c]")
+    assert list(get_bindings(node)) == ["b"]
+
+
+@walrus_operator
+def test_list_bindings_walrus_unpack():
+    node = _parse("[a, b, *(rest := other)]")
+    assert list(get_bindings(node)) == ["rest"]
 
 
 def test_tuple_bindings():
@@ -604,17 +1417,23 @@ def test_tuple_bindings():
     ..code:: python
 
         Tuple(expr* elts, expr_context ctx)
-
     """
-    pass
+    node = _parse("(a, b, c)")
+    assert list(get_bindings(node)) == []
 
 
-def test_slice_bindings():
-    """
-    ..code:: python
+def test_tuple_bindings_unpack():
+    node = _parse("(a, b, *rest)")
+    assert list(get_bindings(node)) == []
 
-        # can appear only in Subscript
-        Slice(expr? lower, expr? upper, expr? step)
 
-    """
-    pass
+@walrus_operator
+def test_tuple_bindings_walrus():
+    node = _parse("(a, (b := genb()), c)")
+    assert list(get_bindings(node)) == ["b"]
+
+
+@walrus_operator
+def test_tuple_bindings_walrus_unpack():
+    node = _parse("(a, b, *(rest := other))")
+    assert list(get_bindings(node)) == ["rest"]
