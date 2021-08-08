@@ -1391,7 +1391,25 @@ def test_list_bindings():
 
         List(expr* elts, expr_context ctx)
     """
-    pass
+    node = _parse("[a, b, c]")
+    assert list(get_bindings(node)) == []
+
+
+def test_list_bindings_unpack():
+    node = _parse("{a, b, *rest}")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_list_bindings_walrus():
+    node = _parse("[a, (b := genb()), c]")
+    assert list(get_bindings(node)) == ["b"]
+
+
+@walrus_operator
+def test_list_bindings_walrus_unpack():
+    node = _parse("[a, b, *(rest := other)]")
+    assert list(get_bindings(node)) == ["rest"]
 
 
 def test_tuple_bindings():
@@ -1399,6 +1417,23 @@ def test_tuple_bindings():
     ..code:: python
 
         Tuple(expr* elts, expr_context ctx)
-
     """
-    pass
+    node = _parse("(a, b, c)")
+    assert list(get_bindings(node)) == []
+
+
+def test_tuple_bindings_unpack():
+    node = _parse("(a, b, *rest)")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_tuple_bindings_walrus():
+    node = _parse("(a, (b := genb()), c)")
+    assert list(get_bindings(node)) == ["b"]
+
+
+@walrus_operator
+def test_tuple_bindings_walrus_unpack():
+    node = _parse("(a, b, *(rest := other))")
+    assert list(get_bindings(node)) == ["rest"]

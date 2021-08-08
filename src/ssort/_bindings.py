@@ -783,8 +783,8 @@ def _get_bindings_for_list(node):
 
         List(expr* elts, expr_context ctx)
     """
-    return
-    yield
+    for elt in node.elts:
+        yield from get_bindings(elt)
 
 
 @get_bindings.register(ast.Tuple)
@@ -795,5 +795,5 @@ def _get_bindings_for_tuple(node):
         Tuple(expr* elts, expr_context ctx)
 
     """
-    return
-    yield
+    for elt in node.elts:
+        yield from get_bindings(elt)
