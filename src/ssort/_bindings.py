@@ -655,10 +655,16 @@ def _get_bindings_for_call(node):
     """
     ..code:: python
 
+        keyword = (identifier? arg, expr value)
         Call(expr func, expr* args, keyword* keywords)
     """
-    return
-    yield
+    yield from get_bindings(node.func)
+
+    for arg in node.args:
+        yield from get_bindings(arg)
+
+    for kwarg in node.keywords:
+        yield from get_bindings(kwarg.value)
 
 
 @get_bindings.register(ast.FormattedValue)

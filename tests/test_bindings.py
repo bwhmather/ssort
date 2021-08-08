@@ -1232,9 +1232,37 @@ def test_call_bindings():
     """
     ..code:: python
 
+        keyword = (identifier? arg, expr value)
         Call(expr func, expr* args, keyword* keywords)
     """
-    pass
+    node = _parse("fun(arg, *args, kwarg=kwarg, **kwargs)")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_call_bindings_walrus_function():
+    node = _parse("(f := fun)()")
+    assert list(get_bindings(node)) == ["f"]
+
+
+@walrus_operator
+def test_call_bindings_walrus_args():
+    node = _parse(
+        """
+        fun(
+            (arg_binding := arg),
+            *(args_binding := args),
+            kwarg=(kwarg_binding := kwarg),
+            **(kwargs_binding := kwargs),
+        )
+        """
+    )
+    assert list(get_bindings(node)) == [
+        "arg_binding",
+        "args_binding",
+        "kwarg_binding",
+        "kwargs_binding",
+    ]
 
 
 def test_formatted_value_bindings():
