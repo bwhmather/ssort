@@ -805,6 +805,28 @@ def test_bool_op_bindings():
 
 
 @walrus_operator
+def test_named_expr_bindings():
+    """
+    ..code:: python
+
+        NamedExpr(expr target, expr value)
+    """
+    node = _parse("(a := b)")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_named_expr_bindings_recursive():
+    """
+    ..code:: python
+
+        NamedExpr(expr target, expr value)
+    """
+    node = _parse("(a := (b := (c := d)))")
+    assert list(get_bindings(node)) == ["c", "b", "a"]
+
+
+@walrus_operator
 def test_bool_op_bindings_walrus_left():
     node = _parse("(left := a) and b")
     assert list(get_bindings(node)) == ["left"]
@@ -826,15 +848,6 @@ def test_bool_op_bindings_walrus_both():
 def test_bool_op_bindings_walrus_multiple():
     node = _parse("(a := 1) and (b := 2) and (c := 3)")
     assert list(get_bindings(node)) == ["a", "b", "c"]
-
-
-def test_named_expr_bindings():
-    """
-    ..code:: python
-
-        NamedExpr(expr target, expr value)
-    """
-    pass
 
 
 def test_bin_op_bindings():

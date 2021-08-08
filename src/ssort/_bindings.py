@@ -444,6 +444,17 @@ def _get_bindings_for_control_flow(node):
     yield
 
 
+@get_bindings.register(ast.NamedExpr)
+def _get_bindings_for_named_expr(node):
+    """
+    ..code:: python
+
+        NamedExpr(expr target, expr value)
+    """
+    yield from get_bindings(node.value)
+    yield from _flatten_target(node.target)
+
+
 @get_bindings.register(ast.BoolOp)
 def _get_bindings_for_bool_op(node):
     """
@@ -455,17 +466,6 @@ def _get_bindings_for_bool_op(node):
     """
     for expr in node.values:
         yield from get_bindings(expr)
-
-
-@get_bindings.register(ast.NamedExpr)
-def _get_bindings_for_named_expr(node):
-    """
-    ..code:: python
-
-        NamedExpr(expr target, expr value)
-    """
-    yield from _flatten_target(node.target)
-    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.BinOp)
