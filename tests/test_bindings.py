@@ -977,6 +977,7 @@ def test_dict_bindings_unpack():
     node = _parse("{**values}")
     assert list(get_bindings(node)) == []
 
+
 @walrus_operator
 def test_dict_bindings_walrus_key():
     node = _parse("{(key := genkey()): value}")
@@ -1001,7 +1002,25 @@ def test_set_bindings():
 
         Set(expr* elts)
     """
-    pass
+    node = _parse("{a, b, c}")
+    assert list(get_bindings(node)) == []
+
+
+def test_set_bindings_unpack():
+    node = _parse("{a, b, *rest}")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_set_bindings_walrus():
+    node = _parse("{a, {b := genb()}, c}")
+    assert list(get_bindings(node)) == ["b"]
+
+
+@walrus_operator
+def test_set_bindings_walrus_unpack():
+    node = _parse("{a, b, *(rest := other)}")
+    assert list(get_bindings(node)) == ["rest"]
 
 
 def test_list_comp_bindings():

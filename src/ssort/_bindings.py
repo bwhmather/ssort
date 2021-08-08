@@ -533,8 +533,8 @@ def _get_bindings_for_set(node):
 
         Set(expr* elts)
     """
-    return
-    yield
+    for elt in node.elts:
+        yield from get_bindings(elt)
 
 
 @get_bindings.register(ast.ListComp)
