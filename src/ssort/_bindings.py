@@ -507,8 +507,9 @@ def _get_bindings_for_if_exp(node):
 
         IfExp(expr test, expr body, expr orelse)
     """
-    return
-    yield
+    yield from get_bindings(node.test)
+    yield from get_bindings(node.body)
+    yield from get_bindings(node.orelse)
 
 
 @get_bindings.register(ast.Dict)

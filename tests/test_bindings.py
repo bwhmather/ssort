@@ -928,7 +928,34 @@ def test_if_exp_bindings():
 
         IfExp(expr test, expr body, expr orelse)
     """
-    pass
+    node = _parse("subsequent() if predicate() else alternate()")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_if_exp_bindings_walrus_subsequent():
+    node = _parse("(a := subsequent()) if predicate() else alternate()")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_if_exp_bindings_walrus_predicate():
+    node = _parse("subsequent() if (a := predicate()) else alternate()")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_if_exp_bindings_walrus_alternate():
+    node = _parse("subsequent() if predicate() else (a := alternate())")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_if_exp_bindings_walrus():
+    node = _parse(
+        "(a := subsequent()) if (b := predicate()) else (c := alternate())"
+    )
+    assert list(get_bindings(node)) == ["b", "a", "c"]
 
 
 def test_dict_bindings():
