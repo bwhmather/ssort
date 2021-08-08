@@ -263,6 +263,8 @@ def _get_bindings_for_while(node):
 
         While(expr test, stmt* body, stmt* orelse)
     """
+    yield from get_bindings(node.test)
+
     for stmt in node.body:
         yield from get_bindings(stmt)
 

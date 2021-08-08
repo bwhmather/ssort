@@ -430,7 +430,26 @@ def test_while_bindings():
 
         While(expr test, stmt* body, stmt* orelse)
     """
-    pass
+    node = _parse(
+        """
+        while test():
+            a = 1
+        else:
+            b = 2
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+@walrus_operator
+def test_while_bindings_walrus_test():
+    node = _parse(
+        """
+        while (value := test):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["value"]
 
 
 def test_if_bindings():
