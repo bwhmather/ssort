@@ -977,6 +977,23 @@ def test_dict_bindings_unpack():
     node = _parse("{**values}")
     assert list(get_bindings(node)) == []
 
+@walrus_operator
+def test_dict_bindings_walrus_key():
+    node = _parse("{(key := genkey()): value}")
+    assert list(get_bindings(node)) == ["key"]
+
+
+@walrus_operator
+def test_dict_bindings_walrus_value():
+    node = _parse("{key: (value := genvalue())}")
+    assert list(get_bindings(node)) == ["value"]
+
+
+@walrus_operator
+def test_dict_bindings_walrus_unpack():
+    node = _parse("{key: value, **(rest := other)}")
+    assert list(get_bindings(node)) == ["rest"]
+
 
 def test_set_bindings():
     """

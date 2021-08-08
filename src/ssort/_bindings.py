@@ -519,8 +519,11 @@ def _get_bindings_for_dict(node):
 
         Dict(expr* keys, expr* values)
     """
-    return
-    yield
+    for key, value in zip(node.keys, node.values):
+        if key is not None:
+            yield from get_bindings(key)
+        if value is not None:
+            yield from get_bindings(value)
 
 
 @get_bindings.register(ast.Set)
