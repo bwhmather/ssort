@@ -1163,7 +1163,14 @@ def test_await_bindings():
         # the grammar constrains where yield expressions can occur
         Await(expr value)
     """
-    pass
+    node = _parse("await fun()")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_await_bindings_walrus():
+    node = _parse("await (r := fun())")
+    assert list(get_bindings(node)) == ["r"]
 
 
 def test_yield_bindings():
@@ -1172,7 +1179,19 @@ def test_yield_bindings():
 
         Yield(expr? value)
     """
-    pass
+    node = _parse("yield fun()")
+    assert list(get_bindings(node)) == []
+
+
+def test_yield_bindings_no_result():
+    node = _parse("yield")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_yield_bindings_walrus():
+    node = _parse("yield (r := fun())")
+    assert list(get_bindings(node)) == ["r"]
 
 
 def test_yield_from_bindings():
@@ -1181,7 +1200,14 @@ def test_yield_from_bindings():
 
         YieldFrom(expr value)
     """
-    pass
+    node = _parse("yield from fun()")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_yield_from_bindings_walrus():
+    node = _parse("yield from (r := fun())")
+    assert list(get_bindings(node)) == ["r"]
 
 
 def test_compare_bindings():

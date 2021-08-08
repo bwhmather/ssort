@@ -612,8 +612,7 @@ def _get_bindings_for_await(node):
         # the grammar constrains where yield expressions can occur
         Await(expr value)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.Yield)
@@ -623,8 +622,8 @@ def _get_bindings_for_yield(node):
 
         Yield(expr? value)
     """
-    return
-    yield
+    if node.value is not None:
+        yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.YieldFrom)
@@ -634,8 +633,7 @@ def _get_bindings_for_yield_from(node):
 
         YieldFrom(expr value)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.Compare)
