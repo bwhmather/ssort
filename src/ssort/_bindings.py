@@ -674,8 +674,7 @@ def _get_bindings_for_formatted_value(node):
 
         FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.JoinedStr)
@@ -685,8 +684,8 @@ def _get_bindings_for_joined_str(node):
 
         JoinedStr(expr* values)
     """
-    return
-    yield
+    for value in node.values:
+        yield from get_bindings(value)
 
 
 @get_bindings.register(ast.Constant)

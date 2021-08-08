@@ -1265,22 +1265,27 @@ def test_call_bindings_walrus_args():
     ]
 
 
-def test_formatted_value_bindings():
-    """
-    ..code:: python
-
-        FormattedValue(expr value, int? conversion, expr? format_spec)
-    """
-    pass
-
-
 def test_joined_str_bindings():
     """
     ..code:: python
 
         JoinedStr(expr* values)
+        FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    pass
+    node = _parse('f"a: {a}"')
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_joined_str_bindings_walrus():
+    """
+    ..code:: python
+
+        JoinedStr(expr* values)
+        FormattedValue(expr value, int? conversion, expr? format_spec)
+    """
+    node = _parse('f"a: {(a := get_a())}"')
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_constant_bindings():
