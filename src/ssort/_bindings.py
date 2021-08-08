@@ -645,8 +645,9 @@ def _get_bindings_for_compare(node):
         # x < 4 < 3 and (x < 4) < 3
         Compare(expr left, cmpop* ops, expr* comparators)
     """
-    return
-    yield
+    yield from get_bindings(node.left)
+    for comparator in node.comparators:
+        yield from get_bindings(comparator)
 
 
 @get_bindings.register(ast.Call)

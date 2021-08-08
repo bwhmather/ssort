@@ -1218,7 +1218,14 @@ def test_compare_bindings():
         # x < 4 < 3 and (x < 4) < 3
         Compare(expr left, cmpop* ops, expr* comparators)
     """
-    pass
+    node = _parse("0 < value < 5")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_compare_bindings_walrus():
+    node = _parse("(a := 0) < (b := value) < (c := 5)")
+    assert list(get_bindings(node)) == ["a", "b", "c"]
 
 
 def test_call_bindings():
