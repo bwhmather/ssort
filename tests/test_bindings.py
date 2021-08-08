@@ -1056,9 +1056,29 @@ def test_set_comp_bindings():
     """
     ..code:: python
 
+        comprehension = (expr target, expr iter, expr* ifs, int is_async)
         SetComp(expr elt, comprehension* generators)
     """
-    pass
+    node = _parse("{item for item in iterator if condition(item)}")
+    assert list(get_bindings(node)) == ["item"]
+
+
+@walrus_operator
+def test_set_comp_bindings_walrus_target():
+    node = _parse("{( a:= item) for item in iterator if condition(item)}")
+    assert list(get_bindings(node)) == ["item", "a"]
+
+
+@walrus_operator
+def test_set_comp_bindings_walrus_iter():
+    node = _parse("{item for item in (it := iterator) if condition(item)}")
+    assert list(get_bindings(node)) == ["it", "item"]
+
+
+@walrus_operator
+def test_set_comp_bindings_walrus_condition():
+    node = _parse("{item for item in iterator if (c := condition(item))}")
+    assert list(get_bindings(node)) == ["item", "c"]
 
 
 def test_dict_comp_bindings():
