@@ -904,6 +904,24 @@ def test_lambda_bindings():
     pass
 
 
+@walrus_operator
+def test_lambda_bindings_walrus_default():
+    node = _parse("(lambda a, b = (b_binding := 2): None)")
+    assert list(get_bindings(node)) == ["b_binding"]
+
+
+@walrus_operator
+def test_lambda_bindings_walrus_kw_default():
+    node = _parse("(lambda *, kw1 = (kw1_binding := 1), kw2: None)")
+    assert list(get_bindings(node)) == ["kw1_binding"]
+
+
+@walrus_operator
+def test_lambda_bindings_walrus_body():
+    node = _parse("(lambda : (a := 1) + a)")
+    assert list(get_bindings(node)) == []
+
+
 def test_if_exp_bindings():
     """
     ..code:: python

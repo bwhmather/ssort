@@ -497,8 +497,7 @@ def _get_bindings_for_lambda(node):
 
         Lambda(arguments args, expr body)
     """
-    return
-    yield
+    yield from _get_bindings_from_arguments(node.args)
 
 
 @get_bindings.register(ast.IfExp)
