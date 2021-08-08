@@ -1321,7 +1321,42 @@ def test_subscript_bindings():
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    pass
+    node = _parse("a[b]")
+    assert list(get_bindings(node)) == []
+
+
+def test_subscript_bindings_slice():
+    node = _parse("a[b:c]")
+    assert list(get_bindings(node)) == []
+
+
+def test_subscript_bindings_slice_with_step():
+    node = _parse("a[b:c:d]")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_subscript_bindings_walrus_value():
+    node = _parse("(a_binding := a)[b]")
+    assert list(get_bindings(node)) == ["a_binding"]
+
+
+@walrus_operator
+def test_subscript_bindings_walrus_index():
+    node = _parse("a[(b_binding := b)]")
+    assert list(get_bindings(node)) == ["b_binding"]
+
+
+@walrus_operator
+def test_subscript_bindings_walrus_slice():
+    node = _parse("a[(b_binding := b):(c_binding := c)]")
+    assert list(get_bindings(node)) == ["b_binding", "c_binding"]
+
+
+@walrus_operator
+def test_subscript_bindings_walrus_slice_with_step():
+    node = _parse("a[(b_binding := b):(c_binding := c):(d_binding := d)]")
+    assert list(get_bindings(node)) == ["b_binding", "c_binding", "d_binding"]
 
 
 def test_starred_bindings():
@@ -1360,17 +1395,6 @@ def test_tuple_bindings():
     ..code:: python
 
         Tuple(expr* elts, expr_context ctx)
-
-    """
-    pass
-
-
-def test_slice_bindings():
-    """
-    ..code:: python
-
-        # can appear only in Subscript
-        Slice(expr? lower, expr? upper, expr? step)
 
     """
     pass

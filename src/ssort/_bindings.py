@@ -1,5 +1,6 @@
 import ast
 import functools
+import sys
 
 
 @functools.singledispatch
@@ -706,8 +707,39 @@ def _get_bindings_for_attribute(node):
 
         Attribute(expr value, identifier attr, expr_context ctx)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
+
+
+@get_bindings.register(ast.Slice)
+def _get_bindings_for_slice(node):
+    """
+    ..code:: python
+
+        # can appear only in Subscript
+        Slice(expr? lower, expr? upper, expr? step)
+
+    """
+    if node.lower is not None:
+        yield from get_bindings(node.lower)
+
+    if node.upper is not None:
+        yield from get_bindings(node.upper)
+
+    if node.step is not None:
+        yield from get_bindings(node.step)
+
+
+if sys.version_info < (3, 9):
+
+    @get_bindings.register(ast.Index)
+    def _get_bindings_for_index(node):
+        """
+        ..code:: python
+
+            # can appear only in Subscript
+            Index(expr value)
+        """
+        yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.Subscript)
@@ -717,8 +749,8 @@ def _get_bindings_for_subscript(node):
 
         Subscript(expr value, expr slice, expr_context ctx)
     """
-    return
-    yield
+    yield from get_bindings(node.value)
+    yield from get_bindings(node.slice)
 
 
 @get_bindings.register(ast.Starred)
@@ -761,19 +793,6 @@ def _get_bindings_for_tuple(node):
     ..code:: python
 
         Tuple(expr* elts, expr_context ctx)
-
-    """
-    return
-    yield
-
-
-@get_bindings.register(ast.Slice)
-def _get_bindings_for_slice(node):
-    """
-    ..code:: python
-
-        # can appear only in Subscript
-        Slice(expr? lower, expr? upper, expr? step)
 
     """
     return
