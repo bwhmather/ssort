@@ -365,8 +365,10 @@ def _get_bindings_for_assert(node):
         Assert(expr test, expr? msg)
 
     """
-    return
-    yield
+    yield from get_bindings(node.test)
+
+    if node.msg is not None:
+        yield from get_bindings(node.msg)
 
 
 @get_bindings.register(ast.Import)

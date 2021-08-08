@@ -672,7 +672,25 @@ def test_assert_bindings():
         Assert(expr test, expr? msg)
 
     """
-    pass
+    node = _parse("assert condition()")
+    assert list(get_bindings(node)) == []
+
+
+def test_assert_bindings_with_message():
+    node = _parse('assert condition(), "message"')
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_assert_bindings_walrus_condition():
+    node = _parse("assert (result := condition())")
+    assert list(get_bindings(node)) == ["result"]
+
+
+@walrus_operator
+def test_assert_bindings_walrus_message():
+    node = _parse('assert condition, (message := "message")')
+    assert list(get_bindings(node)) == ["message"]
 
 
 def test_import_bindings():
