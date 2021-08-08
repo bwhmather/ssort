@@ -185,6 +185,8 @@ def _get_bindings_for_assign(node):
 
         Assign(expr* targets, expr value, string? type_comment)
     """
+    yield from get_bindings(node.value)
+
     for target in node.targets:
         yield from _flatten_target(target)
 
@@ -196,6 +198,8 @@ def _get_bindings_for_aug_assign(node):
 
         AugAssign(expr target, operator op, expr value)
     """
+    yield from get_bindings(node.value)
+
     yield from _flatten_target(node.target)
 
 
@@ -208,6 +212,11 @@ def _get_bindings_for_ann_assign(node):
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
+    yield from get_bindings(node.annotation)
+
+    if node.value is not None:
+        yield from get_bindings(node.value)
+
     yield from _flatten_target(node.target)
 
 

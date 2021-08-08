@@ -298,6 +298,12 @@ def test_assign_bindings_list_star():
     assert list(get_bindings(node)) == ["first", "rest"]
 
 
+@walrus_operator
+def test_assign_bindings_walrus_value():
+    node = _parse("a = (b := c)")
+    assert list(get_bindings(node)) == ["b", "a"]
+
+
 def test_aug_assign_bindings():
     """
     ..code:: python
@@ -306,6 +312,17 @@ def test_aug_assign_bindings():
     """
     node = _parse("a += b")
     assert list(get_bindings(node)) == ["a"]
+
+
+def test_aug_assign_bindings_attribute():
+    node = _parse("obj.attr /= value")
+    assert list(get_bindings(node)) == []
+
+
+@walrus_operator
+def test_aug_assign_bindings_walrus_value():
+    node = _parse("a ^= (b := c)")
+    assert list(get_bindings(node)) == ["b", "a"]
 
 
 def test_ann_assign_bindings():
@@ -318,6 +335,24 @@ def test_ann_assign_bindings():
     """
     node = _parse("a: int = b")
     assert list(get_bindings(node)) == ["a"]
+
+
+def test_ann_assign_bindings_no_value():
+    # TODO this expression doesn't technically bind `a`.
+    node = _parse("a: int")
+    assert list(get_bindings(node)) == ["a"]
+
+
+@walrus_operator
+def test_ann_assign_bindings_walrus_value():
+    node = _parse("a: int = (b := c)")
+    assert list(get_bindings(node)) == ["b", "a"]
+
+
+@walrus_operator
+def test_ann_assign_bindings_walrus_type():
+    node = _parse("a: (a_type := int) = 4")
+    assert list(get_bindings(node)) == ["a_type", "a"]
 
 
 def test_for_bindings():
