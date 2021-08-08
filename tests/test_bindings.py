@@ -759,15 +759,6 @@ def test_nonlocal_bindings_multiple():
     assert list(get_bindings(node)) == ["a", "b"]
 
 
-def test_expr_bindings():
-    """
-    ..code:: python
-
-        Expr(expr value)
-    """
-    pass
-
-
 def test_control_flow_bindings():
     """
     ..code:: python
