@@ -579,7 +579,13 @@ def _get_bindings_for_dict_comp(node):
         DictComp(expr key, expr value, comprehension* generators)
     """
     for generator in node.generators:
+        yield from get_bindings(generator.iter)
         yield from _flatten_target(generator.target)
+        for condition in generator.ifs:
+            yield from get_bindings(condition)
+
+    yield from get_bindings(node.key)
+    yield from get_bindings(node.value)
 
 
 @get_bindings.register(ast.GeneratorExp)

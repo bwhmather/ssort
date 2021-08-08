@@ -1087,7 +1087,45 @@ def test_dict_comp_bindings():
 
         DictComp(expr key, expr value, comprehension* generators)
     """
-    pass
+    node = _parse("{item[0]: item[1] for item in iterator if check(item)}")
+    assert list(get_bindings(node)) == ["item"]
+
+
+def test_dict_comp_bindings_unpack():
+    node = _parse("{key: value for key, value in iterator}")
+    assert list(get_bindings(node)) == ["key", "value"]
+
+
+@walrus_operator
+def test_dict_comp_bindings_walrus_key():
+    node = _parse(
+        "{(key := item[0]): item[1] for item in iterator if check(item)}"
+    )
+    assert list(get_bindings(node)) == ["item", "key"]
+
+
+@walrus_operator
+def test_dict_comp_bindings_walrus_value():
+    node = _parse(
+        "{item[0]: (value := item[1]) for item in iterator if check(item)}"
+    )
+    assert list(get_bindings(node)) == ["item", "value"]
+
+
+@walrus_operator
+def test_dict_comp_bindings_walrus_iter():
+    node = _parse(
+        "{item[0]: item[1] for item in (it := iterator) if check(item)}"
+    )
+    assert list(get_bindings(node)) == ["it", "item"]
+
+
+@walrus_operator
+def test_dict_comp_bindings_walrus_condition():
+    node = _parse(
+        "{item[0]: item[1] for item in iterator if (c := check(item))}"
+    )
+    assert list(get_bindings(node)) == ["item", "c"]
 
 
 def test_generator_exp_bindings():
