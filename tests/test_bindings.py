@@ -759,14 +759,37 @@ def test_nonlocal_bindings_multiple():
     assert list(get_bindings(node)) == ["a", "b"]
 
 
-def test_control_flow_bindings():
+def test_pass_bindings():
     """
     ..code:: python
 
-        Pass | Break | Continue
+        Pass
 
     """
-    pass
+    node = _parse("pass")
+    assert list(get_bindings(node)) == []
+
+
+def test_break_bindings():
+    """
+    ..code:: python
+
+        Break
+
+    """
+    node = _parse("break")
+    assert list(get_bindings(node)) == []
+
+
+def test_continue_bindings():
+    """
+    ..code:: python
+
+        Continue
+
+    """
+    node = _parse("continue")
+    assert list(get_bindings(node)) == []
 
 
 def test_bool_op_bindings():
