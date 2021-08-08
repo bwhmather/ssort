@@ -93,6 +93,15 @@ def _get_bindings_for_class_def(node):
             expr* decorator_list,
         )
     """
+    for decorator in node.decorator_list:
+        yield from get_bindings(decorator)
+
+    for base in node.bases:
+        yield from get_bindings(base)
+
+    for keyword in node.keywords:
+        yield from get_bindings(keyword.value)
+
     yield node.name
 
 

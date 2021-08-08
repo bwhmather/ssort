@@ -176,7 +176,61 @@ def test_class_def_bindings():
             expr* decorator_list,
         )
     """
-    pass
+    node = _parse(
+        """
+        @decorator
+        class ClassName:
+            a = 1
+            def b(self):
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["ClassName"]
+
+
+@walrus_operator
+def test_class_def_bindings_walrus_decorator():
+    node = _parse(
+        """
+        @(d := decorator())
+        class ClassName:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["d", "ClassName"]
+
+
+@walrus_operator
+def test_class_def_bindings_walrus_base():
+    node = _parse(
+        """
+        class ClassName(BaseClass, (OtherBase := namedtuple())):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["OtherBase", "ClassName"]
+
+
+@walrus_operator
+def test_class_def_bindings_walrus_metaclass():
+    node = _parse(
+        """
+        class Class(metaclass=(class_meta := MetaClass)):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["class_meta", "Class"]
+
+
+@walrus_operator
+def test_class_def_bindings_walrus_body():
+    node = _parse(
+        """
+        class Class:
+            a = (prop := 2)
+        """
+    )
+    assert list(get_bindings(node)) == ["Class"]
 
 
 def test_return_bindings():
