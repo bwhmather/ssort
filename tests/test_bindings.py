@@ -491,14 +491,13 @@ def test_with_bindings():
     node = _parse(
         """
         with A() as a:
-            a()
-            b()
+            b = 4
         """
     )
-    assert list(get_bindings(node)) == ["a"]
+    assert list(get_bindings(node)) == ["a", "b"]
 
 
-def test_with_requirements_bindings():
+def test_with_bindings_requirements_example():
     node = _parse(
         """
         with chdir(os.path.dirname(path)):
@@ -511,13 +510,101 @@ def test_with_requirements_bindings():
     assert list(get_bindings(node)) == ["requirements", "req"]
 
 
+def test_with_bindings_multiple():
+    node = _parse(
+        """
+        with A() as a, B() as b:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+def test_with_bindings_unbound():
+    node = _parse(
+        """
+        with A():
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+def test_with_bindings_tuple():
+    node = _parse(
+        """
+        with A() as (a, b):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+@walrus_operator
+def test_with_bindings_walrus():
+    node = _parse(
+        """
+        with (ctx := A()) as a:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["ctx", "a"]
+
+
 def test_async_with_bindings():
     """
     ..code:: python
 
         AsyncWith(withitem* items, stmt* body, string? type_comment)
     """
-    pass
+    node = _parse(
+        """
+        async with A() as a:
+            b = 4
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+def test_async_with_bindings_multiple():
+    node = _parse(
+        """
+        async with A() as a, B() as b:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+def test_async_with_bindings_unbound():
+    node = _parse(
+        """
+        async with A():
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+def test_async_with_bindings_tuple():
+    node = _parse(
+        """
+        async with A() as (a, b):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b"]
+
+
+@walrus_operator
+def test_async_with_bindings_walrus():
+    node = _parse(
+        """
+        async with (ctx := A()) as a:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["ctx", "a"]
 
 
 def test_raise_bindings():

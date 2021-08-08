@@ -301,6 +301,8 @@ def _get_bindings_for_with(node):
         AsyncWith(withitem* items, stmt* body, string? type_comment)
     """
     for item in node.items:
+        yield from get_bindings(item.context_expr)
+
         if item.optional_vars:
             yield from _flatten_target(item.optional_vars)
 
