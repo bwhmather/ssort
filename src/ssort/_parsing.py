@@ -96,7 +96,10 @@ def split(
             next_indent_text = ""
 
         start_offset = row_offsets[start_row] + start_col
-        end_offset = row_offsets[end_row] + end_col
+        if next_node is not None:
+            end_offset = row_offsets[end_row] + end_col
+        else:
+            end_offset = len(root_text.rstrip("\n"))
 
         yield Statement(
             text=this_indent_text + root_text[start_offset:end_offset],
