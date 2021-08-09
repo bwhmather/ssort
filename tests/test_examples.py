@@ -5,6 +5,7 @@ import pytest
 from ssort import ssort
 
 examples = [
+    "alembic_template",
     "distlib_compat",
     "dnspython_versioned",
     "isort_finders",
