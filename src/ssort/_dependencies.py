@@ -1,18 +1,13 @@
 import sys
 
 from ssort._builtins import MODULE_BUILTINS
+from ssort._exceptions import ResolutionError
 from ssort._graphs import Graph
 from ssort._statements import (
     statement_bindings,
     statement_method_requirements,
     statement_requirements,
 )
-
-
-class ResolutionError(Exception):
-    def __init__(self, msg, *, unresolved):
-        super().__init__(msg)
-        self.unresolved = unresolved
 
 
 def statements_graph(statements):

@@ -3,7 +3,7 @@ import difflib
 import pathlib
 import sys
 
-from ssort._dependencies import ResolutionError
+from ssort._exceptions import ResolutionError
 from ssort._ssort import ssort
 
 
