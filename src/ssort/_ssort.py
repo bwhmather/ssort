@@ -4,7 +4,7 @@ import sys
 from ssort._dependencies import (
     class_statements_initialisation_graph,
     class_statements_runtime_graph,
-    statements_graph,
+    module_statements_graph,
 )
 from ssort._graphs import (
     is_topologically_sorted,
@@ -334,7 +334,7 @@ def statement_text_sorted(statement):
 def ssort(text, *, filename="<unknown>"):
     statements = list(split(text, filename=filename))
 
-    graph = statements_graph(statements)
+    graph = module_statements_graph(statements)
 
     replace_cycles(graph, key=sort_key_from_iter(statements))
 

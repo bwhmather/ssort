@@ -10,7 +10,7 @@ from ssort._statements import (
 )
 
 
-def statements_graph(statements):
+def module_statements_graph(statements):
     """
     Returns a dictionary mapping from statements to lists of other statements.
     """
