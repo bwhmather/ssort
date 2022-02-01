@@ -9,10 +9,12 @@ SSort
 
 .. begin-docs
 
-The python statement sorter.
+The python source code sorter.
 
-Enforces topological sorting of top level python statements.
-Groups class members by types and enforces topological sorting of methods.
+Sorts the contents of python modules so that statements are placed after the things they depend on, but leaves grouping to the programmer.
+Groups class members by type and enforces topological sorting of methods.
+
+Makes old fashioned code navigation easier, you can always scroll up to see where something is defined, and reduces bikeshedding.
 
 Compatible with and intended to complement `isort <https://pycqa.github.io/isort/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
 
