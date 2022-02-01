@@ -294,3 +294,30 @@ def test_mixed_runtime_initialisation():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_walrus():
+    original = _clean(
+        """
+        def fun():
+            if (a := nofun()):
+                return a
+            else:
+                return True
+        def nofun():
+            return False
+        """
+    )
+    expected = _clean(
+        """
+        def nofun():
+            return False
+        def fun():
+            if (a := nofun()):
+                return a
+            else:
+                return True
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected

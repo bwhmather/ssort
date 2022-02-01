@@ -438,7 +438,7 @@ def _get_requirements_for_named_expr(node):
 
         NamedExpr(expr target, expr value)
     """
-    raise NotImplementedError("TODO")
+    yield from get_requirements(node.value)
 
 
 @get_requirements.register(ast.BinOp)

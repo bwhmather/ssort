@@ -611,7 +611,8 @@ def test_named_expr_requirements():
 
         NamedExpr(expr target, expr value)
     """
-    pass
+    node = _parse("(a := b)")
+    assert _dep_names(node) == ["b"]
 
 
 def test_bin_op_requirements():

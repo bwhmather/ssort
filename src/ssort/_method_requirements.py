@@ -365,7 +365,7 @@ def _get_attribute_accesses_for_named_expr(node, variable):
 
         NamedExpr(expr target, expr value)
     """
-    raise NotImplementedError("TODO")
+    yield from _get_attribute_accesses(node.value, variable)
 
 
 @_get_attribute_accesses.register(ast.BinOp)
