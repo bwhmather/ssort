@@ -19,6 +19,53 @@ Makes old fashioned code navigation easier, you can always scroll up to see wher
 Compatible with and intended to complement `isort <https://pycqa.github.io/isort/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
 
 
+Before:
+
+.. code:: python
+
+    from module import BaseClass
+
+    def function():
+        return _dependency()
+
+    def _decorator(fn):
+        return fn
+
+    @_decorator
+    def _dependency():
+        return Class()
+
+    class Class(BaseClass):
+        def public_method(self):
+            return self
+
+        def __init__(self):
+            pass
+
+After:
+
+.. code:: python
+
+    from module import BaseClass
+
+    class Class(BaseClass):
+        def __init__(self):
+            pass
+
+        def public_method(self):
+            return self
+
+    def _decorator(fn):
+        return fn
+
+    @_decorator
+    def _dependency():
+        return Class()
+
+    def function():
+        return _dependency()
+
+
 Installation
 ------------
 .. begin-installation
