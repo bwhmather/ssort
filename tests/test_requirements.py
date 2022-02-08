@@ -321,6 +321,31 @@ def test_assign_requirements():
     assert _dep_names(node) == ["b"]
 
 
+def test_assign_attribute_requirements():
+    node = _parse("a.b = c")
+    assert _dep_names(node) == ["a", "c"]
+
+
+def test_assign_star_requirements():
+    node = _parse("*a = c")
+    assert _dep_names(node) == ["c"]
+
+
+def test_assign_star_attribute_requirements():
+    node = _parse("*a.b = c")
+    assert _dep_names(node) == ["a", "c"]
+
+
+def test_assign_subscript_requirements():
+    node = _parse("a[b] = c")
+    assert _dep_names(node) == ["a", "b", "c"]
+
+
+def test_assign_tuple_requirements():
+    node = _parse("a, b[c], d.e, *f = g")
+    assert _dep_names(node) == ["b", "c", "d", "g"]
+
+
 def test_aug_assign_requirements():
     """
     ..code:: python
