@@ -321,3 +321,28 @@ def test_walrus():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_attribute_assign_class_example():
+    original = _clean(
+        """
+        import admin
+        class TestAdmin(admin.ModelAdmin):
+            list_filter = ("foo_method",)
+            def foo_method(self, obj):
+                return "something"
+            foo_method.short_description = "Foo method"
+        """
+    )
+    expected = _clean(
+        """
+        import admin
+        class TestAdmin(admin.ModelAdmin):
+            list_filter = ("foo_method",)
+            def foo_method(self, obj):
+                return "something"
+            foo_method.short_description = "Foo method"
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected

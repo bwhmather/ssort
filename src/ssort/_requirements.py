@@ -147,6 +147,56 @@ def _get_requirements_for_delete(node):
         yield from get_requirements(target)
 
 
+@functools.singledispatch
+def _target_requirements(node):
+    raise NotImplementedError(f"not implemented for {node!r}")
+
+
+@_target_requirements.register(ast.Name)
+def _target_requirements_name(node):
+    assert isinstance(node.ctx, ast.Store)
+    return
+    yield
+
+
+@_target_requirements.register(ast.Starred)
+def _target_requirements_starred(node):
+    assert isinstance(node.ctx, ast.Store)
+    yield from _target_requirements(node.value)
+
+
+@_target_requirements.register(ast.Tuple)
+def _target_requirements_tuple(node):
+    assert isinstance(node.ctx, ast.Store)
+    for element in node.elts:
+        yield from _target_requirements(element)
+
+
+@_target_requirements.register(ast.Subscript)
+def _target_requirements_subscript(node):
+    assert isinstance(node.ctx, ast.Store)
+    yield from get_requirements(node.value)
+    yield from get_requirements(node.slice)
+
+
+@_target_requirements.register(ast.Attribute)
+def _target_requirements_attribute(node):
+    """
+    ..code:: python
+
+        Attribute(expr value, identifier attr, expr_context ctx)
+    """
+    assert isinstance(node.ctx, ast.Store)
+    yield from get_requirements(node.value)
+
+
+@_target_requirements.register(ast.List)
+def _target_requirements_list(node):
+    assert isinstance(node.ctx, ast.Store)
+    for element in node.elts:
+        yield from _target_requirements(element)
+
+
 @get_requirements.register(ast.Assign)
 def _get_requirements_for_assign(node):
     """
@@ -154,6 +204,8 @@ def _get_requirements_for_assign(node):
 
         Assign(expr* targets, expr value, string? type_comment)
     """
+    for target in node.targets:
+        yield from _target_requirements(target)
     yield from get_requirements(node.value)
 
 
