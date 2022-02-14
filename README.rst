@@ -94,11 +94,33 @@ To check that a file is correctly sorted use the `--check` flag.
 To allow ``ssort`` to rearrange your file, simply invoke with no extra flags.
 If ``ssort`` needs to make changes to a `black <https://black.readthedocs.io/en/stable/>`_ conformant file, the result will not necessarily be `black <https://black.readthedocs.io/en/stable/>`_ conformant.
 The result of running `black <https://black.readthedocs.io/en/stable/>`_ on an ``ssort`` conformant file will always be ``ssort`` conformant.
-We recommend that you reformat using `isort <https://pycqa.github.io/isort/>`_ and `black <https://black.readthedocs.io/en/stable/>`_ immediately _after_ running ``ssort``.
+We recommend that you reformat using `isort <https://pycqa.github.io/isort/>`_ and `black <https://black.readthedocs.io/en/stable/>`_ immediately after running ``ssort``.
 
 .. code:: bash
 
     $ ssort src/ tests/ setup.py; isort src/ tests/ setup.py; black src/ tests/ setup.py
+
+You can also setup ssort to run automatically before commit by setting up `pre-commit <https://pre-commit.com/index.html>`_, 
+and registering ssort in your `.pre-commit-config.yaml`.
+
+.. code:: yaml
+
+  repos:
+  # ...
+  - repo: https://github.com/bwhmather/ssort
+    rev: 0.10.0
+    hooks:
+    - id: ssort
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+    - id: isort
+      name: isort (python)
+      args: [--profile=black]
+  - repo: https://github.com/psf/black
+    rev: 22.1.0
+    hooks:
+    - id: black
 
 .. end-usage
 
