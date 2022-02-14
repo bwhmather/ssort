@@ -1,0 +1,6 @@
+- id: ssort
+  name: ssort
+  description: Sorting top level statements in python files.
+  entry: ssort
+  language: python
+  types: [python]
