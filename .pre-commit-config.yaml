@@ -1,0 +1,40 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.1.0
+  hooks:
+  - id: trailing-whitespace
+  - id: end-of-file-fixer
+  - id: check-yaml
+  - id: check-added-large-files
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: v2.2.0
+  hooks:
+  - id: pretty-format-yaml
+    args: [--autofix]
+- repo: https://github.com/pycqa/isort
+  rev: 5.10.1
+  hooks:
+  - id: isort
+    name: isort (python)
+    args: [--profile=black]
+    exclude: test_data/samples/.*.py
+- repo: https://github.com/psf/black
+  rev: 22.1.0
+  hooks:
+  - id: black
+    exclude: test_data/samples/.*.py
+- repo: local
+  hooks:
+  - id: tox
+    name: tox
+    entry: tox --skip-missing-interpreter
+    verbose: true
+    pass_filenames: false
+    description: Automated tests using tox
+    language: system
+- repo: https://github.com/tox-dev/tox-ini-fmt
+  rev: 0.5.2
+  hooks:
+  - id: tox-ini-fmt
