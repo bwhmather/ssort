@@ -84,6 +84,56 @@ def _get_attribute_accesses_for_delete(node, variable):
         yield from _get_attribute_accesses(target, variable)
 
 
+@functools.singledispatch
+def _get_target_attribute_accesses(node, variable):
+    raise NotImplementedError()
+
+
+@_get_target_attribute_accesses.register(ast.Name)
+def _get_target_attribute_accesses_name(node, variable):
+    assert isinstance(node.ctx, ast.Store)
+    return
+    yield
+
+
+@_get_target_attribute_accesses.register(ast.Starred)
+def _get_target_attribute_accesses_starred(node, variable):
+    assert isinstance(node.ctx, ast.Store)
+    yield from _get_target_attribute_accesses(node.value, variable)
+
+
+@_get_target_attribute_accesses.register(ast.Tuple)
+def _get_target_attribute_accesses_tuple(node, variable):
+    assert isinstance(node.ctx, ast.Store)
+    for element in node.elts:
+        yield from _get_target_attribute_accesses(element, variable)
+
+
+@_get_target_attribute_accesses.register(ast.Subscript)
+def _get_target_attribute_accesses_subscript(node, variable):
+    assert isinstance(node.ctx, ast.Store)
+    yield from _get_attribute_accesses(node.value, variable)
+    yield from _get_attribute_accesses(node.slice, variable)
+
+
+@_get_target_attribute_accesses.register(ast.Attribute)
+def _get_target_attribute_accesses_attribute(node, variable):
+    """
+    ..code:: python
+
+        Attribute(expr value, identifier attr, expr_context ctx)
+    """
+    assert isinstance(node.ctx, ast.Store)
+    yield from _get_attribute_accesses(node.value, variable)
+
+
+@_get_target_attribute_accesses.register(ast.List)
+def _get_target_attribute_accesses_list(node, variable):
+    assert isinstance(node.ctx, ast.Store)
+    for element in node.elts:
+        yield from _get_target_attribute_accesses(element, variable)
+
+
 @_get_attribute_accesses.register(ast.Assign)
 def _get_attribute_accesses_for_assign(node, variable):
     """
@@ -92,7 +142,7 @@ def _get_attribute_accesses_for_assign(node, variable):
         Assign(expr* targets, expr value, string? type_comment)
     """
     for target in node.targets:
-        yield from _get_attribute_accesses(target, variable)
+        yield from _get_target_attribute_accesses(target, variable)
     yield from _get_attribute_accesses(node.value, variable)
 
 
@@ -103,7 +153,7 @@ def _get_attribute_accesses_for_aug_assign(node, variable):
 
         AugAssign(expr target, operator op, expr value)
     """
-    yield from _get_attribute_accesses(node.target, variable)
+    yield from _get_target_attribute_accesses(node.target, variable)
     yield from _get_attribute_accesses(node.value, variable)
 
 
@@ -116,7 +166,7 @@ def _get_attribute_accesses_for_ann_assign(node, variable):
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
-    yield from _get_attribute_accesses(node.target, variable)
+    yield from _get_target_attribute_accesses(node.target, variable)
 
     # Can be None for type declaration.
     if node.value:
@@ -148,6 +198,8 @@ def _get_attribute_accesses_for_for(node, variable):
             string? type_comment,
         )
     """
+    yield from _get_target_attribute_accesses(node.target, variable)
+
     # TODO handle shadowing.
     yield from _get_attribute_accesses(node.iter, variable)
 

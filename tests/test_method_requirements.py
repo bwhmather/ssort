@@ -47,3 +47,158 @@ def test_method_requirements():
         """
     )
     assert reqs == ["a", "b"]
+
+
+def test_assign_method_requirements_none():
+    """
+    ..code:: python
+
+        Assign(expr* targets, expr value, string? type_comment)
+    """
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            a = b
+        """
+    )
+    assert reqs == []
+
+
+def test_assign_method_requirements_target():
+    """
+    ..code:: python
+
+        Assign(expr* targets, expr value, string? type_comment)
+    """
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            self.a = b
+        """
+    )
+    assert reqs == []
+
+
+def test_assign_method_requirements_value():
+    """
+    ..code:: python
+
+        Assign(expr* targets, expr value, string? type_comment)
+    """
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            a = self.b
+        """
+    )
+    assert reqs == ["b"]
+
+
+def test_assign_method_attribute_requirements_none():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            a.b = c
+        """
+    )
+    assert reqs == []
+
+
+def test_assign_method_attribute_requirements():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            self.a.b = c
+        """
+    )
+    assert reqs == ["a"]
+
+
+def test_assign_method_star_requirements_none():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            *a = c
+        """
+    )
+    assert reqs == []
+
+
+def test_assign_method_star_requirements():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            *self.a = c
+        """
+    )
+    assert reqs == []
+
+
+def test_assign_method_star_attribute_requirements_none():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            *a.b = c
+        """
+    )
+    assert reqs == []
+
+
+def test_assign_method_star_attribute_requirements():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            *self.a.b = c
+        """
+    )
+    assert reqs == ["a"]
+
+
+def test_assign_method_subscript_requirements_none():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            a[b] = c
+        """
+    )
+    assert reqs == []
+
+
+def test_assign_method_subscript_requirements_source():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            self.a[b] = c
+        """
+    )
+    assert reqs == ["a"]
+
+
+def test_assign_method_subscript_requirements_key():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            a[self.b] = c
+        """
+    )
+    assert reqs == ["b"]
+
+
+def test_assign_method_tuple_requirements_none():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            a, b[c], d.e, *f = g
+        """
+    )
+    assert reqs == []
+
+
+def test_assign_method_tuple_requirements():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            self.a, self.b[self.c], self.d.e, *self.f = self.g
+        """
+    )
+    assert reqs == ["b", "c", "d", "g"]

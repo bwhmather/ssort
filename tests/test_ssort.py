@@ -346,3 +346,22 @@ def test_attribute_assign_class_example():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_iter_unpack_in_class():
+    original = _clean(
+        """
+        class MyClass:
+            def method(self):
+                a, *b = 1, 2, 3
+        """
+    )
+    expected = _clean(
+        """
+        class MyClass:
+            def method(self):
+                a, *b = 1, 2, 3
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
