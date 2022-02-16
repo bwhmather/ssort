@@ -20,7 +20,7 @@ examples = [
 
 @pytest.mark.parametrize("example", examples)
 def test_examples(example):
-    examples_dir = pathlib.Path("examples")
+    examples_dir = pathlib.Path("test_data/samples")
     input_path = examples_dir / f"{example}_input.py"
     output_path = examples_dir / f"{example}_output.py"
     input_text = input_path.read_text()
@@ -38,7 +38,7 @@ def test_examples(example):
 
 @pytest.mark.parametrize("example", examples)
 def test_idempotent(example):
-    examples_dir = pathlib.Path("examples")
+    examples_dir = pathlib.Path("test_data/samples")
     input_path = examples_dir / f"{example}_input.py"
     input_text = input_path.read_text()
 
