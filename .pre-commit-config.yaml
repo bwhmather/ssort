@@ -13,6 +13,11 @@ repos:
   hooks:
   - id: pretty-format-yaml
     args: [--autofix]
+- repo: https://github.com/bwhmather/ssort
+  rev: v0.10.2
+  hooks:
+  - id: ssort
+    exclude: test_data/samples/.*.py
 - repo: https://github.com/pycqa/isort
   rev: 5.10.1
   hooks:
