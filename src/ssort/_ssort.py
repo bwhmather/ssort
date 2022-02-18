@@ -331,10 +331,23 @@ def statement_text_sorted(statement):
     return statement_text(statement)
 
 
-def ssort(text, *, filename="<unknown>"):
-    statements = list(split(text, filename=filename))
+def ssort(
+    text, *, filename="<unknown>", on_syntax_error=None, on_unresolved=None
+):
+    if not on_syntax_error:
 
-    graph = module_statements_graph(statements)
+        def on_syntax_error(message, *, lineno, col_offset, **kwargs):
+            raise SyntaxError(message, lineno=lineno, offset=col_offset)
+
+    try:
+        statements = list(split(text, filename=filename))
+    except SyntaxError as exc:
+        on_syntax_error(exc.msg, lineno=exc.lineno, col_offset=exc.offset)
+        return text
+
+    graph = module_statements_graph(statements, on_unresolved=on_unresolved)
+    if graph is None:
+        return text
 
     replace_cycles(graph, key=sort_key_from_iter(statements))
 

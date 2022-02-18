@@ -10,7 +10,7 @@ from ssort._statements import (
 )
 
 
-def module_statements_graph(statements):
+def module_statements_graph(statements, *, on_unresolved=None):
     """
     Constructs a graph of the interdependencies in a list of module level
     statements.
@@ -19,10 +19,26 @@ def module_statements_graph(statements):
         An ordered list of opaque `Statement` objects from which to construct
         the graph.
 
+    :param on_unresolved:
+        An optional callback that should be invoked for each unresolved
+        dependency.  Can safely raise any arbitrary exception to abort
+        constructing the graph.  By default, will raise `ResolutionError` on
+        the first unresolved requirement.  If no exception is raised, the graph
+        returned by `module_statements_graph` will not contain a link for the
+        missing requirement.
+
     :returns:
         A `Graph` mapping from statements to the set of statements that they
         depend on.
     """
+    if not on_unresolved:
+
+        def on_unresolved(name, *, lineno, col_offset, **kwargs):
+            raise ResolutionError(
+                f"could not resolve {name!r} at line {lineno}, column {col_offset}",
+                unresolved=name,
+            )
+
     # A dictionary mapping from names to the statements which bind them.
     scope = {}
 
@@ -71,10 +87,18 @@ def module_statements_graph(statements):
             if requirement not in resolved
         ]
 
-        if unresolved:
-            raise ResolutionError(
-                "Could not resolve all requirements", unresolved=unresolved
+        for requirement in unresolved:
+            on_unresolved(
+                requirement.name,
+                lineno=requirement.lineno,
+                col_offset=requirement.col_offset,
             )
+
+        if unresolved:
+            # Not safe to attempt to re-order in the event of unresolved
+            # dependencies.  A typo could cause a statement to be moved ahead of
+            # something that it should depend on.
+            return None
 
     graph = Graph()
     for statement in statements:

@@ -3,7 +3,6 @@ import difflib
 import pathlib
 import sys
 
-from ssort._exceptions import ResolutionError
 from ssort._ssort import ssort
 
 
@@ -58,28 +57,39 @@ def main():
 
     paths = _find_files(args.files)
     for path in paths:
+        errors = False
         original = path.read_text()
 
-        try:
-            updated = ssort(original, filename=str(path))
+        def _on_syntax_error(message, *, lineno, col_offset, **kwargs):
+            nonlocal errors
+            errors = True
 
-        except ResolutionError as e:
-            for req in e.unresolved:
-                sys.stderr.write(
-                    f"ERROR: unresolved dependency {req.name!r} "
-                    + f"in {str(path)!r}: "
-                    + f"line {req.lineno}, column {req.col_offset}\n"
-                )
-            unsortable += 1
-            continue
-
-        except SyntaxError as e:
             sys.stderr.write(
                 f"ERROR: syntax error in {str(path)!r}: "
-                + f"line {e.lineno}, column {e.offset}\n"
+                + f"line {lineno}, column {col_offset}\n"
             )
-            unsortable += 1
-            continue
+
+        def _on_unresolved(name, *, lineno, col_offset, **kwargs):
+            nonlocal errors
+            errors = True
+
+            sys.stderr.write(
+                f"ERROR: unresolved dependency {name!r} "
+                + f"in {str(path)!r}: "
+                + f"line {lineno}, column {col_offset}\n"
+            )
+
+        try:
+            updated = ssort(
+                original,
+                filename=str(path),
+                on_syntax_error=_on_syntax_error,
+                on_unresolved=_on_unresolved,
+            )
+
+            if errors:
+                unsortable += 1
+                continue
 
         except Exception as e:
             raise Exception(f"ERROR while sorting {path}\n") from e
