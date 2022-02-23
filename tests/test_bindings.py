@@ -1437,3 +1437,23 @@ def test_tuple_bindings_walrus():
 def test_tuple_bindings_walrus_unpack():
     node = _parse("(a, b, *(rest := other))")
     assert list(get_bindings(node)) == ["rest"]
+
+
+def test_formatted_value_bindings():
+    """
+    ..code:: python
+
+        FormattedValue(expr value, int conversion, expr? format_spec)
+    """
+    node = _parse("f'{a} {b} {c}'")
+    assert list(get_bindings(node)) == []
+
+
+def test_formatted_value_bindings_walrus():
+    node = _parse("f'{a} {1 + (b := 1)} {c}'")
+    assert list(get_bindings(node)) == ["b"]
+
+
+def test_formatted_value_bindings_format_spec_walrus():
+    node = _parse("f'{a} {b:{0 + (c := 0.3)}} {d}'")
+    assert list(get_bindings(node)) == ["c"]
