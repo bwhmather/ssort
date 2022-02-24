@@ -728,6 +728,9 @@ def _get_requirements_for_formatted_value(node):
     """
     yield from get_requirements(node.value)
 
+    if node.format_spec is not None:
+        yield from get_requirements(node.format_spec)
+
 
 @get_requirements.register(ast.JoinedStr)
 def _get_requirements_for_joined_str(node):
@@ -736,8 +739,8 @@ def _get_requirements_for_joined_str(node):
 
         JoinedStr(expr* values)
     """
-    return
-    yield
+    for value in node.values:
+        yield from get_requirements(value)
 
 
 @get_requirements.register(ast.Constant)
