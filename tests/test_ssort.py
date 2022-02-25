@@ -365,3 +365,65 @@ def test_iter_unpack_in_class():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_overload_decorator():
+    original = _clean(
+        """
+        from typing import overload
+        def g():
+            f(1)
+        @overload
+        def f(x: int) -> int:
+            ...
+        @overload
+        def f(x: str) -> str:
+            ...
+        def f(x: int | str) -> int | str:
+            print(x)
+            return x
+        if __name__ == "__main__":
+            f(5)
+        """
+    )
+    expected = _clean(
+        """
+        from typing import overload
+        @overload
+        def f(x: int) -> int:
+            ...
+        @overload
+        def f(x: str) -> str:
+            ...
+        def f(x: int | str) -> int | str:
+            print(x)
+            return x
+        def g():
+            f(1)
+        if __name__ == "__main__":
+            f(5)
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_concat():
+    original = _clean(
+        """
+        def f():
+            return l
+        l = []
+        l += 1
+        """
+    )
+    expected = _clean(
+        """
+        l = []
+        l += 1
+        def f():
+            return l
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
