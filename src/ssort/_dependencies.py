@@ -76,6 +76,15 @@ def statements_graph(statements):
             if resolved[requirement] is not None:
                 graph.add_dependency(statement, resolved[requirement])
 
+    # Add links between statements that overwrite the same binding to make sure
+    # that bindings are always applied in the same order.
+    scope = {}
+    for statement in statements:
+        for name in statement_bindings(statement):
+            if name in scope:
+                graph.add_dependency(statement, scope[name])
+            scope[name] = statement
+
     return graph
 
 
