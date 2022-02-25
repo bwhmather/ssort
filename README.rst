@@ -108,7 +108,7 @@ and registering ssort in your `.pre-commit-config.yaml`.
   repos:
   # ...
   - repo: https://github.com/bwhmather/ssort
-    rev: 0.10.3
+    rev: 0.10.4
     hooks:
     - id: ssort
   - repo: https://github.com/pycqa/isort
