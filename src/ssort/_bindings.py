@@ -677,6 +677,9 @@ def _get_bindings_for_formatted_value(node):
     """
     yield from get_bindings(node.value)
 
+    if node.format_spec is not None:
+        yield from get_bindings(node.format_spec)
+
 
 @get_bindings.register(ast.JoinedStr)
 def _get_bindings_for_joined_str(node):

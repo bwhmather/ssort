@@ -836,7 +836,18 @@ def test_formatted_value_requirements():
 
         FormattedValue(expr value, int? conversion, expr? format_spec)
     """
-    pass
+    node = _parse("f'{a} {b} {c}'")
+    assert _dep_names(node) == ["a", "b", "c"]
+
+
+def test_formatted_value_requirements_format_spec():
+    node = _parse("f'{a} {b:{c}} {d}'")
+    assert _dep_names(node) == ["a", "b", "c", "d"]
+
+
+def test_formatted_value_requirements_format_spec_walrus():
+    node = _parse("f'{a} {b:{(c := 1)}} {d}'")
+    assert _dep_names(node) == ["a", "b", "d"]
 
 
 def test_joined_str_requirements():
