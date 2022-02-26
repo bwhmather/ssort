@@ -111,7 +111,15 @@ def class_statements_initialisation_graph(statements):
     return graph
 
 
-def class_statements_runtime_graph(statements):
+def class_statements_runtime_graph(statements, *, ignore_public):
+    """
+    Returns a graph of dependencies between class methods and attributes of the
+    `self` argument.
+
+    If `ignore_public` is True, this will only contain references to private
+    attributes, leaving the sorting of public attributes to the programmer.
+    """
+
     scope = {}
 
     graph = Graph()
@@ -124,7 +132,10 @@ def class_statements_runtime_graph(statements):
 
     for statement in statements:
         for name in statement_method_requirements(statement):
-            if name in scope:
-                graph.add_dependency(statement, scope[name])
+            if ignore_public and not name.startswith("_"):
+                continue
+            if name not in scope:
+                continue
+            graph.add_dependency(statement, scope[name])
 
     return graph

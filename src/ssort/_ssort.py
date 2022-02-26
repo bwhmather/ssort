@@ -301,9 +301,12 @@ def _statement_text_sorted_class(statement):
         sorted_statements, graph=initialisation_graph
     )
 
-    # Attempt to resolve soft dependencies, but with hard dependencies taking
-    # priority, and keeping existing order where there are cycles.
-    runtime_graph = class_statements_runtime_graph(sorted_statements)
+    # Attempt to resolve soft dependencies on private attributes, but with hard
+    # dependencies taking priority, and always preserving the original order
+    # where there are cycles.
+    runtime_graph = class_statements_runtime_graph(
+        sorted_statements, ignore_public=True
+    )
     runtime_graph.update(initialisation_graph)
     replace_cycles(runtime_graph, key=sort_key_from_iter(sorted_statements))
 
