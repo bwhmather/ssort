@@ -5,7 +5,6 @@ import functools
 import sys
 import typing
 
-
 T = typing.TypeVar("T")
 
 
@@ -123,6 +122,14 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
             yield from func(item)
         for statement in node.body:
             yield from func(statement)
+
+    if sys.version_info >= (3, 10):
+
+        @func.register(ast.Match)
+        def visit_match(node: ast.Match) -> typing.Iterable[T]:
+            yield from func(node.subject)
+            for case in node.cases:
+                yield from func(case)
 
     @func.register(ast.Raise)
     def visit_raise(node: ast.Raise) -> typing.Iterable[T]:
@@ -419,6 +426,62 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
         yield from func(node.context_expr)
         if node.optional_vars is not None:
             yield from func(node.optional_vars)
+
+    if sys.version_info >= (3, 10):
+
+        @func.register(ast.match_case)
+        def visit_match_case(node: ast.match_case) -> typing.Iterable[T]:
+            yield from func(node.pattern)
+            if node.guard is not None:
+                yield from func(node.guard)
+            for statement in node.body:
+                yield from func(statement)
+
+        @func.register(ast.MatchValue)
+        def visit_match_value(node: ast.MatchValue) -> typing.Iterable[T]:
+            yield from func(node.value)
+
+        @func.register(ast.MatchSingleton)
+        def visit_match_singleton(_: ast.MatchSingleton) -> typing.Iterable[T]:
+            return ()
+
+        @func.register(ast.MatchSequence)
+        def visit_match_sequence(
+            node: ast.MatchSequence,
+        ) -> typing.Iterable[T]:
+            for pattern in node.patterns:
+                yield from func(pattern)
+
+        @func.register(ast.MatchMapping)
+        def visit_match_mapping(node: ast.MatchMapping) -> typing.Iterable[T]:
+            for key in node.keys:
+                yield from func(key)
+            for pattern in node.patterns:
+                yield from func(pattern)
+            if node.rest is not None:
+                yield from func(node.rest)
+
+        @func.register(ast.MatchClass)
+        def visit_match_class(node: ast.MatchClass) -> typing.Iterable[T]:
+            yield from func(node.cls)
+            for pattern in node.patterns:
+                yield from func(pattern)
+            for kwd_pattern in node.kwd_patterns:
+                yield from func(kwd_pattern)
+
+        @func.register(ast.MatchStar)
+        def visit_match_star(_: ast.MatchStar) -> typing.Iterable[T]:
+            return ()
+
+        @func.register(ast.MatchAs)
+        def visit_match_as(node: ast.MatchAs) -> typing.Iterable[T]:
+            if node.pattern is not None:
+                yield from func(node.pattern)
+
+        @func.register(ast.MatchOr)
+        def visit_match_or(node: ast.MatchOr) -> typing.Iterable[T]:
+            for pattern in node.patterns:
+                yield from func(pattern)
 
     @func.register(ast.type_ignore)
     def visit_type_ignore(_: ast.type_ignore) -> typing.Iterable[T]:
