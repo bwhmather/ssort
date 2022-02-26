@@ -427,3 +427,32 @@ def test_concat():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_inner_class():
+    original = _clean(
+        """
+        class Outer:
+            '''
+            The outer class.
+            '''
+            a = 4
+            class Inner:
+                pass
+            __slots__ = ("b",)
+        """
+    )
+    expected = _clean(
+        """
+        class Outer:
+            '''
+            The outer class.
+            '''
+            __slots__ = ("b",)
+            class Inner:
+                pass
+            a = 4
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
