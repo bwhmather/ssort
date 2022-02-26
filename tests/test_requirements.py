@@ -356,6 +356,11 @@ def test_aug_assign_requirements():
     assert _dep_names(node) == ["b"]
 
 
+def test_aug_assign_requirements_attribute():
+    node = _parse("a.b += c")
+    assert _dep_names(node) == ["a", "c"]
+
+
 def test_ann_assign_requirements():
     """
     ..code:: python
