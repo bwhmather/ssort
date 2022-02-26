@@ -234,7 +234,13 @@ def test_return_bindings():
         Return(expr? value)
 
     """
-    pass
+    node = _parse("return x")
+    assert list(get_bindings(node)) == []
+
+
+def test_return_bindings_walrus():
+    node = _parse("return (x := 1)")
+    assert list(get_bindings(node)) == ["x"]
 
 
 def test_delete_bindings():
