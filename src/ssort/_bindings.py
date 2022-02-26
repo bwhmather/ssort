@@ -13,6 +13,48 @@ def get_bindings(node):
             yield from get_bindings(value)
 
 
+@get_bindings.register(ast.ClassDef)
+def _get_bindings_for_class_def(node):
+    """
+    ..code:: python
+
+        ClassDef(
+            identifier name,
+            expr* bases,
+            keyword* keywords,
+            stmt* body,
+            expr* decorator_list,
+        )
+    """
+    for decorator in node.decorator_list:
+        yield from get_bindings(decorator)
+
+    for base in node.bases:
+        yield from get_bindings(base)
+
+    for keyword in node.keywords:
+        yield from get_bindings(keyword.value)
+
+    yield node.name
+
+
+@get_bindings.register(ast.ExceptHandler)
+def _get_bindings_for_except_handler(node):
+    """
+    ..code:: python
+
+        ExceptHandler(expr? type, identifier? name, stmt* body)
+    """
+    if node.type:
+        yield from get_bindings(node.type)
+
+    if node.name:
+        yield node.name
+
+    for stmt in node.body:
+        yield from get_bindings(stmt)
+
+
 @get_bindings.register(ast.FunctionDef)
 @get_bindings.register(ast.AsyncFunctionDef)
 def _get_bindings_for_function_def(node):
@@ -50,57 +92,14 @@ def _get_bindings_for_function_def(node):
         yield from get_bindings(node.returns)
 
 
-@get_bindings.register(ast.ClassDef)
-def _get_bindings_for_class_def(node):
+@get_bindings.register(ast.Global)
+def _get_bindings_for_global(node):
     """
     ..code:: python
 
-        ClassDef(
-            identifier name,
-            expr* bases,
-            keyword* keywords,
-            stmt* body,
-            expr* decorator_list,
-        )
+        Global(identifier* names)
     """
-    for decorator in node.decorator_list:
-        yield from get_bindings(decorator)
-
-    for base in node.bases:
-        yield from get_bindings(base)
-
-    for keyword in node.keywords:
-        yield from get_bindings(keyword.value)
-
-    yield node.name
-
-
-@get_bindings.register(ast.Name)
-def _get_bindings_for_name(node):
-    """
-    ..code:: python
-
-        Name(identifier id, expr_context ctx)
-    """
-    if isinstance(node.ctx, ast.Store):
-        yield node.id
-
-
-@get_bindings.register(ast.ExceptHandler)
-def _get_bindings_for_except_handler(node):
-    """
-    ..code:: python
-
-        ExceptHandler(expr? type, identifier? name, stmt* body)
-    """
-    if node.type:
-        yield from get_bindings(node.type)
-
-    if node.name:
-        yield node.name
-
-    for stmt in node.body:
-        yield from get_bindings(stmt)
+    yield from node.names
 
 
 @get_bindings.register(ast.Import)
@@ -129,14 +128,25 @@ def _get_bindings_for_import_from(node):
         yield name.asname if name.asname else name.name
 
 
-@get_bindings.register(ast.Global)
-def _get_bindings_for_global(node):
+@get_bindings.register(ast.Lambda)
+def _get_bindings_for_lambda(node):
     """
     ..code:: python
 
-        Global(identifier* names)
+        Lambda(arguments args, expr body)
     """
-    yield from node.names
+    yield from get_bindings(node.args)
+
+
+@get_bindings.register(ast.Name)
+def _get_bindings_for_name(node):
+    """
+    ..code:: python
+
+        Name(identifier id, expr_context ctx)
+    """
+    if isinstance(node.ctx, ast.Store):
+        yield node.id
 
 
 @get_bindings.register(ast.Nonlocal)
@@ -147,13 +157,3 @@ def _get_bindings_for_non_local(node):
         Nonlocal(identifier* names)
     """
     yield from node.names
-
-
-@get_bindings.register(ast.Lambda)
-def _get_bindings_for_lambda(node):
-    """
-    ..code:: python
-
-        Lambda(arguments args, expr body)
-    """
-    yield from get_bindings(node.args)
