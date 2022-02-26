@@ -201,10 +201,14 @@ def _is_regular_operation(statement):
 
 def _is_property(statement):
     node = statement_node(statement)
-    if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
-        return False
 
-    return True
+    return isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
+
+
+def _is_class(statement):
+    node = statement_node(statement)
+
+    return isinstance(node, ast.ClassDef)
 
 
 def _statement_binding_sort_key(binding_key):
@@ -246,6 +250,8 @@ def _statement_text_sorted_class(statement):
         statements, _is_regular_operation
     )
 
+    inner_classes, statements = _partition(statements, _is_class)
+
     properties, statements = _partition(statements, _is_property)
 
     methods, statements = statements, []
@@ -262,6 +268,9 @@ def _statement_text_sorted_class(statement):
             sort_key_from_iter(SPECIAL_PROPERTIES)
         ),
     )
+
+    # Inner classes (in original order).
+    sorted_statements += inner_classes
 
     # Regular properties (in original order).
     sorted_statements += properties
