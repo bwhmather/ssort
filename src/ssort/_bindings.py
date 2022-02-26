@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import ast
 import functools
+import typing
 
 
 @functools.singledispatch
-def get_bindings(node):
+def get_bindings(node: ast.AST) -> typing.Iterable[str]:
     for field, value in ast.iter_fields(node):
         if isinstance(value, list):
             for item in value:
@@ -14,18 +17,7 @@ def get_bindings(node):
 
 
 @get_bindings.register(ast.ClassDef)
-def _get_bindings_for_class_def(node):
-    """
-    ..code:: python
-
-        ClassDef(
-            identifier name,
-            expr* bases,
-            keyword* keywords,
-            stmt* body,
-            expr* decorator_list,
-        )
-    """
+def _get_bindings_for_class_def(node: ast.ClassDef) -> typing.Iterable[str]:
     for decorator in node.decorator_list:
         yield from get_bindings(decorator)
 
@@ -39,12 +31,9 @@ def _get_bindings_for_class_def(node):
 
 
 @get_bindings.register(ast.ExceptHandler)
-def _get_bindings_for_except_handler(node):
-    """
-    ..code:: python
-
-        ExceptHandler(expr? type, identifier? name, stmt* body)
-    """
+def _get_bindings_for_except_handler(
+    node: ast.ExceptHandler,
+) -> typing.Iterable[str]:
     if node.type:
         yield from get_bindings(node.type)
 
@@ -57,30 +46,9 @@ def _get_bindings_for_except_handler(node):
 
 @get_bindings.register(ast.FunctionDef)
 @get_bindings.register(ast.AsyncFunctionDef)
-def _get_bindings_for_function_def(node):
-    """
-    ..code:: python
-
-        FunctionDef(
-            identifier name,
-            arguments args,
-            stmt* body,
-            expr* decorator_list,
-            expr? returns,
-            string? type_comment,
-        )
-
-    ..code:: python
-
-        AsyncFunctionDef(
-            identifier name,
-            arguments args,
-            stmt* body,
-            expr* decorator_list,
-            expr? returns,
-            string? type_comment,
-        )
-    """
+def _get_bindings_for_function_def(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> typing.Iterable[str]:
     for decorator in node.decorator_list:
         yield from get_bindings(decorator)
 
@@ -93,22 +61,12 @@ def _get_bindings_for_function_def(node):
 
 
 @get_bindings.register(ast.Global)
-def _get_bindings_for_global(node):
-    """
-    ..code:: python
-
-        Global(identifier* names)
-    """
+def _get_bindings_for_global(node: ast.Global) -> typing.Iterable[str]:
     yield from node.names
 
 
 @get_bindings.register(ast.Import)
-def _get_bindings_for_import(node):
-    """
-    ..code:: python
-
-        Import(alias* names)
-    """
+def _get_bindings_for_import(node: ast.Import) -> typing.Iterable[str]:
     for name in node.names:
         if name.asname:
             yield name.asname
@@ -118,42 +76,24 @@ def _get_bindings_for_import(node):
 
 
 @get_bindings.register(ast.ImportFrom)
-def _get_bindings_for_import_from(node):
-    """
-    ..code:: python
-
-        ImportFrom(identifier? module, alias* names, int? level)
-    """
+def _get_bindings_for_import_from(
+    node: ast.ImportFrom,
+) -> typing.Iterable[str]:
     for name in node.names:
         yield name.asname if name.asname else name.name
 
 
 @get_bindings.register(ast.Lambda)
-def _get_bindings_for_lambda(node):
-    """
-    ..code:: python
-
-        Lambda(arguments args, expr body)
-    """
+def _get_bindings_for_lambda(node: ast.Lambda) -> typing.Iterable[str]:
     yield from get_bindings(node.args)
 
 
 @get_bindings.register(ast.Name)
-def _get_bindings_for_name(node):
-    """
-    ..code:: python
-
-        Name(identifier id, expr_context ctx)
-    """
+def _get_bindings_for_name(node: ast.Name) -> typing.Iterable[str]:
     if isinstance(node.ctx, ast.Store):
         yield node.id
 
 
 @get_bindings.register(ast.Nonlocal)
-def _get_bindings_for_non_local(node):
-    """
-    ..code:: python
-
-        Nonlocal(identifier* names)
-    """
+def _get_bindings_for_non_local(node: ast.Nonlocal) -> typing.Iterable[str]:
     yield from node.names
