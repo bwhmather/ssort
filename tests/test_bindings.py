@@ -665,6 +665,18 @@ def test_try_bindings():
     assert list(get_bindings(node)) == ["a", "exc", "b", "c", "d"]
 
 
+def test_try_bindings_walrus():
+    node = _parse(
+        """
+        try:
+            pass
+        except (x := Exception):
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["x"]
+
+
 def test_assert_bindings():
     """
     ..code:: python
