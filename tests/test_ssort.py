@@ -456,3 +456,73 @@ def test_inner_class():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_lifecycle_class():
+    original = _clean(
+        """
+        class Thing:
+            def startup(self):
+                ...
+            def poll(self):
+                try:
+                    ...
+                except:
+                    self.shutdown()
+            def shutdown(self):
+                ...
+        """
+    )
+    expected = _clean(
+        """
+        class Thing:
+            def startup(self):
+                ...
+            def poll(self):
+                try:
+                    ...
+                except:
+                    self.shutdown()
+            def shutdown(self):
+                ...
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_lifecycle_class_private():
+    original = _clean(
+        """
+        class Thing:
+            def startup(self):
+                ...
+            def poll(self):
+                try:
+                    ...
+                except:
+                    self._shutdown_inner()
+            def _shutdown_inner(self):
+                ...
+            def shutdown(self):
+                self._shutdown_inner
+        """
+    )
+    expected = _clean(
+        """
+        class Thing:
+            def startup(self):
+                ...
+            def _shutdown_inner(self):
+                ...
+            def poll(self):
+                try:
+                    ...
+                except:
+                    self._shutdown_inner()
+            def shutdown(self):
+                self._shutdown_inner
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
