@@ -687,7 +687,7 @@ def test_dict_requirements():
         Dict(expr* keys, expr* values)
     """
     node = _parse("{key: value}")
-    assert _dep_names(node) == ["value"]
+    assert _dep_names(node) == ["key", "value"]
 
 
 def test_dict_requirements_empty():
