@@ -399,6 +399,20 @@ class Zone(dns.zone.Zone):
         self._write_txn._setup_version()
         return self._write_txn
 
+    def set_max_versions(self, max_versions):
+        """Set a pruning policy that retains up to the specified number
+        of versions
+        """
+        if max_versions is not None and max_versions < 1:
+            raise ValueError('max versions must be at least 1')
+        if max_versions is None:
+            def policy(*_):
+                return False
+        else:
+            def policy(zone, _):
+                return len(zone._versions) > max_versions
+        self.set_pruning_policy(policy)
+
     def set_pruning_policy(self, policy):
         """Set the pruning policy for the zone.
 
@@ -416,20 +430,6 @@ class Zone(dns.zone.Zone):
         with self._version_lock:
             self._pruning_policy = policy
             self._prune_versions_unlocked()
-
-    def set_max_versions(self, max_versions):
-        """Set a pruning policy that retains up to the specified number
-        of versions
-        """
-        if max_versions is not None and max_versions < 1:
-            raise ValueError('max versions must be at least 1')
-        if max_versions is None:
-            def policy(*_):
-                return False
-        else:
-            def policy(zone, _):
-                return len(zone._versions) > max_versions
-        self.set_pruning_policy(policy)
 
     def _end_read(self, txn):
         with self._version_lock:
