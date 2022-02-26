@@ -369,8 +369,13 @@ def test_ann_assign_requirements():
         AnnAssign(expr target, expr annotation, expr? value, int simple)
 
     """
-    node = _parse("a: int = b")
-    assert _dep_names(node) == ["b"]
+    node = _parse("a: b = c")
+    assert _dep_names(node) == ["b", "c"]
+
+
+def test_ann_assign_requirements_attribute():
+    node = _parse("a.b: c = d")
+    assert _dep_names(node) == ["a", "c", "d"]
 
 
 def test_for_requirements():
