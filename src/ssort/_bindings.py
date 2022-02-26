@@ -116,6 +116,9 @@ def _get_bindings_for_except_handler(node):
 
         ExceptHandler(expr? type, identifier? name, stmt* body)
     """
+    if node.type:
+        yield from get_bindings(node.type)
+
     if node.name:
         yield node.name
 
