@@ -1,5 +1,4 @@
 from ssort._builtins import MODULE_BUILTINS
-from ssort._exceptions import ResolutionError, WildcardImportError
 from ssort._graphs import Graph
 from ssort._statements import (
     statement_bindings,
@@ -9,9 +8,7 @@ from ssort._statements import (
 )
 
 
-def module_statements_graph(
-    statements, *, on_unresolved=None, on_wildcard_import=None
-):
+def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
     """
     Constructs a graph of the interdependencies in a list of module level
     statements.
@@ -21,37 +18,19 @@ def module_statements_graph(
         the graph.
 
     :param on_unresolved:
-        An optional callback that should be invoked for each unresolved
-        dependency.  Can safely raise any arbitrary exception to abort
-        constructing the graph.  By default, will raise `ResolutionError` on
-        the first unresolved requirement.  If no exception is raised, the graph
-        returned by `module_statements_graph` will not contain a link for the
-        missing requirement.
+        An callback that should be invoked for each unresolved dependency.  Can
+        safely raise any arbitrary exception to abort constructing the graph.
+        If no exception is raised, the graph returned by this function will not
+        contain a link for the missing requirement.
     :param on_wildcard_import:
-        An optional callback that should be invoked if ssort detects a `*`
-        import.  By default, ssort will raise `WildcardImportError` and abort
-        construction of the graph.  If no exception is raised, all dangling
-        references will be pointed back to the last `*` import.
+        A callback that should be invoked if ssort detects a `*` import.  If no
+        exception is raised, all dangling references will be pointed back to the
+        last `*` import.
 
     :returns:
         A `Graph` mapping from statements to the set of statements that they
         depend on.
     """
-    if not on_unresolved:
-
-        def on_unresolved(name, *, lineno, col_offset, **kwargs):
-            raise ResolutionError(
-                f"could not resolve {name!r} at line {lineno}, column {col_offset}",
-                unresolved=name,
-            )
-
-    if not on_wildcard_import:
-
-        def on_wildcard_import(*, lineno, col_offset, **kwargs):
-            raise WildcardImportError(
-                "can't reliably determine dependencies on * import"
-            )
-
     # A dictionary mapping from names to the statements which bind them.
     scope = {}
 

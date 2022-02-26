@@ -6,6 +6,7 @@ from ssort._dependencies import (
     class_statements_runtime_graph,
     module_statements_graph,
 )
+from ssort._exceptions import ResolutionError, WildcardImportError
 from ssort._graphs import (
     is_topologically_sorted,
     replace_cycles,
@@ -331,18 +332,78 @@ def statement_text_sorted(statement):
     return statement_text(statement)
 
 
+def _on_syntax_error_ignore(message, **kwargs):
+    pass
+
+
+def _on_syntax_error_raise(message, *, lineno, col_offset, **kwargs):
+    raise SyntaxError(message, lineno=lineno, offset=col_offset)
+
+
+def _interpret_on_syntax_error_action(on_syntax_error):
+    if on_syntax_error == "ignore":
+        return _on_syntax_error_ignore
+
+    if on_syntax_error == "raise":
+        return _on_syntax_error_raise
+
+    return on_syntax_error
+
+
+def _on_unresolved_ignore(message, **kwargs):
+    pass
+
+
+def _on_unresolved_raise(name, *, lineno, col_offset, **kwargs):
+    raise ResolutionError(
+        f"could not resolve {name!r} at line {lineno}, column {col_offset}",
+        unresolved=name,
+    )
+
+
+def _interpret_on_unresolved_action(on_unresolved):
+    if on_unresolved == "ignore":
+        return _on_unresolved_ignore
+
+    if on_unresolved == "raise":
+        return _on_unresolved_raise
+
+    return on_unresolved
+
+
+def _on_wildcard_import_ignore(message, **kwargs):
+    pass
+
+
+def _on_wildcard_import_raise(message, *, lineno, col_offset, **kwargs):
+    raise WildcardImportError(
+        "can't reliably determine dependencies on * import"
+    )
+
+
+def _interpret_on_wildcard_import_action(on_wildcard_import):
+    if on_wildcard_import == "ignore":
+        return _on_wildcard_import_ignore
+
+    if on_wildcard_import == "raise":
+        return _on_wildcard_import_raise
+
+    return on_wildcard_import
+
+
 def ssort(
     text,
     *,
     filename="<unknown>",
-    on_syntax_error=None,
-    on_unresolved=None,
-    on_wildcard_import=None,
+    on_syntax_error="raise",
+    on_unresolved="raise",
+    on_wildcard_import="raise",
 ):
-    if not on_syntax_error:
-
-        def on_syntax_error(message, *, lineno, col_offset, **kwargs):
-            raise SyntaxError(message, lineno=lineno, offset=col_offset)
+    on_syntax_error = _interpret_on_syntax_error_action(on_syntax_error)
+    on_unresolved = _interpret_on_unresolved_action(on_unresolved)
+    on_wildcard_import = _interpret_on_wildcard_import_action(
+        on_wildcard_import
+    )
 
     try:
         statements = list(split(text, filename=filename))
