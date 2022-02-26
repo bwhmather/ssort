@@ -79,12 +79,18 @@ def main():
                 + f"line {lineno}, column {col_offset}\n"
             )
 
+        def _on_wildcard_import(**kwargs):
+            sys.stderr.write(
+                "WARNING: can't determine dependencies on * import\n"
+            )
+
         try:
             updated = ssort(
                 original,
                 filename=str(path),
                 on_syntax_error=_on_syntax_error,
                 on_unresolved=_on_unresolved,
+                on_wildcard_import=_on_wildcard_import,
             )
 
             if errors:

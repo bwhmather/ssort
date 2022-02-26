@@ -332,7 +332,12 @@ def statement_text_sorted(statement):
 
 
 def ssort(
-    text, *, filename="<unknown>", on_syntax_error=None, on_unresolved=None
+    text,
+    *,
+    filename="<unknown>",
+    on_syntax_error=None,
+    on_unresolved=None,
+    on_wildcard_import=None,
 ):
     if not on_syntax_error:
 
@@ -345,7 +350,11 @@ def ssort(
         on_syntax_error(exc.msg, lineno=exc.lineno, col_offset=exc.offset)
         return text
 
-    graph = module_statements_graph(statements, on_unresolved=on_unresolved)
+    graph = module_statements_graph(
+        statements,
+        on_unresolved=on_unresolved,
+        on_wildcard_import=on_wildcard_import,
+    )
     if graph is None:
         return text
 
