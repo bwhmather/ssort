@@ -3,43 +3,15 @@ from __future__ import annotations
 import ast
 import typing
 
-from ssort._visitor import ast_visitor
+from ssort._visitor import node_visitor
 
 
-@ast_visitor
+@node_visitor
 def get_bindings(node: ast.AST) -> typing.Iterable[str]:
     raise NotImplementedError(
         f"could not find bindings for unsupported node {node!r} "
         f"at line {node.lineno}, column: {node.col_offset}"
     )
-
-
-@get_bindings.register(ast.ClassDef)
-def _get_bindings_for_class_def(node: ast.ClassDef) -> typing.Iterable[str]:
-    for decorator in node.decorator_list:
-        yield from get_bindings(decorator)
-
-    for base in node.bases:
-        yield from get_bindings(base)
-
-    for keyword in node.keywords:
-        yield from get_bindings(keyword.value)
-
-    yield node.name
-
-
-@get_bindings.register(ast.ExceptHandler)
-def _get_bindings_for_except_handler(
-    node: ast.ExceptHandler,
-) -> typing.Iterable[str]:
-    if node.type:
-        yield from get_bindings(node.type)
-
-    if node.name:
-        yield node.name
-
-    for stmt in node.body:
-        yield from get_bindings(stmt)
 
 
 @get_bindings.register(ast.FunctionDef)
@@ -49,18 +21,21 @@ def _get_bindings_for_function_def(
 ) -> typing.Iterable[str]:
     for decorator in node.decorator_list:
         yield from get_bindings(decorator)
-
     yield node.name
-
     yield from get_bindings(node.args)
-
     if node.returns is not None:
         yield from get_bindings(node.returns)
 
 
-@get_bindings.register(ast.Global)
-def _get_bindings_for_global(node: ast.Global) -> typing.Iterable[str]:
-    yield from node.names
+@get_bindings.register(ast.ClassDef)
+def _get_bindings_for_class_def(node: ast.ClassDef) -> typing.Iterable[str]:
+    for decorator in node.decorator_list:
+        yield from get_bindings(decorator)
+    for base in node.bases:
+        yield from get_bindings(base)
+    for keyword in node.keywords:
+        yield from get_bindings(keyword.value)
+    yield node.name
 
 
 @get_bindings.register(ast.Import)
@@ -81,6 +56,16 @@ def _get_bindings_for_import_from(
         yield name.asname if name.asname else name.name
 
 
+@get_bindings.register(ast.Global)
+def _get_bindings_for_global(node: ast.Global) -> typing.Iterable[str]:
+    yield from node.names
+
+
+@get_bindings.register(ast.Nonlocal)
+def _get_bindings_for_non_local(node: ast.Nonlocal) -> typing.Iterable[str]:
+    yield from node.names
+
+
 @get_bindings.register(ast.Lambda)
 def _get_bindings_for_lambda(node: ast.Lambda) -> typing.Iterable[str]:
     yield from get_bindings(node.args)
@@ -92,6 +77,13 @@ def _get_bindings_for_name(node: ast.Name) -> typing.Iterable[str]:
         yield node.id
 
 
-@get_bindings.register(ast.Nonlocal)
-def _get_bindings_for_non_local(node: ast.Nonlocal) -> typing.Iterable[str]:
-    yield from node.names
+@get_bindings.register(ast.ExceptHandler)
+def _get_bindings_for_except_handler(
+    node: ast.ExceptHandler,
+) -> typing.Iterable[str]:
+    if node.type:
+        yield from get_bindings(node.type)
+    if node.name:
+        yield node.name
+    for statement in node.body:
+        yield from get_bindings(statement)
