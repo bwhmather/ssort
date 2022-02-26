@@ -75,29 +75,6 @@ def _get_bindings_for_class_def(node):
     yield node.name
 
 
-@get_bindings.register(ast.Return)
-def _get_bindings_for_return(node):
-    """
-    ..code:: python
-
-        Return(expr? value)
-
-    """
-    return
-    yield
-
-
-@get_bindings.register(ast.Delete)
-def _get_bindings_for_delete(node):
-    """
-    ..code:: python
-
-        Delete(expr* targets)
-    """
-    return
-    yield
-
-
 @get_bindings.register(ast.Name)
 def _get_bindings_for_name(node):
     """
