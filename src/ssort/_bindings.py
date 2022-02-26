@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import ast
-import functools
 import typing
 
+from ssort._visitor import ast_visitor
 
-@functools.singledispatch
+
+@ast_visitor
 def get_bindings(node: ast.AST) -> typing.Iterable[str]:
-    for _, value in ast.iter_fields(node):
-        if isinstance(value, list):
-            for item in value:
-                if isinstance(item, ast.AST):
-                    yield from get_bindings(item)
-        elif isinstance(value, ast.AST):
-            yield from get_bindings(value)
+    raise NotImplementedError(
+        f"could not find bindings for unsupported node {node!r} "
+        f"at line {node.lineno}, column: {node.col_offset}"
+    )
 
 
 @get_bindings.register(ast.ClassDef)
