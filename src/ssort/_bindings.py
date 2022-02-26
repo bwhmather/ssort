@@ -7,7 +7,7 @@ import typing
 
 @functools.singledispatch
 def get_bindings(node: ast.AST) -> typing.Iterable[str]:
-    for field, value in ast.iter_fields(node):
+    for _, value in ast.iter_fields(node):
         if isinstance(value, list):
             for item in value:
                 if isinstance(item, ast.AST):
