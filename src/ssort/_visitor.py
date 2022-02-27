@@ -19,7 +19,7 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
     def visit_module(node: ast.Module) -> typing.Iterable[T]:
         for statement in node.body:
             yield from func(statement)
-        for type_ignore in node.type_ignore:
+        for type_ignore in node.type_ignores:
             yield from func(type_ignore)
 
     @func.register(ast.Interactive)
@@ -313,7 +313,7 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
         yield from func(node.value)
 
     @func.register(ast.Name)
-    def visit_name(node: ast.Name) -> typing.Iterable[T]:
+    def visit_name(_: ast.Name) -> typing.Iterable[T]:
         return ()
 
     @func.register(ast.List)
