@@ -151,7 +151,6 @@ def test_function_def_requirements_nonlocal_closure_capture():
             return inner
         """
     )
-
     assert _dep_names(node) == []
 
 
@@ -190,8 +189,27 @@ def test_function_def_requirements_global_closure_no_capture():
             return inner
         """
     )
-
     assert _dep_names(node) == ["a"]
+
+
+def test_function_def_requirements_default():
+    node = _parse(
+        """
+        def function(a=b):
+            pass
+        """
+    )
+    assert _dep_names(node) == ["b"]
+
+
+def test_function_def_requirements_annotations():
+    node = _parse(
+        """
+        def function(a: b) -> c:
+            pass
+        """
+    )
+    assert _dep_names(node) == ["b", "c"]
 
 
 def test_async_function_def_requirements():
@@ -679,6 +697,11 @@ def test_lambda_requirements():
     """
     node = _parse("lambda arg, *args, **kwargs: arg + other(*args) / kwargs")
     assert _dep_names(node) == ["other"]
+
+
+def test_lambda_requirements_default():
+    node = _parse("lambda a=b: a")
+    assert _dep_names(node) == ["b"]
 
 
 def test_if_exp_requirements():
