@@ -191,7 +191,6 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
 
     @func.register(ast.BoolOp)
     def visit_bool_op(node: ast.BoolOp) -> typing.Iterable[T]:
-        yield from func(node.op)
         for value in node.values:
             yield from func(value)
 
@@ -203,12 +202,10 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
     @func.register(ast.BinOp)
     def visit_bin_op(node: ast.BinOp) -> typing.Iterable[T]:
         yield from func(node.left)
-        yield from func(node.op)
         yield from func(node.right)
 
     @func.register(ast.UnaryOp)
     def visit_unary_op(node: ast.UnaryOp) -> typing.Iterable[T]:
-        yield from func(node.op)
         yield from func(node.operand)
 
     @func.register(ast.Lambda)
@@ -276,8 +273,6 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
     @func.register(ast.Compare)
     def visit_compare(node: ast.Compare) -> typing.Iterable[T]:
         yield from func(node.left)
-        for op in node.ops:
-            yield from func(op)
         for comparator in node.comparators:
             yield from func(comparator)
 
@@ -307,34 +302,29 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
     @func.register(ast.Attribute)
     def visit_attribute(node: ast.Attribute) -> typing.Iterable[T]:
         yield from func(node.value)
-        yield from func(node.ctx)
 
     @func.register(ast.Subscript)
     def visit_subscript(node: ast.Subscript) -> typing.Iterable[T]:
         yield from func(node.value)
         yield from func(node.slice)
-        yield from func(node.ctx)
 
     @func.register(ast.Starred)
     def visit_starred(node: ast.Starred) -> typing.Iterable[T]:
         yield from func(node.value)
-        yield from func(node.ctx)
 
     @func.register(ast.Name)
     def visit_name(node: ast.Name) -> typing.Iterable[T]:
-        yield from func(node.ctx)
+        return ()
 
     @func.register(ast.List)
     def visit_list(node: ast.List) -> typing.Iterable[T]:
         for elt in node.elts:
             yield from func(elt)
-        yield from func(node.ctx)
 
     @func.register(ast.Tuple)
     def visit_tuple(node: ast.Tuple) -> typing.Iterable[T]:
         for elt in node.elts:
             yield from func(elt)
-        yield from func(node.ctx)
 
     @func.register(ast.Slice)
     def visit_slice(node: ast.Slice) -> typing.Iterable[T]:
@@ -355,26 +345,6 @@ def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
         @func.register(ast.Index)
         def visit_index(node: ast.Index) -> typing.Iterable[T]:
             yield from func(node.value)
-
-    @func.register(ast.expr_context)
-    def visit_expr_context(_: ast.expr_context) -> typing.Iterable[T]:
-        return ()
-
-    @func.register(ast.boolop)
-    def visit_boolop(_: ast.boolop) -> typing.Iterable[T]:
-        return ()
-
-    @func.register(ast.operator)
-    def visit_operator(_: ast.operator) -> typing.Iterable[T]:
-        return ()
-
-    @func.register(ast.unaryop)
-    def visit_unaryop(_: ast.unaryop) -> typing.Iterable[T]:
-        return ()
-
-    @func.register(ast.cmpop)
-    def visit_cmpop(_: ast.cmpop) -> typing.Iterable[T]:
-        return ()
 
     @func.register(ast.comprehension)
     def visit_comprehension(node: ast.comprehension) -> typing.Iterable[T]:
