@@ -72,6 +72,11 @@ def _get_requirements_for_function_def(node):
     for decorator in node.decorator_list:
         yield from get_requirements(decorator)
 
+    yield from get_requirements(node.args)
+
+    if node.returns is not None:
+        yield from get_requirements(node.returns)
+
     scope = _get_scope_from_arguments(node.args)
 
     requirements = []
@@ -229,6 +234,7 @@ def _get_requirements_for_lambda(node):
 
         Lambda(arguments args, expr body)
     """
+    yield from get_requirements(node.args)
     scope = _get_scope_from_arguments(node.args)
     for requirement in get_requirements(node.body):
         if requirement.name not in scope:
