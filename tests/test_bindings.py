@@ -1018,7 +1018,7 @@ def test_list_comp_bindings():
 
 def test_list_comp_bindings_walrus_target():
     node = _parse("[( a:= item) for item in iterator if condition(item)]")
-    assert list(get_bindings(node)) == ["item", "a"]
+    assert list(get_bindings(node)) == ["a", "item"]
 
 
 def test_list_comp_bindings_walrus_iter():
@@ -1044,7 +1044,7 @@ def test_set_comp_bindings():
 
 def test_set_comp_bindings_walrus_target():
     node = _parse("{( a:= item) for item in iterator if condition(item)}")
-    assert list(get_bindings(node)) == ["item", "a"]
+    assert list(get_bindings(node)) == ["a", "item"]
 
 
 def test_set_comp_bindings_walrus_iter():
@@ -1076,14 +1076,14 @@ def test_dict_comp_bindings_walrus_key():
     node = _parse(
         "{(key := item[0]): item[1] for item in iterator if check(item)}"
     )
-    assert list(get_bindings(node)) == ["item", "key"]
+    assert list(get_bindings(node)) == ["key", "item"]
 
 
 def test_dict_comp_bindings_walrus_value():
     node = _parse(
         "{item[0]: (value := item[1]) for item in iterator if check(item)}"
     )
-    assert list(get_bindings(node)) == ["item", "value"]
+    assert list(get_bindings(node)) == ["value", "item"]
 
 
 def test_dict_comp_bindings_walrus_iter():
@@ -1112,7 +1112,7 @@ def test_generator_exp_bindings():
 
 def test_generator_exp_bindings_walrus_target():
     node = _parse("(( a:= item) for item in iterator if condition(item))")
-    assert list(get_bindings(node)) == ["item", "a"]
+    assert list(get_bindings(node)) == ["a", "item"]
 
 
 def test_generator_exp_bindings_walrus_iter():
