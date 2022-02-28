@@ -25,7 +25,7 @@ class Requirement:
     scope: Scope = Scope.LOCAL
 
 
-def _get_scope_from_arguments(args):
+def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
     scope = set()
     scope.update(arg.arg for arg in args.posonlyargs)
     scope.update(arg.arg for arg in args.args)  # Arghhh.
