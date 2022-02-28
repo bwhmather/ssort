@@ -47,6 +47,15 @@ class NodeVisitor(Generic[T]):
             )
         return visitor(self, node)
 
+    def generic_visit(self, node: ast.AST) -> Iterable[T]:
+        try:
+            visitor = NodeVisitor._visitors[type(node)]
+        except KeyError:
+            raise NotImplementedError(
+                f"Visitor for {type(node).__name__} has not been implemented"
+            )
+        return visitor(self, node)
+
     @register_visitor(ast.Module)
     def visit_module(self, node: ast.Module) -> Iterable[T]:
         for statement in node.body:
@@ -509,3 +518,6 @@ class NodeVisitor(Generic[T]):
     @register_visitor(ast.type_ignore)
     def visit_type_ignore(self, node: ast.type_ignore) -> Iterable[T]:
         return ()
+
+
+NodeVisitor._find_visitor_methods()

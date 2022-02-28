@@ -65,13 +65,10 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
         for requirement in requirements:
             if requirement.scope == Scope.GLOBAL:
                 yield requirement
-
             elif requirement.scope == Scope.NONLOCAL:
                 yield dataclasses.replace(requirement, scope=Scope.LOCAL)
-
-            else:
-                if requirement.name not in scope:
-                    yield requirement
+            elif requirement.name not in scope:
+                yield requirement
 
     @register_visitor(ast.ClassDef)
     def visit_class_def(self, node: ast.ClassDef) -> Iterable[Requirement]:
@@ -148,62 +145,12 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
             if requirement.name not in scope:
                 yield requirement
 
-    @register_visitor(ast.ListComp)
-    def visit_list_comp(self, node: ast.ListComp) -> Iterable[Requirement]:
-        requirements = []
-        requirements += self.visit(node.elt)
-
-        for generator in node.generators:
-            requirements += self.visit(generator)
-
+    @register_visitor(
+        ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp
+    )
+    def vist_comp(self, node: ast.AST) -> Iterable[Requirement]:
         bindings = set(get_bindings(node))
-
-        for requirement in requirements:
-            if requirement.name not in bindings:
-                yield requirement
-
-    @register_visitor(ast.SetComp)
-    def visit_set_comp(self, node: ast.SetComp) -> Iterable[Requirement]:
-        requirements = []
-        requirements += self.visit(node.elt)
-
-        for generator in node.generators:
-            requirements += self.visit(generator)
-
-        bindings = set(get_bindings(node))
-
-        for requirement in requirements:
-            if requirement.name not in bindings:
-                yield requirement
-
-    @register_visitor(ast.DictComp)
-    def visit_dict_comp(self, node: ast.DictComp) -> Iterable[Requirement]:
-        requirements = []
-        requirements += self.visit(node.key)
-        requirements += self.visit(node.value)
-
-        for generator in node.generators:
-            requirements += self.visit(generator)
-
-        bindings = set(get_bindings(node))
-
-        for requirement in requirements:
-            if requirement.name not in bindings:
-                yield requirement
-
-    @register_visitor(ast.GeneratorExp)
-    def visit_generator_exp(
-        self, node: ast.GeneratorExp
-    ) -> Iterable[Requirement]:
-        requirements = []
-        requirements += self.visit(node.elt)
-
-        for generator in node.generators:
-            requirements += self.visit(generator)
-
-        bindings = set(get_bindings(node))
-
-        for requirement in requirements:
+        for requirement in self.generic_visit(node):
             if requirement.name not in bindings:
                 yield requirement
 
