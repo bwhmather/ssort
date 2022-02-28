@@ -7,7 +7,7 @@ from typing import Iterable
 
 from ssort._bindings import get_bindings
 from ssort._builtins import CLASS_BUILTINS
-from ssort._visitor import NodeVisitor
+from ssort._visitor import NodeVisitor, register_visitor
 
 
 class Scope(enum.Enum):
@@ -38,6 +38,7 @@ def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
 
 
 class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
+    @register_visitor(ast.FunctionDef, ast.AsyncFunctionDef)
     def visit_function_def(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> Iterable[Requirement]:
@@ -72,6 +73,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
                 if requirement.name not in scope:
                     yield requirement
 
+    @register_visitor(ast.ClassDef)
     def visit_class_def(self, node: ast.ClassDef) -> Iterable[Requirement]:
         for decorator in node.decorator_list:
             yield from self.visit(decorator)
@@ -88,6 +90,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
 
             scope.update(get_bindings(statement))
 
+    @register_visitor(ast.For, ast.AsyncFor)
     def visit_for(self, node: ast.For | ast.AsyncFor) -> Iterable[Requirement]:
         bindings = set(get_bindings(node))
 
@@ -103,6 +106,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
                 if requirement.name not in bindings:
                     yield requirement
 
+    @register_visitor(ast.With, ast.AsyncWith)
     def visit_with(
         self, node: ast.With | ast.AsyncWith
     ) -> Iterable[Requirement]:
@@ -116,6 +120,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
                 if requirement.name not in bindings:
                     yield requirement
 
+    @register_visitor(ast.Global)
     def visit_global(self, node: ast.Global) -> Iterable[Requirement]:
         for name in node.names:
             yield Requirement(
@@ -125,6 +130,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
                 scope=Scope.GLOBAL,
             )
 
+    @register_visitor(ast.Nonlocal)
     def visit_nonlocal(self, node: ast.Nonlocal) -> Iterable[Requirement]:
         for name in node.names:
             yield Requirement(
@@ -134,6 +140,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
                 scope=Scope.NONLOCAL,
             )
 
+    @register_visitor(ast.Lambda)
     def visit_lambda(self, node: ast.Lambda) -> Iterable[Requirement]:
         yield from self.visit(node.args)
         scope = _get_scope_from_arguments(node.args)
@@ -141,6 +148,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
             if requirement.name not in scope:
                 yield requirement
 
+    @register_visitor(ast.ListComp)
     def visit_list_comp(self, node: ast.ListComp) -> Iterable[Requirement]:
         requirements = []
         requirements += self.visit(node.elt)
@@ -154,6 +162,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
             if requirement.name not in bindings:
                 yield requirement
 
+    @register_visitor(ast.SetComp)
     def visit_set_comp(self, node: ast.SetComp) -> Iterable[Requirement]:
         requirements = []
         requirements += self.visit(node.elt)
@@ -167,6 +176,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
             if requirement.name not in bindings:
                 yield requirement
 
+    @register_visitor(ast.DictComp)
     def visit_dict_comp(self, node: ast.DictComp) -> Iterable[Requirement]:
         requirements = []
         requirements += self.visit(node.key)
@@ -181,6 +191,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
             if requirement.name not in bindings:
                 yield requirement
 
+    @register_visitor(ast.GeneratorExp)
     def visit_generator_exp(
         self, node: ast.GeneratorExp
     ) -> Iterable[Requirement]:
@@ -196,6 +207,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
             if requirement.name not in bindings:
                 yield requirement
 
+    @register_visitor(ast.Name)
     def visit_name(self, node: ast.Name) -> Iterable[Requirement]:
         if isinstance(node.ctx, (ast.Load, ast.Del)):
             yield Requirement(
