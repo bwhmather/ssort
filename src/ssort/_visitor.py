@@ -1,460 +1,449 @@
 from __future__ import annotations
 
 import ast
-import functools
+import inspect
 import sys
-import typing
+from typing import Callable, Generic, Iterable, TypeVar
 
-T = typing.TypeVar("T")
+T = TypeVar("T")
 
 
-def node_visitor(func: typing.Callable[[ast.AST], typing.Iterable[T]]):
-    """Decorator for AST node visitor functions.
+class NodeVisitor(Generic[T]):
+    """A high performance AST node visitor.
 
-    Has much better performance than its equivalents in the `ast` module.
+    Provides an interface similar to `ast.NodeVisitor` but is much more
+    performant.
     """
-    func = functools.singledispatch(func)
 
-    @func.register(ast.Module)
-    def visit_module(node: ast.Module) -> typing.Iterable[T]:
+    _visitors: dict[type, Callable[[NodeVisitor, ast.AST], Iterable[T]]] = {}
+
+    @classmethod
+    def _find_visitor_methods(cls):
+        # Register visitor methods according to their type annotations.
+        cls._visitors = {}
+        for name, func in inspect.getmembers(cls, inspect.isfunction):
+            if not name.startswith("visit_"):
+                continue
+
+            signature = inspect.signature(func)
+            parameters = list(signature.parameters.values())
+
+            # All visitor signatures should be of form (self, node)
+            if len(parameters) != 2:
+                raise ValueError(f"Invalid signature for visitor: {name!r}")
+
+            annotation = parameters[1].annotation
+            if not isinstance(annotation, str):
+                raise ValueError(
+                    f"Non-string annotation for visitor: {name!r}"
+                )
+
+            # Process each type in a union.
+            for type_name in annotation.split("|"):
+                type_name = type_name.strip()
+                try:
+                    ast_type = eval(type_name)
+                except Exception:
+                    raise ValueError(
+                        f"Unable to parse visitor annotation: {annotation}"
+                    )
+                cls._visitors[ast_type] = func
+
+    def __init_subclass__(cls, **kwargs):
+        cls._find_visitor_methods()
+
+    def visit(self, node: ast.AST) -> Iterable[T]:
+        try:
+            visitor = self._visitors[type(node)]
+        except KeyError:
+            raise NotImplementedError(
+                f"Visitor for {type(node).__name__} has not been implemented"
+            )
+        return visitor(self, node)
+
+    def visit_module(self, node: ast.Module) -> Iterable[T]:
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
         for type_ignore in node.type_ignores:
-            yield from func(type_ignore)
+            yield from self.visit(type_ignore)
 
-    @func.register(ast.Interactive)
-    def visit_interactive(node: ast.Interactive) -> typing.Iterable[T]:
+    def visit_interactive(self, node: ast.Interactive) -> Iterable[T]:
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
 
-    @func.register(ast.Expression)
-    def visit_expression(node: ast.Expression) -> typing.Iterable[T]:
-        yield from func(node.body)
+    def visit_expression(self, node: ast.Expression) -> Iterable[T]:
+        yield from self.visit(node.body)
 
-    @func.register(ast.FunctionType)
-    def visit_function_type(node: ast.FunctionType) -> typing.Iterable[T]:
+    def visit_function_type(self, node: ast.FunctionType) -> Iterable[T]:
         for argtype in node.argtypes:
-            yield from func(argtype)
-        yield from func(node.returns)
+            yield from self.visit(argtype)
+        yield from self.visit(node.returns)
 
-    @func.register(ast.FunctionDef)
-    @func.register(ast.AsyncFunctionDef)
-    def visit_function_def(
-        node: ast.FunctionDef | ast.AsyncFunctionDef,
-    ) -> typing.Iterable[T]:
+    def visit_function_def(self, node: ast.FunctionDef) -> Iterable[T]:
         for decorator in node.decorator_list:
-            yield from func(decorator)
-        yield from func(node.args)
+            yield from self.visit(decorator)
+        yield from self.visit(node.args)
         if node.returns is not None:
-            yield from func(node.returns)
+            yield from self.visit(node.returns)
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
 
-    @func.register(ast.ClassDef)
-    def visit_class_def(node: ast.ClassDef) -> typing.Iterable[T]:
+    def visit_async_function_def(
+        self, node: ast.AsyncFunctionDef
+    ) -> Iterable[T]:
         for decorator in node.decorator_list:
-            yield from func(decorator)
+            yield from self.visit(decorator)
+        yield from self.visit(node.args)
+        if node.returns is not None:
+            yield from self.visit(node.returns)
+        for statement in node.body:
+            yield from self.visit(statement)
+
+    def visit_class_def(self, node: ast.ClassDef) -> Iterable[T]:
+        for decorator in node.decorator_list:
+            yield from self.visit(decorator)
         for base in node.bases:
-            yield from func(base)
+            yield from self.visit(base)
         for keyword in node.keywords:
-            yield from func(keyword)
+            yield from self.visit(keyword)
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
 
-    @func.register(ast.Return)
-    def visit_return(node: ast.Return) -> typing.Iterable[T]:
+    def visit_return(self, node: ast.Return) -> Iterable[T]:
         if node.value is not None:
-            yield from func(node.value)
+            yield from self.visit(node.value)
 
-    @func.register(ast.Delete)
-    def visit_delete(node: ast.Delete) -> typing.Iterable[T]:
+    def visit_delete(self, node: ast.Delete) -> Iterable[T]:
         for target in node.targets:
-            yield from func(target)
+            yield from self.visit(target)
 
-    @func.register(ast.Assign)
-    def visit_assign(node: ast.Assign) -> typing.Iterable[T]:
+    def visit_assign(self, node: ast.Assign) -> Iterable[T]:
         for target in node.targets:
-            yield from func(target)
-        yield from func(node.value)
+            yield from self.visit(target)
+        yield from self.visit(node.value)
 
-    @func.register(ast.AugAssign)
-    def visit_aug_assign(node: ast.AugAssign) -> typing.Iterable[T]:
-        yield from func(node.target)
-        yield from func(node.value)
+    def visit_aug_assign(self, node: ast.AugAssign) -> Iterable[T]:
+        yield from self.visit(node.target)
+        yield from self.visit(node.value)
 
-    @func.register(ast.AnnAssign)
-    def visit_ann_assign(node: ast.AnnAssign) -> typing.Iterable[T]:
-        yield from func(node.target)
-        yield from func(node.annotation)
+    def visit_ann_assign(self, node: ast.AnnAssign) -> Iterable[T]:
+        yield from self.visit(node.target)
+        yield from self.visit(node.annotation)
         if node.value is not None:
-            yield from func(node.value)
+            yield from self.visit(node.value)
 
-    @func.register(ast.For)
-    @func.register(ast.AsyncFor)
-    def visit_for(node: ast.For | ast.AsyncFor) -> typing.Iterable[T]:
-        yield from func(node.target)
-        yield from func(node.iter)
+    def visit_for(self, node: ast.For) -> Iterable[T]:
+        yield from self.visit(node.target)
+        yield from self.visit(node.iter)
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
         for statement in node.orelse:
-            yield from func(statement)
+            yield from self.visit(statement)
 
-    @func.register(ast.While)
-    def visit_while(node: ast.While) -> typing.Iterable[T]:
-        yield from func(node.test)
+    def visit_async_for(self, node: ast.AsyncFor) -> Iterable[T]:
+        yield from self.visit(node.target)
+        yield from self.visit(node.iter)
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
         for statement in node.orelse:
-            yield from func(statement)
+            yield from self.visit(statement)
 
-    @func.register(ast.If)
-    def visit_if(node: ast.If) -> typing.Iterable[T]:
-        yield from func(node.test)
+    def visit_while(self, node: ast.While) -> Iterable[T]:
+        yield from self.visit(node.test)
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
         for statement in node.orelse:
-            yield from func(statement)
+            yield from self.visit(statement)
 
-    @func.register(ast.With)
-    @func.register(ast.AsyncWith)
-    def visit_with(node: ast.With | ast.AsyncWith) -> typing.Iterable[T]:
+    def visit_if(self, node: ast.If) -> Iterable[T]:
+        yield from self.visit(node.test)
+        for statement in node.body:
+            yield from self.visit(statement)
+        for statement in node.orelse:
+            yield from self.visit(statement)
+
+    def visit_with(self, node: ast.With) -> Iterable[T]:
         for item in node.items:
-            yield from func(item)
+            yield from self.visit(item)
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
+
+    def visit_async_with(self, node: ast.AsyncWith) -> Iterable[T]:
+        for item in node.items:
+            yield from self.visit(item)
+        for statement in node.body:
+            yield from self.visit(statement)
 
     if sys.version_info >= (3, 10):
 
-        @func.register(ast.Match)
-        def visit_match(node: ast.Match) -> typing.Iterable[T]:
-            yield from func(node.subject)
+        def visit_match(self, node: ast.Match) -> Iterable[T]:
+            yield from self.visit(node.subject)
             for case in node.cases:
-                yield from func(case)
+                yield from self.visit(case)
 
-    @func.register(ast.Raise)
-    def visit_raise(node: ast.Raise) -> typing.Iterable[T]:
+    def visit_raise(self, node: ast.Raise) -> Iterable[T]:
         if node.exc is not None:
-            yield from func(node.exc)
+            yield from self.visit(node.exc)
         if node.cause is not None:
-            yield from func(node.cause)
+            yield from self.visit(node.cause)
 
-    @func.register(ast.Try)
-    def visit_try(node: ast.Try) -> typing.Iterable[T]:
+    def visit_try(self, node: ast.Try) -> Iterable[T]:
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
         for handler in node.handlers:
-            yield from func(handler)
+            yield from self.visit(handler)
         for statement in node.orelse:
-            yield from func(statement)
+            yield from self.visit(statement)
         for statement in node.finalbody:
-            yield from func(statement)
+            yield from self.visit(statement)
 
-    @func.register(ast.Assert)
-    def visit_assert(node: ast.Assert) -> typing.Iterable[T]:
-        yield from func(node.test)
+    def visit_assert(self, node: ast.Assert) -> Iterable[T]:
+        yield from self.visit(node.test)
         if node.msg is not None:
-            yield from func(node.msg)
+            yield from self.visit(node.msg)
 
-    @func.register(ast.Import)
-    def visit_import(node: ast.Import) -> typing.Iterable[T]:
+    def visit_import(self, node: ast.Import) -> Iterable[T]:
         for name in node.names:
-            yield from func(name)
+            yield from self.visit(name)
 
-    @func.register(ast.ImportFrom)
-    def visit_import_from(node: ast.ImportFrom) -> typing.Iterable[T]:
+    def visit_import_from(self, node: ast.ImportFrom) -> Iterable[T]:
         for name in node.names:
-            yield from func(name)
+            yield from self.visit(name)
 
-    @func.register(ast.Global)
-    def visit_global(_: ast.Global) -> typing.Iterable[T]:
+    def visit_global(self, node: ast.Global) -> Iterable[T]:
         return ()
 
-    @func.register(ast.Nonlocal)
-    def visit_nonlocal(_: ast.Nonlocal) -> typing.Iterable[T]:
+    def visit_nonlocal(self, node: ast.Nonlocal) -> Iterable[T]:
         return ()
 
-    @func.register(ast.Expr)
-    def visit_expr(node: ast.Expr) -> typing.Iterable[T]:
-        yield from func(node.value)
+    def visit_expr(self, node: ast.Expr) -> Iterable[T]:
+        yield from self.visit(node.value)
 
-    @func.register(ast.Pass)
-    def visit_pass(_: ast.Pass) -> typing.Iterable[T]:
+    def visit_pass(self, node: ast.Pass) -> Iterable[T]:
         return ()
 
-    @func.register(ast.Break)
-    def visit_break(_: ast.Break) -> typing.Iterable[T]:
+    def visit_break(self, node: ast.Break) -> Iterable[T]:
         return ()
 
-    @func.register(ast.Continue)
-    def visit_continue(_: ast.Continue) -> typing.Iterable[T]:
+    def visit_continue(self, node: ast.Continue) -> Iterable[T]:
         return ()
 
-    @func.register(ast.BoolOp)
-    def visit_bool_op(node: ast.BoolOp) -> typing.Iterable[T]:
+    def visit_bool_op(self, node: ast.BoolOp) -> Iterable[T]:
         for value in node.values:
-            yield from func(value)
+            yield from self.visit(value)
 
-    @func.register(ast.NamedExpr)
-    def visit_named_expr(node: ast.NamedExpr) -> typing.Iterable[T]:
-        yield from func(node.target)
-        yield from func(node.value)
+    def visit_named_expr(self, node: ast.NamedExpr) -> Iterable[T]:
+        yield from self.visit(node.target)
+        yield from self.visit(node.value)
 
-    @func.register(ast.BinOp)
-    def visit_bin_op(node: ast.BinOp) -> typing.Iterable[T]:
-        yield from func(node.left)
-        yield from func(node.right)
+    def visit_bin_op(self, node: ast.BinOp) -> Iterable[T]:
+        yield from self.visit(node.left)
+        yield from self.visit(node.right)
 
-    @func.register(ast.UnaryOp)
-    def visit_unary_op(node: ast.UnaryOp) -> typing.Iterable[T]:
-        yield from func(node.operand)
+    def visit_unary_op(self, node: ast.UnaryOp) -> Iterable[T]:
+        yield from self.visit(node.operand)
 
-    @func.register(ast.Lambda)
-    def visit_lambda(node: ast.Lambda) -> typing.Iterable[T]:
-        yield from func(node.args)
-        yield from func(node.body)
+    def visit_lambda(self, node: ast.Lambda) -> Iterable[T]:
+        yield from self.visit(node.args)
+        yield from self.visit(node.body)
 
-    @func.register(ast.IfExp)
-    def visit_if_exp(node: ast.IfExp) -> typing.Iterable[T]:
-        yield from func(node.test)
-        yield from func(node.body)
-        yield from func(node.orelse)
+    def visit_if_exp(self, node: ast.IfExp) -> Iterable[T]:
+        yield from self.visit(node.test)
+        yield from self.visit(node.body)
+        yield from self.visit(node.orelse)
 
-    @func.register(ast.Dict)
-    def visit_dict(node: ast.Dict) -> typing.Iterable[T]:
+    def visit_dict(self, node: ast.Dict) -> Iterable[T]:
         for key in node.keys:
             if key is not None:
-                yield from func(key)
+                yield from self.visit(key)
         for value in node.values:
-            yield from func(value)
+            yield from self.visit(value)
 
-    @func.register(ast.Set)
-    def visit_set(node: ast.Set) -> typing.Iterable[T]:
+    def visit_set(self, node: ast.Set) -> Iterable[T]:
         for elt in node.elts:
-            yield from func(elt)
+            yield from self.visit(elt)
 
-    @func.register(ast.ListComp)
-    def visit_list_comp(node: ast.ListComp) -> typing.Iterable[T]:
-        yield from func(node.elt)
+    def visit_list_comp(self, node: ast.ListComp) -> Iterable[T]:
+        yield from self.visit(node.elt)
         for generator in node.generators:
-            yield from func(generator)
+            yield from self.visit(generator)
 
-    @func.register(ast.SetComp)
-    def visit_set_comp(node: ast.SetComp) -> typing.Iterable[T]:
-        yield from func(node.elt)
+    def visit_set_comp(self, node: ast.SetComp) -> Iterable[T]:
+        yield from self.visit(node.elt)
         for generator in node.generators:
-            yield from func(generator)
+            yield from self.visit(generator)
 
-    @func.register(ast.DictComp)
-    def visit_dict_comp(node: ast.DictComp) -> typing.Iterable[T]:
-        yield from func(node.key)
-        yield from func(node.value)
+    def visit_dict_comp(self, node: ast.DictComp) -> Iterable[T]:
+        yield from self.visit(node.key)
+        yield from self.visit(node.value)
         for generator in node.generators:
-            yield from func(generator)
+            yield from self.visit(generator)
 
-    @func.register(ast.GeneratorExp)
-    def visit_generator_exp(node: ast.GeneratorExp) -> typing.Iterable[T]:
-        yield from func(node.elt)
+    def visit_generator_exp(self, node: ast.GeneratorExp) -> Iterable[T]:
+        yield from self.visit(node.elt)
         for generator in node.generators:
-            yield from func(generator)
+            yield from self.visit(generator)
 
-    @func.register(ast.Await)
-    def visit_await(node: ast.Await) -> typing.Iterable[T]:
-        yield from func(node.value)
+    def visit_await(self, node: ast.Await) -> Iterable[T]:
+        yield from self.visit(node.value)
 
-    @func.register(ast.Yield)
-    def visit_yield(node: ast.Yield) -> typing.Iterable[T]:
+    def visit_yield(self, node: ast.Yield) -> Iterable[T]:
         if node.value is not None:
-            yield from func(node.value)
+            yield from self.visit(node.value)
 
-    @func.register(ast.YieldFrom)
-    def visit_yield_from(node: ast.YieldFrom) -> typing.Iterable[T]:
-        yield from func(node.value)
+    def visit_yield_from(self, node: ast.YieldFrom) -> Iterable[T]:
+        yield from self.visit(node.value)
 
-    @func.register(ast.Compare)
-    def visit_compare(node: ast.Compare) -> typing.Iterable[T]:
-        yield from func(node.left)
+    def visit_compare(self, node: ast.Compare) -> Iterable[T]:
+        yield from self.visit(node.left)
         for comparator in node.comparators:
-            yield from func(comparator)
+            yield from self.visit(comparator)
 
-    @func.register(ast.Call)
-    def visit_call(node: ast.Call) -> typing.Iterable[T]:
-        yield from func(node.func)
+    def visit_call(self, node: ast.Call) -> Iterable[T]:
+        yield from self.visit(node.func)
         for arg in node.args:
-            yield from func(arg)
+            yield from self.visit(arg)
         for keyword in node.keywords:
-            yield from func(keyword)
+            yield from self.visit(keyword)
 
-    @func.register(ast.FormattedValue)
-    def visit_formatted_value(node: ast.FormattedValue) -> typing.Iterable[T]:
-        yield from func(node.value)
+    def visit_formatted_value(self, node: ast.FormattedValue) -> Iterable[T]:
+        yield from self.visit(node.value)
         if node.format_spec is not None:
-            yield from func(node.format_spec)
+            yield from self.visit(node.format_spec)
 
-    @func.register(ast.JoinedStr)
-    def visit_joined_str(node: ast.JoinedStr) -> typing.Iterable[T]:
+    def visit_joined_str(self, node: ast.JoinedStr) -> Iterable[T]:
         for value in node.values:
-            yield from func(value)
+            yield from self.visit(value)
 
-    @func.register(ast.Constant)
-    def visit_constant(_: ast.Constant) -> typing.Iterable[T]:
+    def visit_constant(self, node: ast.Constant) -> Iterable[T]:
         return ()
 
-    @func.register(ast.Attribute)
-    def visit_attribute(node: ast.Attribute) -> typing.Iterable[T]:
-        yield from func(node.value)
+    def visit_attribute(self, node: ast.Attribute) -> Iterable[T]:
+        yield from self.visit(node.value)
 
-    @func.register(ast.Subscript)
-    def visit_subscript(node: ast.Subscript) -> typing.Iterable[T]:
-        yield from func(node.value)
-        yield from func(node.slice)
+    def visit_subscript(self, node: ast.Subscript) -> Iterable[T]:
+        yield from self.visit(node.value)
+        yield from self.visit(node.slice)
 
-    @func.register(ast.Starred)
-    def visit_starred(node: ast.Starred) -> typing.Iterable[T]:
-        yield from func(node.value)
+    def visit_starred(self, node: ast.Starred) -> Iterable[T]:
+        yield from self.visit(node.value)
 
-    @func.register(ast.Name)
-    def visit_name(_: ast.Name) -> typing.Iterable[T]:
+    def visit_name(self, node: ast.Name) -> Iterable[T]:
         return ()
 
-    @func.register(ast.List)
-    def visit_list(node: ast.List) -> typing.Iterable[T]:
+    def visit_list(self, node: ast.List) -> Iterable[T]:
         for elt in node.elts:
-            yield from func(elt)
+            yield from self.visit(elt)
 
-    @func.register(ast.Tuple)
-    def visit_tuple(node: ast.Tuple) -> typing.Iterable[T]:
+    def visit_tuple(self, node: ast.Tuple) -> Iterable[T]:
         for elt in node.elts:
-            yield from func(elt)
+            yield from self.visit(elt)
 
-    @func.register(ast.Slice)
-    def visit_slice(node: ast.Slice) -> typing.Iterable[T]:
+    def visit_slice(self, node: ast.Slice) -> Iterable[T]:
         if node.lower is not None:
-            yield from func(node.lower)
+            yield from self.visit(node.lower)
         if node.upper is not None:
-            yield from func(node.upper)
+            yield from self.visit(node.upper)
         if node.step is not None:
-            yield from func(node.step)
+            yield from self.visit(node.step)
 
     if sys.version_info < (3, 9):
 
-        @func.register(ast.ExtSlice)
-        def visit_ext_slice(node: ast.ExtSlice) -> typing.Iterable[T]:
+        def visit_ext_slice(self, node: ast.ExtSlice) -> Iterable[T]:
             for dim in node.dims:
-                yield from func(dim)
+                yield from self.visit(dim)
 
-        @func.register(ast.Index)
-        def visit_index(node: ast.Index) -> typing.Iterable[T]:
-            yield from func(node.value)
+        def visit_index(self, node: ast.Index) -> Iterable[T]:
+            yield from self.visit(node.value)
 
-    @func.register(ast.comprehension)
-    def visit_comprehension(node: ast.comprehension) -> typing.Iterable[T]:
-        yield from func(node.target)
-        yield from func(node.iter)
+    def visit_comprehension(self, node: ast.comprehension) -> Iterable[T]:
+        yield from self.visit(node.target)
+        yield from self.visit(node.iter)
         for ifs in node.ifs:
-            yield from func(ifs)
+            yield from self.visit(ifs)
 
-    @func.register(ast.ExceptHandler)
-    def visit_except_handler(node: ast.ExceptHandler) -> typing.Iterable[T]:
+    def visit_except_handler(self, node: ast.ExceptHandler) -> Iterable[T]:
         if node.type is not None:
-            yield from func(node.type)
+            yield from self.visit(node.type)
         for statement in node.body:
-            yield from func(statement)
+            yield from self.visit(statement)
 
-    @func.register(ast.arguments)
-    def visit_arguments(node: ast.arguments) -> typing.Iterable[T]:
+    def visit_arguments(self, node: ast.arguments) -> Iterable[T]:
         for arg in node.posonlyargs:
-            yield from func(arg)
+            yield from self.visit(arg)
         for arg in node.args:
-            yield from func(arg)
+            yield from self.visit(arg)
         if node.vararg is not None:
-            yield from func(node.vararg)
+            yield from self.visit(node.vararg)
         for arg in node.kwonlyargs:
-            yield from func(arg)
+            yield from self.visit(arg)
         for default in node.kw_defaults:
             if default is not None:
-                yield from func(default)
+                yield from self.visit(default)
         if node.kwarg is not None:
-            yield from func(node.kwarg)
+            yield from self.visit(node.kwarg)
         for default in node.defaults:
-            yield from func(default)
+            yield from self.visit(default)
 
-    @func.register(ast.arg)
-    def visit_arg(node: ast.arg) -> typing.Iterable[T]:
+    def visit_arg(self, node: ast.arg) -> Iterable[T]:
         if node.annotation is not None:
-            yield from func(node.annotation)
+            yield from self.visit(node.annotation)
 
-    @func.register(ast.keyword)
-    def visit_keyword(node: ast.keyword) -> typing.Iterable[T]:
-        yield from func(node.value)
+    def visit_keyword(self, node: ast.keyword) -> Iterable[T]:
+        yield from self.visit(node.value)
 
-    @func.register(ast.alias)
-    def visit_alias(_: ast.alias) -> typing.Iterable[T]:
+    def visit_alias(self, node: ast.alias) -> Iterable[T]:
         return ()
 
-    @func.register(ast.withitem)
-    def visit_withitem(node: ast.withitem) -> typing.Iterable[T]:
-        yield from func(node.context_expr)
+    def visit_withitem(self, node: ast.withitem) -> Iterable[T]:
+        yield from self.visit(node.context_expr)
         if node.optional_vars is not None:
-            yield from func(node.optional_vars)
+            yield from self.visit(node.optional_vars)
 
     if sys.version_info >= (3, 10):
 
-        @func.register(ast.match_case)
-        def visit_match_case(node: ast.match_case) -> typing.Iterable[T]:
-            yield from func(node.pattern)
+        def visit_match_case(self, node: ast.match_case) -> Iterable[T]:
+            yield from self.visit(node.pattern)
             if node.guard is not None:
-                yield from func(node.guard)
+                yield from self.visit(node.guard)
             for statement in node.body:
-                yield from func(statement)
+                yield from self.visit(statement)
 
-        @func.register(ast.MatchValue)
-        def visit_match_value(node: ast.MatchValue) -> typing.Iterable[T]:
-            yield from func(node.value)
+        def visit_match_value(self, node: ast.MatchValue) -> Iterable[T]:
+            yield from self.visit(node.value)
 
-        @func.register(ast.MatchSingleton)
-        def visit_match_singleton(_: ast.MatchSingleton) -> typing.Iterable[T]:
+        def visit_match_singleton(
+            self, node: ast.MatchSingleton
+        ) -> Iterable[T]:
             return ()
 
-        @func.register(ast.MatchSequence)
-        def visit_match_sequence(
-            node: ast.MatchSequence,
-        ) -> typing.Iterable[T]:
+        def visit_match_sequence(self, node: ast.MatchSequence) -> Iterable[T]:
             for pattern in node.patterns:
-                yield from func(pattern)
+                yield from self.visit(pattern)
 
-        @func.register(ast.MatchMapping)
-        def visit_match_mapping(node: ast.MatchMapping) -> typing.Iterable[T]:
+        def visit_match_mapping(self, node: ast.MatchMapping) -> Iterable[T]:
             for key in node.keys:
-                yield from func(key)
+                yield from self.visit(key)
             for pattern in node.patterns:
-                yield from func(pattern)
-            if node.rest is not None:
-                yield from func(node.rest)
+                yield from self.visit(pattern)
 
-        @func.register(ast.MatchClass)
-        def visit_match_class(node: ast.MatchClass) -> typing.Iterable[T]:
-            yield from func(node.cls)
+        def visit_match_class(self, node: ast.MatchClass) -> Iterable[T]:
+            yield from self.visit(node.cls)
             for pattern in node.patterns:
-                yield from func(pattern)
+                yield from self.visit(pattern)
             for kwd_pattern in node.kwd_patterns:
-                yield from func(kwd_pattern)
+                yield from self.visit(kwd_pattern)
 
-        @func.register(ast.MatchStar)
-        def visit_match_star(_: ast.MatchStar) -> typing.Iterable[T]:
+        def visit_match_star(self, node: ast.MatchStar) -> Iterable[T]:
             return ()
 
-        @func.register(ast.MatchAs)
-        def visit_match_as(node: ast.MatchAs) -> typing.Iterable[T]:
+        def visit_match_as(self, node: ast.MatchAs) -> Iterable[T]:
             if node.pattern is not None:
-                yield from func(node.pattern)
+                yield from self.visit(node.pattern)
 
-        @func.register(ast.MatchOr)
-        def visit_match_or(node: ast.MatchOr) -> typing.Iterable[T]:
+        def visit_match_or(self, node: ast.MatchOr) -> Iterable[T]:
             for pattern in node.patterns:
-                yield from func(pattern)
+                yield from self.visit(pattern)
 
-    @func.register(ast.type_ignore)
-    def visit_type_ignore(_: ast.type_ignore) -> typing.Iterable[T]:
+    def visit_type_ignore(self, node: ast.type_ignore) -> Iterable[T]:
         return ()
-
-    return func
