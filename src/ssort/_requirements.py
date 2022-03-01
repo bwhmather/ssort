@@ -149,7 +149,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
     @register_visitor(
         ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp
     )
-    def vist_comp(self, node: ast.AST) -> Iterable[Requirement]:
+    def visit_comp(self, node: ast.AST) -> Iterable[Requirement]:
         bindings = set(get_bindings(node))
         for requirement in self.generic_visit(node):
             if requirement.name not in bindings:
