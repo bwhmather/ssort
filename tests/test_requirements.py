@@ -503,6 +503,26 @@ def test_with_requirements():
     assert _dep_names(node) == ["A", "b"]
 
 
+def test_with_requirements_shadow():
+    node = _parse(
+        """
+        with a as a:
+            pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
+
+
+def test_with_requirements_attribute():
+    node = _parse(
+        """
+        with a as b.c:
+            pass
+        """
+    )
+    assert _dep_names(node) == ["a", "b"]
+
+
 def test_with_requirements_bindings():
     node = _parse(
         """
