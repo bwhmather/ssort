@@ -28,12 +28,19 @@ class NodeVisitor(Generic[T]):
     @classmethod
     def _find_visitor_methods(cls):
         cls._visitors = {}
-        for name, member in inspect.getmembers(cls):
-            node_types = getattr(member, "_node_types", None)
-            if node_types is None:
-                continue
-            for node_type in node_types:
-                cls._visitors[node_type] = member
+        registered_members = set()
+
+        def predicate(m):
+            return (
+                getattr(m, "_node_types", None) is not None
+                and m not in registered_members
+            )
+
+        for base in reversed(inspect.getmro(cls)):
+            for name, member in inspect.getmembers(base, predicate):
+                for node_type in member._node_types:
+                    cls._visitors[node_type] = member
+                    registered_members.add(member)
 
     def __init_subclass__(cls, **kwargs):
         cls._find_visitor_methods()
