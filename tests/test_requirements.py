@@ -430,6 +430,16 @@ def test_for_requirements_target_replaces_scope():
     assert _dep_names(node) == ["a"]
 
 
+def test_for_requirements_attribute():
+    node = _parse(
+        """
+        for a.b in c:
+            pass
+        """
+    )
+    assert _dep_names(node) == ["a", "c"]
+
+
 def test_async_for_requirements():
     """
     ..code:: python
