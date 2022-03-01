@@ -110,7 +110,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
         bindings = set(get_bindings(node))
 
         for item in node.items:
-            yield from self.visit(item.context_expr)
+            yield from self.visit(item)
 
         for stmt in node.body:
             for requirement in self.visit(stmt):
