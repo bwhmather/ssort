@@ -91,6 +91,7 @@ class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
     def visit_for(self, node: ast.For | ast.AsyncFor) -> Iterable[Requirement]:
         bindings = set(get_bindings(node))
 
+        yield from self.visit(node.target)
         yield from self.visit(node.iter)
 
         for stmt in node.body:
