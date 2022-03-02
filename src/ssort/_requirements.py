@@ -7,7 +7,7 @@ from typing import Iterable
 
 from ssort._bindings import get_bindings
 from ssort._builtins import CLASS_BUILTINS
-from ssort._visitor import NodeVisitor, register_visitor
+from ssort._visitor import NodeVisitor
 
 
 class Scope(enum.Enum):
@@ -25,6 +25,10 @@ class Requirement:
     scope: Scope = Scope.LOCAL
 
 
+_requirements_visitor: NodeVisitor[Requirement] = NodeVisitor()
+get_requirements = _requirements_visitor.visit
+
+
 def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
     scope = set()
     scope.update(arg.arg for arg in args.posonlyargs)
@@ -37,134 +41,138 @@ def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
     return scope
 
 
-class _RequirementsNodeVisitor(NodeVisitor[Requirement]):
-    @register_visitor(ast.FunctionDef, ast.AsyncFunctionDef)
-    def visit_function_def(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> Iterable[Requirement]:
-        for decorator in node.decorator_list:
-            yield from self.visit(decorator)
+@_requirements_visitor.register(ast.FunctionDef, ast.AsyncFunctionDef)
+def _get_requirements_for_function_def(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> Iterable[Requirement]:
+    for decorator in node.decorator_list:
+        yield from get_requirements(decorator)
 
-        yield from self.visit(node.args)
+    yield from get_requirements(node.args)
 
-        if node.returns is not None:
-            yield from self.visit(node.returns)
+    if node.returns is not None:
+        yield from get_requirements(node.returns)
 
-        scope = _get_scope_from_arguments(node.args)
+    scope = _get_scope_from_arguments(node.args)
 
-        requirements = []
-        for statement in node.body:
-            scope.update(get_bindings(statement))
-            for requirement in self.visit(statement):
-                if not requirement.deferred:
-                    requirement = dataclasses.replace(
-                        requirement, deferred=True
-                    )
-                requirements.append(requirement)
+    requirements = []
+    for statement in node.body:
+        scope.update(get_bindings(statement))
+        for requirement in get_requirements(statement):
+            if not requirement.deferred:
+                requirement = dataclasses.replace(requirement, deferred=True)
+            requirements.append(requirement)
 
-        for requirement in requirements:
-            if requirement.scope == Scope.GLOBAL:
-                yield requirement
-            elif requirement.scope == Scope.NONLOCAL:
-                yield dataclasses.replace(requirement, scope=Scope.LOCAL)
-            elif requirement.name not in scope:
-                yield requirement
+    for requirement in requirements:
+        if requirement.scope == Scope.GLOBAL:
+            yield requirement
+        elif requirement.scope == Scope.NONLOCAL:
+            yield dataclasses.replace(requirement, scope=Scope.LOCAL)
+        elif requirement.name not in scope:
+            yield requirement
 
-    @register_visitor(ast.ClassDef)
-    def visit_class_def(self, node: ast.ClassDef) -> Iterable[Requirement]:
-        for decorator in node.decorator_list:
-            yield from self.visit(decorator)
 
-        for base in node.bases:
-            yield from self.visit(base)
+@_requirements_visitor.register(ast.ClassDef)
+def _get_requirements_for_class_def(
+    node: ast.ClassDef,
+) -> Iterable[Requirement]:
+    for decorator in node.decorator_list:
+        yield from get_requirements(decorator)
 
-        scope = set(CLASS_BUILTINS)
+    for base in node.bases:
+        yield from get_requirements(base)
 
-        for statement in node.body:
-            for stmt_dep in self.visit(statement):
-                if stmt_dep.deferred or stmt_dep.name not in scope:
-                    yield stmt_dep
+    scope = set(CLASS_BUILTINS)
 
-            scope.update(get_bindings(statement))
+    for statement in node.body:
+        for stmt_dep in get_requirements(statement):
+            if stmt_dep.deferred or stmt_dep.name not in scope:
+                yield stmt_dep
 
-    @register_visitor(ast.For, ast.AsyncFor)
-    def visit_for(self, node: ast.For | ast.AsyncFor) -> Iterable[Requirement]:
-        bindings = set(get_bindings(node))
+        scope.update(get_bindings(statement))
 
-        yield from self.visit(node.target)
-        yield from self.visit(node.iter)
 
-        for stmt in node.body:
-            for requirement in self.visit(stmt):
-                if requirement.name not in bindings:
-                    yield requirement
+@_requirements_visitor.register(ast.For, ast.AsyncFor)
+def _get_requirements_for_for(
+    node: ast.For | ast.AsyncFor,
+) -> Iterable[Requirement]:
+    bindings = set(get_bindings(node))
 
-        for stmt in node.orelse:
-            for requirement in self.visit(stmt):
-                if requirement.name not in bindings:
-                    yield requirement
+    yield from get_requirements(node.target)
+    yield from get_requirements(node.iter)
 
-    @register_visitor(ast.With, ast.AsyncWith)
-    def visit_with(
-        self, node: ast.With | ast.AsyncWith
-    ) -> Iterable[Requirement]:
-        bindings = set(get_bindings(node))
-
-        for item in node.items:
-            yield from self.visit(item)
-
-        for stmt in node.body:
-            for requirement in self.visit(stmt):
-                if requirement.name not in bindings:
-                    yield requirement
-
-    @register_visitor(ast.Global)
-    def visit_global(self, node: ast.Global) -> Iterable[Requirement]:
-        for name in node.names:
-            yield Requirement(
-                name=name,
-                lineno=node.lineno,
-                col_offset=node.col_offset,
-                scope=Scope.GLOBAL,
-            )
-
-    @register_visitor(ast.Nonlocal)
-    def visit_nonlocal(self, node: ast.Nonlocal) -> Iterable[Requirement]:
-        for name in node.names:
-            yield Requirement(
-                name=name,
-                lineno=node.lineno,
-                col_offset=node.col_offset,
-                scope=Scope.NONLOCAL,
-            )
-
-    @register_visitor(ast.Lambda)
-    def visit_lambda(self, node: ast.Lambda) -> Iterable[Requirement]:
-        yield from self.visit(node.args)
-        scope = _get_scope_from_arguments(node.args)
-        for requirement in self.visit(node.body):
-            if requirement.name not in scope:
-                yield requirement
-
-    @register_visitor(
-        ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp
-    )
-    def visit_comp(self, node: ast.AST) -> Iterable[Requirement]:
-        bindings = set(get_bindings(node))
-        for requirement in self.generic_visit(node):
+    for stmt in node.body:
+        for requirement in get_requirements(stmt):
             if requirement.name not in bindings:
                 yield requirement
 
-    @register_visitor(ast.Name)
-    def visit_name(self, node: ast.Name) -> Iterable[Requirement]:
-        if isinstance(node.ctx, (ast.Load, ast.Del)):
-            yield Requirement(
-                name=node.id, lineno=node.lineno, col_offset=node.col_offset
-            )
+    for stmt in node.orelse:
+        for requirement in get_requirements(stmt):
+            if requirement.name not in bindings:
+                yield requirement
 
 
-_visitor = _RequirementsNodeVisitor()
+@_requirements_visitor.register(ast.With, ast.AsyncWith)
+def _get_requirements_for_with(
+    node: ast.With | ast.AsyncWith,
+) -> Iterable[Requirement]:
+    bindings = set(get_bindings(node))
+
+    for item in node.items:
+        yield from get_requirements(item)
+
+    for stmt in node.body:
+        for requirement in get_requirements(stmt):
+            if requirement.name not in bindings:
+                yield requirement
 
 
-def get_requirements(node: ast.AST) -> Iterable[Requirement]:
-    return _visitor.visit(node)
+@_requirements_visitor.register(ast.Global)
+def _get_requirements_for_global(node: ast.Global) -> Iterable[Requirement]:
+    for name in node.names:
+        yield Requirement(
+            name=name,
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+            scope=Scope.GLOBAL,
+        )
+
+
+@_requirements_visitor.register(ast.Nonlocal)
+def _get_requirements_for_nonlocal(
+    node: ast.Nonlocal,
+) -> Iterable[Requirement]:
+    for name in node.names:
+        yield Requirement(
+            name=name,
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+            scope=Scope.NONLOCAL,
+        )
+
+
+@_requirements_visitor.register(ast.Lambda)
+def _get_requirements_for_lambda(node: ast.Lambda) -> Iterable[Requirement]:
+    yield from get_requirements(node.args)
+    scope = _get_scope_from_arguments(node.args)
+    for requirement in get_requirements(node.body):
+        if requirement.name not in scope:
+            yield requirement
+
+
+@_requirements_visitor.register(
+    ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp
+)
+def _get_requirements_for_comp(node: ast.AST) -> Iterable[Requirement]:
+    bindings = set(get_bindings(node))
+    for requirement in _requirements_visitor.generic_visit(node):
+        if requirement.name not in bindings:
+            yield requirement
+
+
+@_requirements_visitor.register(ast.Name)
+def _get_requirements_for_name(node: ast.Name) -> Iterable[Requirement]:
+    if isinstance(node.ctx, (ast.Load, ast.Del)):
+        yield Requirement(
+            name=node.id, lineno=node.lineno, col_offset=node.col_offset
+        )

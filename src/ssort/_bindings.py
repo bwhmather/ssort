@@ -3,74 +3,77 @@ from __future__ import annotations
 import ast
 from typing import Iterable
 
-from ssort._visitor import NodeVisitor, register_visitor
+from ssort._visitor import NodeVisitor
+
+_bindings_visitor: NodeVisitor[str] = NodeVisitor()
+get_bindings = _bindings_visitor.visit
 
 
-class _BindingsNodeVisitor(NodeVisitor[str]):
-    @register_visitor(ast.FunctionDef, ast.AsyncFunctionDef)
-    def visit_function_def(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> Iterable[str]:
-        for decorator in node.decorator_list:
-            yield from self.visit(decorator)
+@_bindings_visitor.register(ast.FunctionDef, ast.AsyncFunctionDef)
+def _get_bindings_for_function_def(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> Iterable[str]:
+    for decorator in node.decorator_list:
+        yield from get_bindings(decorator)
+    yield node.name
+    yield from get_bindings(node.args)
+    if node.returns is not None:
+        yield from get_bindings(node.returns)
+
+
+@_bindings_visitor.register(ast.ClassDef)
+def _get_bindings_for_class_def(node: ast.ClassDef) -> Iterable[str]:
+    for decorator in node.decorator_list:
+        yield from get_bindings(decorator)
+    for base in node.bases:
+        yield from get_bindings(base)
+    for keyword in node.keywords:
+        yield from get_bindings(keyword.value)
+    yield node.name
+
+
+@_bindings_visitor.register(ast.Import)
+def _get_bindings_for_import(node: ast.Import) -> Iterable[str]:
+    for name in node.names:
+        if name.asname:
+            yield name.asname
+        else:
+            root, *rest = name.name.split(".", 1)
+            yield root
+
+
+@_bindings_visitor.register(ast.ImportFrom)
+def _get_bindings_for_import_from(node: ast.ImportFrom) -> Iterable[str]:
+    for name in node.names:
+        yield name.asname if name.asname else name.name
+
+
+@_bindings_visitor.register(ast.Global)
+def _get_bindings_for_global(node: ast.Global) -> Iterable[str]:
+    yield from node.names
+
+
+@_bindings_visitor.register(ast.Nonlocal)
+def _get_bindings_for_nonlocal(node: ast.Nonlocal) -> Iterable[str]:
+    yield from node.names
+
+
+@_bindings_visitor.register(ast.Lambda)
+def _get_bindings_for_lambda(node: ast.Lambda) -> Iterable[str]:
+    yield from get_bindings(node.args)
+
+
+@_bindings_visitor.register(ast.Name)
+def _get_bindings_for_name(node: ast.Name) -> Iterable[str]:
+    if isinstance(node.ctx, ast.Store):
+        yield node.id
+
+
+@_bindings_visitor.register(ast.ExceptHandler)
+def _get_bindings_for_except_handler(node: ast.ExceptHandler) -> Iterable[str]:
+    if node.type:
+        yield from get_bindings(node.type)
+    if node.name:
         yield node.name
-        yield from self.visit(node.args)
-        if node.returns is not None:
-            yield from self.visit(node.returns)
-
-    @register_visitor(ast.ClassDef)
-    def visit_class_def(self, node: ast.ClassDef) -> Iterable[str]:
-        for decorator in node.decorator_list:
-            yield from self.visit(decorator)
-        for base in node.bases:
-            yield from self.visit(base)
-        for keyword in node.keywords:
-            yield from self.visit(keyword.value)
-        yield node.name
-
-    @register_visitor(ast.Import)
-    def visit_import(self, node: ast.Import) -> Iterable[str]:
-        for name in node.names:
-            if name.asname:
-                yield name.asname
-            else:
-                root, *rest = name.name.split(".", 1)
-                yield root
-
-    @register_visitor(ast.ImportFrom)
-    def visit_import_from(self, node: ast.ImportFrom) -> Iterable[str]:
-        for name in node.names:
-            yield name.asname if name.asname else name.name
-
-    @register_visitor(ast.Global)
-    def visit_global(self, node: ast.Global) -> Iterable[str]:
-        yield from node.names
-
-    @register_visitor(ast.Nonlocal)
-    def visit_nonlocal(self, node: ast.Nonlocal) -> Iterable[str]:
-        yield from node.names
-
-    @register_visitor(ast.Lambda)
-    def visit_lambda(self, node: ast.Lambda) -> Iterable[str]:
-        yield from self.visit(node.args)
-
-    @register_visitor(ast.Name)
-    def visit_name(self, node: ast.Name) -> Iterable[str]:
-        if isinstance(node.ctx, ast.Store):
-            yield node.id
-
-    @register_visitor(ast.ExceptHandler)
-    def visit_except_handler(self, node: ast.ExceptHandler) -> Iterable[str]:
-        if node.type:
-            yield from self.visit(node.type)
-        if node.name:
-            yield node.name
-        for statement in node.body:
-            yield from self.visit(statement)
-
-
-_visitor = _BindingsNodeVisitor()
-
-
-def get_bindings(node: ast.AST) -> Iterable[str]:
-    return _visitor.visit(node)
+    for statement in node.body:
+        yield from get_bindings(statement)
