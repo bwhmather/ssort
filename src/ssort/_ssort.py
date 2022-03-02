@@ -4,8 +4,9 @@ import sys
 from ssort._dependencies import (
     class_statements_initialisation_graph,
     class_statements_runtime_graph,
-    statements_graph,
+    module_statements_graph,
 )
+from ssort._exceptions import ResolutionError, WildcardImportError
 from ssort._graphs import (
     is_topologically_sorted,
     replace_cycles,
@@ -331,10 +332,92 @@ def statement_text_sorted(statement):
     return statement_text(statement)
 
 
-def ssort(text, *, filename="<unknown>"):
-    statements = list(split(text, filename=filename))
+def _on_syntax_error_ignore(message, **kwargs):
+    pass
 
-    graph = statements_graph(statements)
+
+def _on_syntax_error_raise(message, *, lineno, col_offset, **kwargs):
+    raise SyntaxError(message, lineno=lineno, offset=col_offset)
+
+
+def _interpret_on_syntax_error_action(on_syntax_error):
+    if on_syntax_error == "ignore":
+        return _on_syntax_error_ignore
+
+    if on_syntax_error == "raise":
+        return _on_syntax_error_raise
+
+    return on_syntax_error
+
+
+def _on_unresolved_ignore(message, **kwargs):
+    pass
+
+
+def _on_unresolved_raise(name, *, lineno, col_offset, **kwargs):
+    raise ResolutionError(
+        f"could not resolve {name!r} at line {lineno}, column {col_offset}",
+        unresolved=name,
+    )
+
+
+def _interpret_on_unresolved_action(on_unresolved):
+    if on_unresolved == "ignore":
+        return _on_unresolved_ignore
+
+    if on_unresolved == "raise":
+        return _on_unresolved_raise
+
+    return on_unresolved
+
+
+def _on_wildcard_import_ignore(message, **kwargs):
+    pass
+
+
+def _on_wildcard_import_raise(message, *, lineno, col_offset, **kwargs):
+    raise WildcardImportError(
+        "can't reliably determine dependencies on * import"
+    )
+
+
+def _interpret_on_wildcard_import_action(on_wildcard_import):
+    if on_wildcard_import == "ignore":
+        return _on_wildcard_import_ignore
+
+    if on_wildcard_import == "raise":
+        return _on_wildcard_import_raise
+
+    return on_wildcard_import
+
+
+def ssort(
+    text,
+    *,
+    filename="<unknown>",
+    on_syntax_error="raise",
+    on_unresolved="raise",
+    on_wildcard_import="raise",
+):
+    on_syntax_error = _interpret_on_syntax_error_action(on_syntax_error)
+    on_unresolved = _interpret_on_unresolved_action(on_unresolved)
+    on_wildcard_import = _interpret_on_wildcard_import_action(
+        on_wildcard_import
+    )
+
+    try:
+        statements = list(split(text, filename=filename))
+    except SyntaxError as exc:
+        on_syntax_error(exc.msg, lineno=exc.lineno, col_offset=exc.offset)
+        return text
+
+    graph = module_statements_graph(
+        statements,
+        on_unresolved=on_unresolved,
+        on_wildcard_import=on_wildcard_import,
+    )
+    if graph is None:
+        return text
 
     replace_cycles(graph, key=sort_key_from_iter(statements))
 
