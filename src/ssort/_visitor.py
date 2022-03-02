@@ -210,6 +210,7 @@ def _visit_async_with(visitor: NodeVisitor, node: ast.AsyncWith) -> Iterable:
 
 if sys.version_info >= (3, 10):
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.Match)
     def _visit_match(visitor: NodeVisitor, node: ast.Match) -> Iterable:
         yield from visitor.visit(node.subject)
@@ -539,6 +540,7 @@ def _visit_withitem(visitor: NodeVisitor, node: ast.withitem) -> Iterable:
 
 if sys.version_info >= (3, 10):
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.match_case)
     def _visit_match_case(
         visitor: NodeVisitor, node: ast.match_case
@@ -549,18 +551,21 @@ if sys.version_info >= (3, 10):
         for statement in node.body:
             yield from visitor.visit(statement)
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.MatchValue)
     def _visit_match_value(
         visitor: NodeVisitor, node: ast.MatchValue
     ) -> Iterable:
         yield from visitor.visit(node.value)
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.MatchSingleton)
     def _visit_match_singleton(
         visitor: NodeVisitor, node: ast.MatchSingleton
     ) -> Iterable:
         return ()
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.MatchSequence)
     def _visit_match_sequence(
         visitor: NodeVisitor, node: ast.MatchSequence
@@ -568,6 +573,7 @@ if sys.version_info >= (3, 10):
         for pattern in node.patterns:
             yield from visitor.visit(pattern)
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.MatchMapping)
     def _visit_match_mapping(
         visitor: NodeVisitor, node: ast.MatchMapping
@@ -577,6 +583,7 @@ if sys.version_info >= (3, 10):
         for pattern in node.patterns:
             yield from visitor.visit(pattern)
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.MatchClass)
     def _visit_match_class(
         visitor: NodeVisitor, node: ast.MatchClass
@@ -587,17 +594,20 @@ if sys.version_info >= (3, 10):
         for kwd_pattern in node.kwd_patterns:
             yield from visitor.visit(kwd_pattern)
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.MatchStar)
     def _visit_match_star(
         visitor: NodeVisitor, node: ast.MatchStar
     ) -> Iterable:
         return ()
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.MatchAs)
     def _visit_match_as(visitor: NodeVisitor, node: ast.MatchAs) -> Iterable:
         if node.pattern is not None:
             yield from visitor.visit(node.pattern)
 
+    # pylint: disable=no-member
     @_register_generic_visitor(ast.MatchOr)
     def _visit_match_or(visitor: NodeVisitor, node: ast.MatchOr) -> Iterable:
         for pattern in node.patterns:
