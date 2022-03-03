@@ -3,13 +3,16 @@ from __future__ import annotations
 import ast
 from typing import Iterable
 
-from ssort._visitor import NodeVisitor
-
-_bindings_visitor: NodeVisitor[str] = NodeVisitor()
-get_bindings = _bindings_visitor.visit
+from ssort._ast import iter_child_nodes, node_dispatch
 
 
-@_bindings_visitor.register(ast.FunctionDef, ast.AsyncFunctionDef)
+@node_dispatch
+def get_bindings(node: ast.AST) -> Iterable[str]:
+    for child in iter_child_nodes(node):
+        yield from get_bindings(child)
+
+
+@get_bindings.register(ast.FunctionDef, ast.AsyncFunctionDef)
 def _get_bindings_for_function_def(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[str]:
@@ -21,7 +24,7 @@ def _get_bindings_for_function_def(
         yield from get_bindings(node.returns)
 
 
-@_bindings_visitor.register(ast.ClassDef)
+@get_bindings.register(ast.ClassDef)
 def _get_bindings_for_class_def(node: ast.ClassDef) -> Iterable[str]:
     for decorator in node.decorator_list:
         yield from get_bindings(decorator)
@@ -32,7 +35,7 @@ def _get_bindings_for_class_def(node: ast.ClassDef) -> Iterable[str]:
     yield node.name
 
 
-@_bindings_visitor.register(ast.Import)
+@get_bindings.register(ast.Import)
 def _get_bindings_for_import(node: ast.Import) -> Iterable[str]:
     for name in node.names:
         if name.asname:
@@ -42,34 +45,34 @@ def _get_bindings_for_import(node: ast.Import) -> Iterable[str]:
             yield root
 
 
-@_bindings_visitor.register(ast.ImportFrom)
+@get_bindings.register(ast.ImportFrom)
 def _get_bindings_for_import_from(node: ast.ImportFrom) -> Iterable[str]:
     for name in node.names:
         yield name.asname if name.asname else name.name
 
 
-@_bindings_visitor.register(ast.Global)
+@get_bindings.register(ast.Global)
 def _get_bindings_for_global(node: ast.Global) -> Iterable[str]:
     yield from node.names
 
 
-@_bindings_visitor.register(ast.Nonlocal)
+@get_bindings.register(ast.Nonlocal)
 def _get_bindings_for_nonlocal(node: ast.Nonlocal) -> Iterable[str]:
     yield from node.names
 
 
-@_bindings_visitor.register(ast.Lambda)
+@get_bindings.register(ast.Lambda)
 def _get_bindings_for_lambda(node: ast.Lambda) -> Iterable[str]:
     yield from get_bindings(node.args)
 
 
-@_bindings_visitor.register(ast.Name)
+@get_bindings.register(ast.Name)
 def _get_bindings_for_name(node: ast.Name) -> Iterable[str]:
     if isinstance(node.ctx, ast.Store):
         yield node.id
 
 
-@_bindings_visitor.register(ast.ExceptHandler)
+@get_bindings.register(ast.ExceptHandler)
 def _get_bindings_for_except_handler(node: ast.ExceptHandler) -> Iterable[str]:
     if node.type:
         yield from get_bindings(node.type)

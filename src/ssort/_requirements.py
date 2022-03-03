@@ -5,9 +5,9 @@ import dataclasses
 import enum
 from typing import Iterable
 
+from ssort._ast import iter_child_nodes, node_dispatch
 from ssort._bindings import get_bindings
 from ssort._builtins import CLASS_BUILTINS
-from ssort._visitor import NodeVisitor
 
 
 class Scope(enum.Enum):
@@ -25,8 +25,10 @@ class Requirement:
     scope: Scope = Scope.LOCAL
 
 
-_requirements_visitor: NodeVisitor[Requirement] = NodeVisitor()
-get_requirements = _requirements_visitor.visit
+@node_dispatch
+def get_requirements(node: ast.AST) -> Iterable[Requirement]:
+    for child in iter_child_nodes(node):
+        yield from get_requirements(child)
 
 
 def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
@@ -41,7 +43,7 @@ def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
     return scope
 
 
-@_requirements_visitor.register(ast.FunctionDef, ast.AsyncFunctionDef)
+@get_requirements.register(ast.FunctionDef, ast.AsyncFunctionDef)
 def _get_requirements_for_function_def(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[Requirement]:
@@ -72,7 +74,7 @@ def _get_requirements_for_function_def(
             yield requirement
 
 
-@_requirements_visitor.register(ast.ClassDef)
+@get_requirements.register(ast.ClassDef)
 def _get_requirements_for_class_def(
     node: ast.ClassDef,
 ) -> Iterable[Requirement]:
@@ -92,7 +94,7 @@ def _get_requirements_for_class_def(
         scope.update(get_bindings(statement))
 
 
-@_requirements_visitor.register(ast.For, ast.AsyncFor)
+@get_requirements.register(ast.For, ast.AsyncFor)
 def _get_requirements_for_for(
     node: ast.For | ast.AsyncFor,
 ) -> Iterable[Requirement]:
@@ -112,7 +114,7 @@ def _get_requirements_for_for(
                 yield requirement
 
 
-@_requirements_visitor.register(ast.With, ast.AsyncWith)
+@get_requirements.register(ast.With, ast.AsyncWith)
 def _get_requirements_for_with(
     node: ast.With | ast.AsyncWith,
 ) -> Iterable[Requirement]:
@@ -127,7 +129,7 @@ def _get_requirements_for_with(
                 yield requirement
 
 
-@_requirements_visitor.register(ast.Global)
+@get_requirements.register(ast.Global)
 def _get_requirements_for_global(node: ast.Global) -> Iterable[Requirement]:
     for name in node.names:
         yield Requirement(
@@ -138,7 +140,7 @@ def _get_requirements_for_global(node: ast.Global) -> Iterable[Requirement]:
         )
 
 
-@_requirements_visitor.register(ast.Nonlocal)
+@get_requirements.register(ast.Nonlocal)
 def _get_requirements_for_nonlocal(
     node: ast.Nonlocal,
 ) -> Iterable[Requirement]:
@@ -151,7 +153,7 @@ def _get_requirements_for_nonlocal(
         )
 
 
-@_requirements_visitor.register(ast.Lambda)
+@get_requirements.register(ast.Lambda)
 def _get_requirements_for_lambda(node: ast.Lambda) -> Iterable[Requirement]:
     yield from get_requirements(node.args)
     scope = _get_scope_from_arguments(node.args)
@@ -160,17 +162,18 @@ def _get_requirements_for_lambda(node: ast.Lambda) -> Iterable[Requirement]:
             yield requirement
 
 
-@_requirements_visitor.register(
+@get_requirements.register(
     ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp
 )
 def _get_requirements_for_comp(node: ast.AST) -> Iterable[Requirement]:
     bindings = set(get_bindings(node))
-    for requirement in _requirements_visitor.generic_visit(node):
-        if requirement.name not in bindings:
-            yield requirement
+    for child in iter_child_nodes(node):
+        for requirement in get_requirements(child):
+            if requirement.name not in bindings:
+                yield requirement
 
 
-@_requirements_visitor.register(ast.Name)
+@get_requirements.register(ast.Name)
 def _get_requirements_for_name(node: ast.Name) -> Iterable[Requirement]:
     if isinstance(node.ctx, (ast.Load, ast.Del)):
         yield Requirement(
