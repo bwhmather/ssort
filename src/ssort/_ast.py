@@ -12,21 +12,18 @@ class _NodeDispatch(Generic[_T]):
     def __init__(self, function: Callable[[ast.AST], _T]) -> None:
         functools.update_wrapper(self, function)
         self._function = function
-        self._name = f"_{function.__name__}"
+        self._functions = {}
 
     def register(self, *node_types: Type[ast.AST]):
         def decorator(function: Callable[[ast.AST], _T]):
             for node_type in node_types:
-                setattr(node_type, self._name, function)
+                self._functions[node_type] = function
             return function
 
         return decorator
 
     def __call__(self, node: ast.AST) -> _T:
-        function = getattr(node, self._name, None)
-        if function is not None:
-            return function()
-        return self._function(node)
+        return self._functions.get(type(node), self._function)(node)
 
 
 node_dispatch = _NodeDispatch
