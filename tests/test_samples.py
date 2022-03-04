@@ -1,7 +1,5 @@
 import pathlib
 
-import pytest
-
 from ssort import ssort
 
 examples = [
@@ -18,7 +16,10 @@ examples = [
 ]
 
 
-@pytest.mark.parametrize("example", examples)
+def pytest_generate_tests(metafunc):
+    metafunc.parametrize("example", examples)
+
+
 def test_examples(example):
     examples_dir = pathlib.Path("test_data/samples")
     input_path = examples_dir / f"{example}_input.py"
@@ -40,7 +41,6 @@ def test_examples(example):
     assert actual_text == expected_text
 
 
-@pytest.mark.parametrize("example", examples)
 def test_idempotent(example):
     examples_dir = pathlib.Path("test_data/samples")
     input_path = examples_dir / f"{example}_input.py"
