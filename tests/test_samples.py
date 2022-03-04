@@ -8,6 +8,7 @@ examples = [
     "distlib_locators",
     "dnspython_versioned",
     "isort_finders",
+    "jinja_runtime",
     "pillow_BdfFontFile",
     "pillow_Image",
     "setuptools_bdist",
