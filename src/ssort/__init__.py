@@ -8,5 +8,5 @@ from ssort._ssort import ssort
 assert ResolutionError is not None
 assert WildcardImportError is not None
 
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 __all__ = ["ssort"]
