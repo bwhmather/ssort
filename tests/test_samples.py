@@ -5,6 +5,7 @@ from ssort import ssort
 examples = [
     "alembic_template",
     "distlib_compat",
+    "distlib_locators",
     "dnspython_versioned",
     "isort_finders",
     "pillow_BdfFontFile",
