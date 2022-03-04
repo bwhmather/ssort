@@ -2,23 +2,16 @@ import pathlib
 
 from ssort import ssort
 
-examples = [
-    "alembic_template",
-    "distlib_compat",
-    "distlib_locators",
-    "dnspython_versioned",
-    "isort_finders",
-    "jinja_runtime",
-    "pillow_BdfFontFile",
-    "pillow_Image",
-    "setuptools_bdist",
-    "setuptools_init",
-    "setuptools_msvccompiler",
-    "sqlalchemy_base",
-]
-
 
 def pytest_generate_tests(metafunc):
+    examples_dir = pathlib.Path("test_data/samples")
+
+    examples = []
+    for input_path in examples_dir.glob("*_input.py"):
+        examples.append(input_path.name[: -len("_input.py")])
+    examples.sort()
+    assert examples
+
     metafunc.parametrize("example", examples)
 
 
