@@ -365,3 +365,164 @@ def test_iter_unpack_in_class():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_overload_decorator():
+    original = _clean(
+        """
+        from typing import overload
+        def g():
+            f(1)
+        @overload
+        def f(x: int) -> int:
+            ...
+        @overload
+        def f(x: str) -> str:
+            ...
+        def f(x: int | str) -> int | str:
+            print(x)
+            return x
+        if __name__ == "__main__":
+            f(5)
+        """
+    )
+    expected = _clean(
+        """
+        from typing import overload
+        @overload
+        def f(x: int) -> int:
+            ...
+        @overload
+        def f(x: str) -> str:
+            ...
+        def f(x: int | str) -> int | str:
+            print(x)
+            return x
+        def g():
+            f(1)
+        if __name__ == "__main__":
+            f(5)
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_concat():
+    original = _clean(
+        """
+        def f():
+            return l
+        l = []
+        l += 1
+        """
+    )
+    expected = _clean(
+        """
+        l = []
+        l += 1
+        def f():
+            return l
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_inner_class():
+    original = _clean(
+        """
+        class Outer:
+            '''
+            The outer class.
+            '''
+            a = 4
+            class Inner:
+                pass
+            __slots__ = ("b",)
+        """
+    )
+    expected = _clean(
+        """
+        class Outer:
+            '''
+            The outer class.
+            '''
+            __slots__ = ("b",)
+            class Inner:
+                pass
+            a = 4
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_lifecycle_class():
+    original = _clean(
+        """
+        class Thing:
+            def startup(self):
+                ...
+            def poll(self):
+                try:
+                    ...
+                except:
+                    self.shutdown()
+            def shutdown(self):
+                ...
+        """
+    )
+    expected = _clean(
+        """
+        class Thing:
+            def startup(self):
+                ...
+            def poll(self):
+                try:
+                    ...
+                except:
+                    self.shutdown()
+            def shutdown(self):
+                ...
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_lifecycle_class_private():
+    original = _clean(
+        """
+        class Thing:
+            def startup(self):
+                ...
+            def poll(self):
+                try:
+                    ...
+                except:
+                    self._shutdown_inner()
+            def _shutdown_inner(self):
+                ...
+            def shutdown(self):
+                self._shutdown_inner
+        """
+    )
+    expected = _clean(
+        """
+        class Thing:
+            def startup(self):
+                ...
+            def _shutdown_inner(self):
+                ...
+            def poll(self):
+                try:
+                    ...
+                except:
+                    self._shutdown_inner()
+            def shutdown(self):
+                self._shutdown_inner
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected

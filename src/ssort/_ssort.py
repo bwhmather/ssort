@@ -4,8 +4,9 @@ import sys
 from ssort._dependencies import (
     class_statements_initialisation_graph,
     class_statements_runtime_graph,
-    statements_graph,
+    module_statements_graph,
 )
+from ssort._exceptions import ResolutionError, WildcardImportError
 from ssort._graphs import (
     is_topologically_sorted,
     replace_cycles,
@@ -201,10 +202,14 @@ def _is_regular_operation(statement):
 
 def _is_property(statement):
     node = statement_node(statement)
-    if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
-        return False
 
-    return True
+    return isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
+
+
+def _is_class(statement):
+    node = statement_node(statement)
+
+    return isinstance(node, ast.ClassDef)
 
 
 def _statement_binding_sort_key(binding_key):
@@ -246,6 +251,8 @@ def _statement_text_sorted_class(statement):
         statements, _is_regular_operation
     )
 
+    inner_classes, statements = _partition(statements, _is_class)
+
     properties, statements = _partition(statements, _is_property)
 
     methods, statements = statements, []
@@ -262,6 +269,9 @@ def _statement_text_sorted_class(statement):
             sort_key_from_iter(SPECIAL_PROPERTIES)
         ),
     )
+
+    # Inner classes (in original order).
+    sorted_statements += inner_classes
 
     # Regular properties (in original order).
     sorted_statements += properties
@@ -292,9 +302,12 @@ def _statement_text_sorted_class(statement):
         sorted_statements, graph=initialisation_graph
     )
 
-    # Attempt to resolve soft dependencies, but with hard dependencies taking
-    # priority, and keeping existing order where there are cycles.
-    runtime_graph = class_statements_runtime_graph(sorted_statements)
+    # Attempt to resolve soft dependencies on private attributes, but with hard
+    # dependencies taking priority, and always preserving the original order
+    # where there are cycles.
+    runtime_graph = class_statements_runtime_graph(
+        sorted_statements, ignore_public=True
+    )
     runtime_graph.update(initialisation_graph)
     replace_cycles(runtime_graph, key=sort_key_from_iter(sorted_statements))
 
@@ -319,10 +332,92 @@ def statement_text_sorted(statement):
     return statement_text(statement)
 
 
-def ssort(text, *, filename="<unknown>"):
-    statements = list(split(text, filename=filename))
+def _on_syntax_error_ignore(message, **kwargs):
+    pass
 
-    graph = statements_graph(statements)
+
+def _on_syntax_error_raise(message, *, lineno, col_offset, **kwargs):
+    raise SyntaxError(message, lineno=lineno, offset=col_offset)
+
+
+def _interpret_on_syntax_error_action(on_syntax_error):
+    if on_syntax_error == "ignore":
+        return _on_syntax_error_ignore
+
+    if on_syntax_error == "raise":
+        return _on_syntax_error_raise
+
+    return on_syntax_error
+
+
+def _on_unresolved_ignore(message, **kwargs):
+    pass
+
+
+def _on_unresolved_raise(name, *, lineno, col_offset, **kwargs):
+    raise ResolutionError(
+        f"could not resolve {name!r} at line {lineno}, column {col_offset}",
+        unresolved=name,
+    )
+
+
+def _interpret_on_unresolved_action(on_unresolved):
+    if on_unresolved == "ignore":
+        return _on_unresolved_ignore
+
+    if on_unresolved == "raise":
+        return _on_unresolved_raise
+
+    return on_unresolved
+
+
+def _on_wildcard_import_ignore(message, **kwargs):
+    pass
+
+
+def _on_wildcard_import_raise(message, *, lineno, col_offset, **kwargs):
+    raise WildcardImportError(
+        "can't reliably determine dependencies on * import"
+    )
+
+
+def _interpret_on_wildcard_import_action(on_wildcard_import):
+    if on_wildcard_import == "ignore":
+        return _on_wildcard_import_ignore
+
+    if on_wildcard_import == "raise":
+        return _on_wildcard_import_raise
+
+    return on_wildcard_import
+
+
+def ssort(
+    text,
+    *,
+    filename="<unknown>",
+    on_syntax_error="raise",
+    on_unresolved="raise",
+    on_wildcard_import="raise",
+):
+    on_syntax_error = _interpret_on_syntax_error_action(on_syntax_error)
+    on_unresolved = _interpret_on_unresolved_action(on_unresolved)
+    on_wildcard_import = _interpret_on_wildcard_import_action(
+        on_wildcard_import
+    )
+
+    try:
+        statements = list(split(text, filename=filename))
+    except SyntaxError as exc:
+        on_syntax_error(exc.msg, lineno=exc.lineno, col_offset=exc.offset)
+        return text
+
+    graph = module_statements_graph(
+        statements,
+        on_unresolved=on_unresolved,
+        on_wildcard_import=on_wildcard_import,
+    )
+    if graph is None:
+        return text
 
     replace_cycles(graph, key=sort_key_from_iter(statements))
 

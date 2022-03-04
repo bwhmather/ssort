@@ -25,7 +25,11 @@ def test_examples(example):
     output_path = examples_dir / f"{example}_output.py"
     input_text = input_path.read_text()
 
-    actual_text = ssort(input_text, filename=str(input_path))
+    actual_text = ssort(
+        input_text,
+        filename=str(input_path),
+        on_wildcard_import=lambda **kwargs: None,
+    )
 
     # XXX Uncomment to update samples. XXX
     # output_path.write_text(actual_text)
@@ -42,7 +46,15 @@ def test_idempotent(example):
     input_path = examples_dir / f"{example}_input.py"
     input_text = input_path.read_text()
 
-    sorted_text = ssort(input_text, filename=str(input_path))
-    resorted_text = ssort(sorted_text, filename=str(input_path))
+    sorted_text = ssort(
+        input_text,
+        filename=str(input_path),
+        on_wildcard_import=lambda **kwargs: None,
+    )
+    resorted_text = ssort(
+        sorted_text,
+        filename=str(input_path),
+        on_wildcard_import=lambda **kwargs: None,
+    )
 
     assert resorted_text == sorted_text
