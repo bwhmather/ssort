@@ -593,7 +593,7 @@ class SimpleScrapingLocator(Locator):
     # These are used to deal with various Content-Encoding schemes.
     decoders = {
         'deflate': zlib.decompress,
-        'gzip': lambda b: gzip.GzipFile(fileobj=BytesIO(d)).read(),
+        'gzip': lambda b: gzip.GzipFile(fileobj=BytesIO(b)).read(),
         'none': lambda b: b,
     }
 
