@@ -216,18 +216,6 @@ def test_method_requirements_inner_function():
     assert reqs == ["a"]
 
 
-def test_method_requirements_inner_function_shadow_self():
-    reqs = _method_requirements(
-        """
-        def fun(self):
-            def inner(self):
-                return self.a
-            return inner(self.b)
-        """
-    )
-    assert reqs == ["b"]
-
-
 def test_method_requirements_formatted_value():
     reqs = _method_requirements(
         """
