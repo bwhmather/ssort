@@ -297,3 +297,13 @@ def test_method_requirements_with():
         """
     )
     assert reqs == ["a", "b"]
+
+
+def test_method_requirements_ann_assign():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            self.a: self.b = self.c
+        """
+    )
+    assert reqs == ["b", "c"]
