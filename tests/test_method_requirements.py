@@ -286,3 +286,14 @@ def test_method_requirements_lambda_default():
         """
     )
     assert reqs == ["a", "b"]
+
+
+def test_method_requirements_with():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            with self.a as self.b:
+                pass
+        """
+    )
+    assert reqs == ["a", "b"]
