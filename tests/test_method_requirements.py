@@ -276,3 +276,13 @@ def test_method_requirements_generator_exp():
         """
     )
     assert reqs == ["a", "b", "d"]
+
+
+def test_method_requirements_lambda_default():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            return lambda x=self.a: self.b
+        """
+    )
+    assert reqs == ["a", "b"]
