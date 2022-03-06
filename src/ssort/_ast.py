@@ -9,21 +9,21 @@ _T = TypeVar("_T")
 
 
 class _NodeDispatch(Generic[_T]):
-    def __init__(self, function: Callable[[ast.AST], _T]) -> None:
+    def __init__(self, function: Callable[[ast.AST, ...], _T]) -> None:
         functools.update_wrapper(self, function)
         self._function = function
         self._functions = {}
 
     def register(self, *node_types: Type[ast.AST]):
-        def decorator(function: Callable[[ast.AST], _T]):
+        def decorator(function: Callable[[ast.AST, ...], _T]):
             for node_type in node_types:
                 self._functions[node_type] = function
             return function
 
         return decorator
 
-    def __call__(self, node: ast.AST) -> _T:
-        return self._functions.get(type(node), self._function)(node)
+    def __call__(self, node: ast.AST, *args) -> _T:
+        return self._functions.get(type(node), self._function)(node, *args)
 
 
 node_dispatch = _NodeDispatch
