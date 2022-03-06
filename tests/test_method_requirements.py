@@ -280,7 +280,7 @@ def test_method_requirements_with():
     reqs = _method_requirements(
         """
         def fun(self):
-            with self.a as self.b:
+            with self.a as self.b.c:
                 pass
         """
     )
