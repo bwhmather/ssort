@@ -202,3 +202,27 @@ def test_assign_method_tuple_requirements():
         """
     )
     assert reqs == ["b", "c", "d", "g"]
+
+
+def test_method_requirements_inner_function():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            def inner():
+                return self.a
+            return inner()
+        """
+    )
+    assert reqs == ["a"]
+
+
+def test_method_requirements_inner_function_shadow_self():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            def inner(self):
+                return self.a
+            return inner(self.b)
+        """
+    )
+    assert reqs == ["b"]
