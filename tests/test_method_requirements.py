@@ -226,3 +226,13 @@ def test_method_requirements_inner_function_shadow_self():
         """
     )
     assert reqs == ["b"]
+
+
+def test_method_requirements_formatted_value():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            return f"{self.a} {self.b} {self.c}"
+        """
+    )
+    assert reqs == ["a", "b", "c"]
