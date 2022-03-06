@@ -4,21 +4,21 @@ from ssort import ssort
 
 
 def pytest_generate_tests(metafunc):
-    examples_dir = pathlib.Path("test_data/samples")
+    samples_dir = pathlib.Path("test_data/samples")
 
-    examples = []
-    for input_path in examples_dir.glob("*_input.py"):
-        examples.append(input_path.name[: -len("_input.py")])
-    examples.sort()
-    assert examples
+    samples = []
+    for input_path in samples_dir.glob("*_input.py"):
+        samples.append(input_path.name[: -len("_input.py")])
+    samples.sort()
+    assert samples
 
-    metafunc.parametrize("example", examples)
+    metafunc.parametrize("sample", samples)
 
 
-def test_examples(example):
-    examples_dir = pathlib.Path("test_data/samples")
-    input_path = examples_dir / f"{example}_input.py"
-    output_path = examples_dir / f"{example}_output.py"
+def test_samples(sample):
+    samples_dir = pathlib.Path("test_data/samples")
+    input_path = samples_dir / f"{sample}_input.py"
+    output_path = samples_dir / f"{sample}_output.py"
     input_text = input_path.read_text()
 
     actual_text = ssort(
@@ -36,9 +36,9 @@ def test_examples(example):
     assert actual_text == expected_text
 
 
-def test_idempotent(example):
-    examples_dir = pathlib.Path("test_data/samples")
-    input_path = examples_dir / f"{example}_input.py"
+def test_idempotent(sample):
+    samples_dir = pathlib.Path("test_data/samples")
+    input_path = samples_dir / f"{sample}_input.py"
     input_text = input_path.read_text()
 
     sorted_text = ssort(
