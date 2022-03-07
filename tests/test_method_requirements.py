@@ -2,7 +2,14 @@ import ast
 import sys
 import textwrap
 
+import pytest
+
 from ssort._method_requirements import get_method_requirements
+
+match_statement = pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="match statements were introduced in python 3.10",
+)
 
 
 def _method_requirements(source):
@@ -295,3 +302,16 @@ def test_method_requirements_ann_assign():
         """
     )
     assert reqs == ["b", "c"]
+
+
+@match_statement
+def test_method_requirements_match_statement():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            match self.a:
+                case self.b:
+                    pass
+        """
+    )
+    assert reqs == ["a", "b"]
