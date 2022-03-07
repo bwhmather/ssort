@@ -38,8 +38,7 @@ def get_method_requirements(node: ast.AST) -> Iterable[str]:
     return ()
 
 
-@get_method_requirements.register(ast.FunctionDef)
-@get_method_requirements.register(ast.AsyncFunctionDef)
+@get_method_requirements.register(ast.FunctionDef, ast.AsyncFunctionDef)
 def _get_method_requirements_for_function_def(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[str]:
