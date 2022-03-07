@@ -202,3 +202,96 @@ def test_assign_method_tuple_requirements():
         """
     )
     assert reqs == ["b", "c", "d", "g"]
+
+
+def test_method_requirements_inner_function():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            def inner():
+                return self.a
+            return inner()
+        """
+    )
+    assert reqs == ["a"]
+
+
+def test_method_requirements_formatted_value():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            return f"{self.a} {self.b} {self.c}"
+        """
+    )
+    assert reqs == ["a", "b", "c"]
+
+
+def test_method_requirements_list_comp():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            return [self.a for self.b.c in self.d]
+        """
+    )
+    assert reqs == ["a", "b", "d"]
+
+
+def test_method_requirements_set_comp():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            return {self.a for self.b.c in self.d}
+        """
+    )
+    assert reqs == ["a", "b", "d"]
+
+
+def test_method_requirements_dict_comp():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            return {self.a: self.b for self.c.d in self.e}
+        """
+    )
+    assert reqs == ["a", "b", "c", "e"]
+
+
+def test_method_requirements_generator_exp():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            return (self.a for self.b.c in self.d)
+        """
+    )
+    assert reqs == ["a", "b", "d"]
+
+
+def test_method_requirements_lambda_default():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            return lambda x=self.a: self.b
+        """
+    )
+    assert reqs == ["a", "b"]
+
+
+def test_method_requirements_with():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            with self.a as self.b.c:
+                pass
+        """
+    )
+    assert reqs == ["a", "b"]
+
+
+def test_method_requirements_ann_assign():
+    reqs = _method_requirements(
+        """
+        def fun(self):
+            self.a: self.b = self.c
+        """
+    )
+    assert reqs == ["b", "c"]
