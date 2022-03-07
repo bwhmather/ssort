@@ -2,7 +2,14 @@ import ast
 import sys
 import textwrap
 
+import pytest
+
 from ssort._requirements import get_requirements
+
+match_statement = pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="match statements were introduced in python 3.10",
+)
 
 
 def _parse(source):
@@ -1028,3 +1035,123 @@ def test_slice_requirements():
 
     """
     pass
+
+
+@match_statement
+def test_match_statement_requirements_literal():
+    node = _parse(
+        """
+        match a:
+            case True:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
+
+
+@match_statement
+def test_match_statement_requirements_capture():
+    node = _parse(
+        """
+        match a:
+            case b:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
+
+
+@match_statement
+def test_match_statement_requirements_wildcard():
+    node = _parse(
+        """
+        match a:
+            case _:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
+
+
+@match_statement
+def test_match_statement_requirements_constant():
+    node = _parse(
+        """
+        match a:
+            case 1:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
+
+
+@match_statement
+def test_match_statement_requirements_named_constant():
+    node = _parse(
+        """
+        match a:
+            case MyEnum.CONSTANT:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a", "MyEnum"]
+
+
+@match_statement
+def test_match_statement_requirements_sequence():
+    node = _parse(
+        """
+        match a:
+            case [b, *c, d, _]:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
+
+
+@match_statement
+def test_match_statement_requirements_mapping():
+    node = _parse(
+        """
+        match a:
+            case {"k1": "v1", "k2": b, "k3": _, **c}:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
+
+
+@match_statement
+def test_match_statement_requirements_class():
+    node = _parse(
+        """
+        match a:
+            case MyClass(0, b, x=_, y=c):
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a", "MyClass"]
+
+
+@match_statement
+def test_match_statement_requirements_or():
+    node = _parse(
+        """
+        match a:
+            case b | c:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
+
+
+@match_statement
+def test_match_statement_requirements_as():
+    node = _parse(
+        """
+        match a:
+            case b as c:
+                pass
+        """
+    )
+    assert _dep_names(node) == ["a"]
