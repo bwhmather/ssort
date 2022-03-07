@@ -14,6 +14,12 @@ walrus_operator = pytest.mark.skipif(
 )
 
 
+match_statement = pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="match statements were introduced in python 3.10",
+)
+
+
 def _parse(source):
     source = textwrap.dedent(source)
     root = ast.parse(source)
@@ -1409,3 +1415,123 @@ def test_formatted_value_bindings_walrus():
 def test_formatted_value_bindings_format_spec_walrus():
     node = _parse("f'{a} {b:{0 + (c := 0.3)}} {d}'")
     assert list(get_bindings(node)) == ["c"]
+
+
+@match_statement
+def test_match_statement_bindings_literal():
+    node = _parse(
+        """
+        match a:
+            case True:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+@match_statement
+def test_match_statement_bindings_capture():
+    node = _parse(
+        """
+        match a:
+            case b:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["b"]
+
+
+@match_statement
+def test_match_statement_bindings_wildcard():
+    node = _parse(
+        """
+        match a:
+            case _:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+@match_statement
+def test_match_statement_bindings_constant():
+    node = _parse(
+        """
+        match a:
+            case 1:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+@match_statement
+def test_match_statement_bindings_named_constant():
+    node = _parse(
+        """
+        match a:
+            case MyEnum.CONSTANT:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+@match_statement
+def test_match_statement_bindings_sequence():
+    node = _parse(
+        """
+        match a:
+            case [b, *c, d, _]:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["b", "c", "d"]
+
+
+@match_statement
+def test_match_statement_bindings_mapping():
+    node = _parse(
+        """
+        match a:
+            case {"k1": "v1", "k2": b, "k3": _, **c}:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["b", "c"]
+
+
+@match_statement
+def test_match_statement_bindings_class():
+    node = _parse(
+        """
+        match a:
+            case MyClass(0, b, x=_, y=c):
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["b", "c"]
+
+
+@match_statement
+def test_match_statement_bindings_or():
+    node = _parse(
+        """
+        match a:
+            case b | c:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["b", "c"]
+
+
+@match_statement
+def test_match_statement_bindings_as():
+    node = _parse(
+        """
+        match a:
+            case b as c:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["b", "c"]
