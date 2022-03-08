@@ -18,7 +18,7 @@ from ssort._statements import (
     statement_node,
     statement_text,
 )
-from ssort._utils import sort_key_from_iter
+from ssort._utils import detect_encoding, sort_key_from_iter
 
 SPECIAL_PROPERTIES = [
     "__doc__",
@@ -399,6 +399,11 @@ def ssort(
     on_unresolved="raise",
     on_wildcard_import="raise",
 ):
+    encoding = None
+    if isinstance(text, bytes):
+        encoding = detect_encoding(text)
+        text = text.decode(encoding)
+
     on_syntax_error = _interpret_on_syntax_error_action(on_syntax_error)
     on_unresolved = _interpret_on_unresolved_action(on_unresolved)
     on_wildcard_import = _interpret_on_wildcard_import_action(
@@ -430,4 +435,7 @@ def ssort(
     )
     if output:
         output += "\n"
+
+    if encoding is not None:
+        output = output.encode(encoding)
     return output
