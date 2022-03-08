@@ -1,28 +1,24 @@
 import pathlib
 
-import pytest
-
 from ssort import ssort
 
-examples = [
-    "alembic_template",
-    "distlib_compat",
-    "dnspython_versioned",
-    "isort_finders",
-    "pillow_BdfFontFile",
-    "pillow_Image",
-    "setuptools_bdist",
-    "setuptools_init",
-    "setuptools_msvccompiler",
-    "sqlalchemy_base",
-]
+
+def pytest_generate_tests(metafunc):
+    samples_dir = pathlib.Path("test_data/samples")
+
+    samples = []
+    for input_path in samples_dir.glob("*_input.py"):
+        samples.append(input_path.name[: -len("_input.py")])
+    samples.sort()
+    assert samples
+
+    metafunc.parametrize("sample", samples)
 
 
-@pytest.mark.parametrize("example", examples)
-def test_examples(example):
-    examples_dir = pathlib.Path("test_data/samples")
-    input_path = examples_dir / f"{example}_input.py"
-    output_path = examples_dir / f"{example}_output.py"
+def test_samples(sample):
+    samples_dir = pathlib.Path("test_data/samples")
+    input_path = samples_dir / f"{sample}_input.py"
+    output_path = samples_dir / f"{sample}_output.py"
     input_text = input_path.read_text()
 
     actual_text = ssort(
@@ -40,10 +36,9 @@ def test_examples(example):
     assert actual_text == expected_text
 
 
-@pytest.mark.parametrize("example", examples)
-def test_idempotent(example):
-    examples_dir = pathlib.Path("test_data/samples")
-    input_path = examples_dir / f"{example}_input.py"
+def test_idempotent(sample):
+    samples_dir = pathlib.Path("test_data/samples")
+    input_path = samples_dir / f"{sample}_input.py"
     input_text = input_path.read_text()
 
     sorted_text = ssort(

@@ -99,6 +99,14 @@ class Locator(object):
 
     downloadable_extensions = source_extensions + ('.whl',)
 
+    def _get_scheme(self):
+        return self._scheme
+
+    def _set_scheme(self, value):
+        self._scheme = value
+
+    scheme = property(_get_scheme, _set_scheme)
+
     def __init__(self, scheme='default'):
         """
         Initialise an instance.
@@ -141,14 +149,6 @@ class Locator(object):
 
     def clear_cache(self):
         self._cache.clear()
-
-    def _get_scheme(self):
-        return self._scheme
-
-    def _set_scheme(self, value):
-        self._scheme = value
-
-    scheme = property(_get_scheme, _set_scheme)
 
     def _get_project(self, name):
         """
@@ -541,6 +541,8 @@ href\\s*=\\s*(?:"(?P<url1>[^"]*)"|'(?P<url2>[^']*)'|(?P<url3>[^>\\s\n]*))
 """, re.I | re.S | re.X)
     _base = re.compile(r"""<base\s+href\s*=\s*['"]?([^'">]+)""", re.I | re.S)
 
+    _clean_re = re.compile(r'[^a-z0-9$&+,/:;=?@.#%_\\|-]', re.I)
+
     def __init__(self, data, url):
         """
         Initialise an instance with the Unicode page contents and the URL they
@@ -551,8 +553,6 @@ href\\s*=\\s*(?:"(?P<url1>[^"]*)"|'(?P<url2>[^']*)'|(?P<url3>[^>\\s\n]*))
         m = self._base.search(self.data)
         if m:
             self.base_url = m.group(1)
-
-    _clean_re = re.compile(r'[^a-z0-9$&+,/:;=?@.#%_\\|-]', re.I)
 
     @cached_property
     def links(self):
@@ -597,6 +597,11 @@ class SimpleScrapingLocator(Locator):
         'none': lambda b: b,
     }
 
+    platform_dependent = re.compile(r'\b(linux_(i\d86|x86_64|arm\w+)|'
+                                    r'win(32|_amd64)|macosx_?\d+)\b', re.I)
+
+    _distname_re = re.compile('<a href=[^>]*>([^<]+)<')
+
     def __init__(self, url, timeout=None, num_workers=10, **kwargs):
         """
         Initialise an instance.
@@ -623,53 +628,6 @@ class SimpleScrapingLocator(Locator):
         # in _prepare_threads.
         self._gplock = threading.RLock()
         self.platform_check = False  # See issue #112
-
-    def _prepare_threads(self):
-        """
-        Threads are created only when get_project is called, and terminate
-        before it returns. They are there primarily to parallelise I/O (i.e.
-        fetching web pages).
-        """
-        self._threads = []
-        for i in range(self.num_workers):
-            t = threading.Thread(target=self._fetch)
-            t.setDaemon(True)
-            t.start()
-            self._threads.append(t)
-
-    def _wait_threads(self):
-        """
-        Tell all the threads to terminate (by sending a sentinel value) and
-        wait for them to do so.
-        """
-        # Note that you need two loops, since you can't say which
-        # thread will get each sentinel
-        for t in self._threads:
-            self._to_fetch.put(None)    # sentinel
-        for t in self._threads:
-            t.join()
-        self._threads = []
-
-    def _get_project(self, name):
-        result = {'urls': {}, 'digests': {}}
-        with self._gplock:
-            self.result = result
-            self.project_name = name
-            url = urljoin(self.base_url, '%s/' % quote(name))
-            self._seen.clear()
-            self._page_cache.clear()
-            self._prepare_threads()
-            try:
-                logger.debug('Queueing %s', url)
-                self._to_fetch.put(url)
-                self._to_fetch.join()
-            finally:
-                self._wait_threads()
-            del self.result
-        return result
-
-    platform_dependent = re.compile(r'\b(linux_(i\d86|x86_64|arm\w+)|'
-                                    r'win(32|_amd64)|macosx_?\d+)\b', re.I)
 
     def _is_platform_dependent(self, url):
         """
@@ -759,6 +717,50 @@ class SimpleScrapingLocator(Locator):
                 #logger.debug('Sentinel seen, quitting.')
                 break
 
+    def _prepare_threads(self):
+        """
+        Threads are created only when get_project is called, and terminate
+        before it returns. They are there primarily to parallelise I/O (i.e.
+        fetching web pages).
+        """
+        self._threads = []
+        for i in range(self.num_workers):
+            t = threading.Thread(target=self._fetch)
+            t.setDaemon(True)
+            t.start()
+            self._threads.append(t)
+
+    def _wait_threads(self):
+        """
+        Tell all the threads to terminate (by sending a sentinel value) and
+        wait for them to do so.
+        """
+        # Note that you need two loops, since you can't say which
+        # thread will get each sentinel
+        for t in self._threads:
+            self._to_fetch.put(None)    # sentinel
+        for t in self._threads:
+            t.join()
+        self._threads = []
+
+    def _get_project(self, name):
+        result = {'urls': {}, 'digests': {}}
+        with self._gplock:
+            self.result = result
+            self.project_name = name
+            url = urljoin(self.base_url, '%s/' % quote(name))
+            self._seen.clear()
+            self._page_cache.clear()
+            self._prepare_threads()
+            try:
+                logger.debug('Queueing %s', url)
+                self._to_fetch.put(url)
+                self._to_fetch.join()
+            finally:
+                self._wait_threads()
+            del self.result
+        return result
+
     def get_page(self, url):
         """
         Get the HTML for an URL, possibly from an in-memory cache.
@@ -817,8 +819,6 @@ class SimpleScrapingLocator(Locator):
                 finally:
                     self._page_cache[url] = result   # even if None (failure)
         return result
-
-    _distname_re = re.compile('<a href=[^>]*>([^<]+)<')
 
     def get_distribution_names(self):
         """
@@ -967,6 +967,13 @@ class AggregatingLocator(Locator):
     """
     This class allows you to chain and/or merge a list of locators.
     """
+
+    def _set_scheme(self, value):
+        self._scheme = value
+        for locator in self.locators:
+            locator.scheme = value
+
+    scheme = property(Locator.scheme.fget, _set_scheme)
     def __init__(self, *locators, **kwargs):
         """
         Initialise an instance.
@@ -987,13 +994,6 @@ class AggregatingLocator(Locator):
         super(AggregatingLocator, self).clear_cache()
         for locator in self.locators:
             locator.clear_cache()
-
-    def _set_scheme(self, value):
-        self._scheme = value
-        for locator in self.locators:
-            locator.scheme = value
-
-    scheme = property(Locator.scheme.fget, _set_scheme)
 
     def _get_project(self, name):
         result = {}
