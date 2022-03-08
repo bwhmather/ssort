@@ -88,7 +88,8 @@ if sys.version_info >= (3, 10):
     # pylint: disable=no-member
     @get_bindings.register(ast.MatchStar)
     def _get_bindings_for_match_star(node: ast.MatchStar) -> Iterable[str]:
-        yield node.name
+        if node.name is not None:
+            yield node.name
 
     # pylint: disable=no-member
     @get_bindings.register(ast.MatchMapping)
