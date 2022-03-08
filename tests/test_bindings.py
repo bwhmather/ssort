@@ -1490,6 +1490,18 @@ def test_match_statement_bindings_sequence():
 
 
 @match_statement
+def test_match_statement_bindings_sequence_wildcard():
+    node = _parse(
+        """
+        match a:
+            case [*_]:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == []
+
+
+@match_statement
 def test_match_statement_bindings_mapping():
     node = _parse(
         """
