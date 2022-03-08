@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import re
 import sys
 from typing import Any, Callable, Generic, TypeVar
 
@@ -41,3 +42,22 @@ class _SingleDispatch(Generic[_T]):
 
 
 single_dispatch = _SingleDispatch
+
+
+_ENCODING_RE = re.compile("^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)")
+
+
+def detect_encoding(bytestring):
+    """
+    Detect the encoding of a python source file based on "coding" comments, as
+    defined in [PEP 263](https://www.python.org/dev/peps/pep-0263/).
+
+    Defaults to "utf-8", as per [PEP 3120](https://www.python.org/dev/peps/pep-3120/).
+    """
+    encoding = "utf-8"
+    for line in bytestring.splitlines()[:2]:
+        match = _ENCODING_RE.match(line.decode("latin-1"))
+        if not match:
+            continue
+        encoding = match[1]
+    return encoding
