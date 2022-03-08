@@ -4,6 +4,7 @@ import pathlib
 import sys
 
 from ssort._ssort import ssort
+from ssort._utils import detect_encoding
 
 
 def _find_files(patterns):
@@ -58,7 +59,9 @@ def main():
     paths = _find_files(args.files)
     for path in paths:
         errors = False
-        original = path.read_text()
+        original_bytes = path.read_bytes()
+        encoding = detect_encoding(original_bytes)
+        original = original_bytes.decode(encoding)
 
         def _on_syntax_error(message, *, lineno, col_offset, **kwargs):
             nonlocal errors
@@ -108,7 +111,7 @@ def main():
                 )
             else:
                 sys.stderr.write(f"Sorting {str(path)!r}\n")
-                path.write_text(updated)
+                path.write_text(updated, encoding=encoding)
         else:
             unchanged += 1
 
