@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import sys
 from typing import Iterable
 
 from ssort._ast import iter_child_nodes, node_dispatch
@@ -80,3 +81,29 @@ def _get_bindings_for_except_handler(node: ast.ExceptHandler) -> Iterable[str]:
         yield node.name
     for statement in node.body:
         yield from get_bindings(statement)
+
+
+if sys.version_info >= (3, 10):
+
+    @get_bindings.register(ast.MatchStar)
+    def _get_bindings_for_match_star(node: ast.MatchStar) -> Iterable[str]:
+        if node.name is not None:
+            yield node.name
+
+    @get_bindings.register(ast.MatchMapping)
+    def _get_bindings_for_match_mapping(
+        node: ast.MatchMapping,
+    ) -> Iterable[str]:
+        for key in node.keys:
+            yield from get_bindings(key)
+        for pattern in node.patterns:
+            yield from get_bindings(pattern)
+        if node.rest is not None:
+            yield node.rest
+
+    @get_bindings.register(ast.MatchAs)
+    def _get_bindings_for_match_as(node: ast.MatchAs) -> Iterable[str]:
+        if node.pattern is not None:
+            yield from get_bindings(node.pattern)
+        if node.name is not None:
+            yield node.name
