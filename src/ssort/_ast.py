@@ -439,7 +439,6 @@ def _iter_child_nodes_of_withitem(node: ast.withitem) -> Iterable[ast.AST]:
 
 if sys.version_info >= (3, 10):
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.match_case)
     def _iter_child_nodes_of_match_case(
         node: ast.match_case,
@@ -449,28 +448,24 @@ if sys.version_info >= (3, 10):
             yield node.guard
         yield from node.body
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.MatchValue)
     def _iter_child_nodes_of_match_value(
         node: ast.MatchValue,
     ) -> Iterable[ast.AST]:
         yield node.value
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.MatchSingleton)
     def _iter_child_nodes_of_match_singleton(
         node: ast.MatchSingleton,
     ) -> Iterable[ast.AST]:
         return ()
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.MatchSequence)
     def _iter_child_nodes_of_match_sequence(
         node: ast.MatchSequence,
     ) -> Iterable[ast.AST]:
         yield from node.patterns
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.MatchMapping)
     def _iter_child_nodes_of_match_mapping(
         node: ast.MatchMapping,
@@ -478,7 +473,6 @@ if sys.version_info >= (3, 10):
         yield from node.keys
         yield from node.patterns
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.MatchClass)
     def _iter_child_nodes_of_match_class(
         node: ast.MatchClass,
@@ -487,20 +481,17 @@ if sys.version_info >= (3, 10):
         yield from node.patterns
         yield from node.kwd_patterns
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.MatchStar)
     def _iter_child_nodes_of_match_star(
         node: ast.MatchStar,
     ) -> Iterable[ast.AST]:
         return ()
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.MatchAs)
     def _iter_child_nodes_of_match_as(node: ast.MatchAs) -> Iterable[ast.AST]:
         if node.pattern is not None:
             yield node.pattern
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.MatchOr)
     def _iter_child_nodes_of_match_or(node: ast.MatchOr) -> Iterable[ast.AST]:
         yield from node.patterns
