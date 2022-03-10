@@ -3,6 +3,7 @@ import difflib
 import pathlib
 import sys
 
+from ssort._exceptions import UnknownEncodingError
 from ssort._ssort import ssort
 from ssort._utils import detect_encoding
 
@@ -59,8 +60,18 @@ def main():
     paths = _find_files(args.files)
     for path in paths:
         errors = False
+
         original_bytes = path.read_bytes()
-        encoding = detect_encoding(original_bytes)
+
+        try:
+            encoding = detect_encoding(original_bytes)
+        except UnknownEncodingError as exc:
+            sys.stderr.write(
+                f"ERROR: unknown encoding, {exc.encoding!r}, in {str(path)!r}\n"
+            )
+            unsortable += 1
+            continue
+
         original = original_bytes.decode(encoding)
 
         def _on_syntax_error(message, *, lineno, col_offset, **kwargs):
