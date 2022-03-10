@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import functools
+import io
 import re
 import sys
+import tokenize
 from typing import Any, Callable, Generic, TypeVar
+
+from ssort._exceptions import UnknownEncodingError
 
 if sys.version_info < (3, 9):
     memoize = functools.lru_cache(maxsize=None)
@@ -44,20 +48,15 @@ class _SingleDispatch(Generic[_T]):
 single_dispatch = _SingleDispatch
 
 
-_ENCODING_RE = re.compile("^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)")
-
-
 def detect_encoding(bytestring):
     """
     Detect the encoding of a python source file based on "coding" comments, as
     defined in [PEP 263](https://www.python.org/dev/peps/pep-0263/).
-
-    Defaults to "utf-8", as per [PEP 3120](https://www.python.org/dev/peps/pep-3120/).
     """
-    encoding = "utf-8"
-    for line in bytestring.splitlines()[:2]:
-        match = _ENCODING_RE.match(line.decode("latin-1"))
-        if not match:
-            continue
-        encoding = match[1]
+    try:
+        encoding, _ = tokenize.detect_encoding(io.BytesIO(bytestring).readline)
+    except SyntaxError as exc:
+        raise UnknownEncodingError(
+            exc.msg, encoding=re.match("unknown encoding: (.*)", exc.msg)[1]
+        ) from exc
     return encoding
