@@ -1,6 +1,6 @@
 import subprocess
 
-_good = """
+_good = b"""
 def _private():
     pass
 
@@ -8,7 +8,7 @@ def public():
     return _private()
 """
 
-_unsorted = """
+_unsorted = b"""
 def public():
     return _private()
 
@@ -16,7 +16,7 @@ def _private():
     pass
 """
 
-_syntax = """
+_syntax = b"""
 def _private(
     pass
 
@@ -24,7 +24,7 @@ def public(
     return _private()
 """
 
-_resolution = """
+_resolution = b"""
 def _private():
     pass
 
@@ -32,7 +32,7 @@ def public():
     return _other()
 """
 
-_double_resolution = """
+_double_resolution = b"""
 def _private():
     pass
 
@@ -45,7 +45,7 @@ def _write_fixtures(dirpath, texts):
     paths = []
     for index, text in enumerate(texts):
         path = dirpath / f"file_{index:04}.py"
-        path.write_text(text, encoding="utf-8")
+        path.write_bytes(text)
         paths.append(str(path))
     return paths
 
