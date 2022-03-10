@@ -16,6 +16,10 @@ def _private():
     pass
 """
 
+_encoding = b"""
+# coding=invalid-encoding
+"""
+
 _syntax = b"""
 def _private(
     pass
@@ -255,6 +259,20 @@ def test_ssort_one_unsorted_one_syntax_error(tmp_path):
         f"ERROR: syntax error in {paths[0]!r}: line 3, column 5\n",
         f"Sorting {paths[1]!r}\n",
         "1 file was resorted, 1 file was left unchanged, 1 file was not sortable\n",
+    ]
+    expected_status = 1
+
+    actual_msgs, actual_status = _ssort(tmp_path)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_encoding_error(tmp_path):
+    paths = _write_fixtures(tmp_path, [_encoding])
+
+    expected_msgs = [
+        f"ERROR: unknown encoding, 'invalid-encoding', in {paths[0]!r}\n",
+        "1 file was not sortable\n",
     ]
     expected_status = 1
 
