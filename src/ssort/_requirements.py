@@ -33,7 +33,7 @@ def get_requirements(node: ast.AST) -> Iterable[Requirement]:
 
 
 def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
-    scope = set()
+    scope: set[str] = set()
     scope.update(arg.arg for arg in args.posonlyargs)
     scope.update(arg.arg for arg in args.args)  # Arghhh.
     if args.vararg:
