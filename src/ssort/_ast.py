@@ -29,7 +29,7 @@ def _iter_child_nodes_of_interactive(
 
 @iter_child_nodes.register(ast.Expression)
 def _iter_child_nodes_of_expression(node: ast.Expression) -> Iterable[ast.AST]:
-    yield from node.body
+    yield node.body
 
 
 @iter_child_nodes.register(ast.FunctionType)
