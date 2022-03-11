@@ -72,7 +72,14 @@ def main():
             unsortable += 1
             continue
 
-        original = original_bytes.decode(encoding)
+        try:
+            original = original_bytes.decode(encoding)
+        except UnicodeDecodeError as exc:
+            sys.stderr.write(
+                f"ERROR: encoding error in {str(path)!r}: {exc}\n"
+            )
+            unsortable += 1
+            continue
 
         def _on_syntax_error(message, *, lineno, col_offset, **kwargs):
             nonlocal errors
