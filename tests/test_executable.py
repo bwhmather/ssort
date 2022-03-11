@@ -20,6 +20,11 @@ _encoding = b"""
 # coding=invalid-encoding
 """
 
+_character = b"""
+# coding=ascii
+\xfe = 2
+"""
+
 _syntax = b"""
 def _private(
     pass
@@ -272,6 +277,20 @@ def test_ssort_encoding_error(tmp_path):
 
     expected_msgs = [
         f"ERROR: unknown encoding, 'invalid-encoding', in {paths[0]!r}\n",
+        "1 file was not sortable\n",
+    ]
+    expected_status = 1
+
+    actual_msgs, actual_status = _ssort(tmp_path)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_character_error(tmp_path):
+    paths = _write_fixtures(tmp_path, [_character])
+
+    expected_msgs = [
+        f"ERROR: encoding error in {paths[0]!r}: 'ascii' codec can't decode byte 0xfe in position 16: ordinal not in range(128)\n",
         "1 file was not sortable\n",
     ]
     expected_status = 1
