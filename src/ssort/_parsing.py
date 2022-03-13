@@ -1,4 +1,5 @@
 import ast
+import warnings
 from io import StringIO
 from token import NAME
 from tokenize import generate_tokens
@@ -46,7 +47,9 @@ def split(
     row_lengths.append(len(root_text) - row_offsets[-1])
 
     if nodes is None:
-        root_node = ast.parse(root_text, filename)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            root_node = ast.parse(root_text, filename)
         nodes = iter(root_node.body)
     else:
         nodes = iter(nodes)
