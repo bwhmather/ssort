@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, Hashable, TypeVar
+from typing import Callable, Generic, Hashable, TypeVar
 
 from ssort._utils import sort_key_from_iter
 
@@ -106,7 +106,7 @@ def _find_cycle(graph: Graph[_T]) -> list[_T] | None:
     return None
 
 
-def replace_cycles(graph: Graph[_T], *, key: Callable[[_T], Any]) -> None:
+def replace_cycles(graph: Graph[_T], *, key: Callable[[_T], int]) -> None:
     """
     Finds all cycles and replaces them with forward links that keep them from
     being re-ordered.
