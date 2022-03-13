@@ -1,6 +1,11 @@
 import pytest
 
-from ssort import DecodingError, UnknownEncodingError, ssort
+from ssort import (
+    DecodingError,
+    ResolutionError,
+    UnknownEncodingError,
+    ssort,
+)
 
 
 class _DummyException(Exception):
@@ -68,3 +73,47 @@ def test_on_decoding_error_callback():
     assert exc_info.value.args == (
         "'ascii' codec can't decode byte 0xfe in position 15: ordinal not in range(128)",
     )
+
+
+# === Unresolved ===============================================================
+
+
+def test_on_unresolved_raise():
+    original = "def fun():\n    unresolved()"
+
+    with pytest.raises(ResolutionError) as exc_info:
+        ssort(original, on_unresolved="raise")
+
+    assert (
+        str(exc_info.value)
+        == "could not resolve 'unresolved'"
+    )
+    assert exc_info.value.name == "unresolved"
+    assert exc_info.value.lineno == 2
+    assert exc_info.value.col_offset == 4
+
+
+def test_on_unresolved_ignore():
+    original = "def fun():\n    unresolved()"
+
+    actual = ssort(original, on_unresolved="ignore")
+
+    assert actual == original
+
+
+def test_on_unresolved_callback():
+    original = "def fun():\n    unresolved()"
+
+    def on_unresolved(message, *, name, lineno, col_offset):
+        raise _DummyException(message, name, lineno, col_offset)
+
+    with pytest.raises(_DummyException) as exc_info:
+        ssort(original, on_unresolved=on_unresolved)
+
+    assert exc_info.value.args == (
+        "could not resolve 'unresolved'",
+        "unresolved",
+        2,
+        4,
+    )
+

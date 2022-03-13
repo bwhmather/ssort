@@ -391,14 +391,18 @@ def _interpret_on_syntax_error_action(on_syntax_error):
     return on_syntax_error
 
 
-def _on_unresolved_ignore(message, **kwargs):
+def _on_unresolved_ignore(
+    message, *, name, lineno, col_offset, **kwargs
+):
     pass
 
 
-def _on_unresolved_raise(name, *, lineno, col_offset, **kwargs):
+def _on_unresolved_raise(message, *, name, lineno, col_offset, **kwargs):
     raise ResolutionError(
-        f"could not resolve {name!r} at line {lineno}, column {col_offset}",
-        unresolved=name,
+        message,
+        name=name,
+        lineno=lineno,
+        col_offset=col_offset,
     )
 
 

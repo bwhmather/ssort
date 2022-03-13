@@ -9,9 +9,11 @@ class DecodingError(Exception):
 
 
 class ResolutionError(Exception):
-    def __init__(self, msg, *, unresolved):
+    def __init__(self, msg, *, name, lineno, col_offset):
         super().__init__(msg)
-        self.unresolved = unresolved
+        self.name = name
+        self.lineno = lineno
+        self.col_offset = col_offset
 
 
 class WildcardImportError(Exception):
