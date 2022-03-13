@@ -85,7 +85,8 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
 
         for requirement in unresolved:
             on_unresolved(
-                requirement.name,
+                f"could not resolve {requirement.name!r}",
+                name=requirement.name,
                 lineno=requirement.lineno,
                 col_offset=requirement.col_offset,
             )
