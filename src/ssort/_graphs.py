@@ -1,26 +1,32 @@
+from __future__ import annotations
+
+from typing import Callable, Generic, Hashable, TypeVar
+
 from ssort._utils import sort_key_from_iter
 
+_T = TypeVar("_T", bound=Hashable)
 
-class Graph:
-    def __init__(self):
-        self.nodes = []
-        self.dependencies = {}
-        self.dependants = {}
 
-    def add_node(self, identifier):
+class Graph(Generic[_T]):
+    def __init__(self) -> None:
+        self.nodes: list[_T] = []
+        self.dependencies: dict[_T, list[_T]] = {}
+        self.dependants: dict[_T, list[_T]] = {}
+
+    def add_node(self, identifier: _T) -> None:
         if identifier not in self.nodes:
             self.nodes.append(identifier)
             self.dependencies[identifier] = []
             self.dependants[identifier] = []
 
-    def add_dependency(self, node, dependency):
+    def add_dependency(self, node: _T, dependency: _T) -> None:
         assert dependency in self.nodes
 
         if dependency not in self.dependencies[node]:
             self.dependencies[node].append(dependency)
             self.dependants[dependency].append(node)
 
-    def remove_node(self, node):
+    def remove_node(self, node: _T) -> None:
         self.nodes.remove(node)
         del self.dependencies[node]
         del self.dependants[node]
@@ -36,7 +42,7 @@ class Graph:
             except ValueError:
                 pass
 
-    def remove_dependency(self, node, dependency):
+    def remove_dependency(self, node: _T, dependency: _T) -> None:
         assert dependency in self.nodes
 
         try:
@@ -49,7 +55,7 @@ class Graph:
         except ValueError:
             pass
 
-    def update(self, other):
+    def update(self, other: Graph[_T]) -> None:
         for node in other.nodes:
             self.add_node(node)
 
@@ -57,18 +63,18 @@ class Graph:
             for dependency in other.dependencies[node]:
                 self.add_dependency(node, dependency)
 
-    def copy(self):
-        dup = Graph()
+    def copy(self) -> Graph[_T]:
+        dup: Graph[_T] = Graph()
         dup.update(self)
         return dup
 
 
-def _remove_self_references(graph):
+def _remove_self_references(graph: Graph[_T]) -> None:
     for node in graph.nodes:
         graph.remove_dependency(node, node)
 
 
-def _find_cycle(graph):
+def _find_cycle(graph: Graph[_T]) -> list[_T] | None:
     processed = set()
     for node in graph.nodes:
         if node in processed:
@@ -97,8 +103,10 @@ def _find_cycle(graph):
                 stack.append((dependency, set(graph.dependencies[dependency])))
                 in_stack.add(dependency)
 
+    return None
 
-def replace_cycles(graph, *, key):
+
+def replace_cycles(graph: Graph[_T], *, key: Callable[[_T], int]) -> None:
     """
     Finds all cycles and replaces them with forward links that keep them from
     being re-ordered.
@@ -122,7 +130,7 @@ def replace_cycles(graph, *, key):
             prev = node
 
 
-def is_topologically_sorted(nodes, graph):
+def is_topologically_sorted(nodes: list[_T], graph: Graph[_T]) -> bool:
     visited = set()
     for node in nodes:
         visited.add(node)
@@ -132,11 +140,17 @@ def is_topologically_sorted(nodes, graph):
     return True
 
 
-def topological_sort(target, /, *, graph=None):
+def topological_sort(
+    target: Graph[_T] | list[_T], /, *, graph: Graph[_T] | None = None
+) -> list[_T]:
     if graph is None:
+        if not isinstance(target, Graph):
+            raise TypeError("target must be a Graph")
         graph = target
         nodes = target.nodes
     else:
+        if not isinstance(target, list):
+            raise TypeError("target must be a list")
         nodes = target
 
     # Create a mutable copy of the graph so that we can pop edges from it as we

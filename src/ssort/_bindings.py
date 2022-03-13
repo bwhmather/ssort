@@ -4,16 +4,18 @@ import ast
 import sys
 from typing import Iterable
 
-from ssort._ast import iter_child_nodes, node_dispatch
+from ssort._ast import iter_child_nodes
+from ssort._utils import single_dispatch
 
 
-@node_dispatch
+@single_dispatch
 def get_bindings(node: ast.AST) -> Iterable[str]:
     for child in iter_child_nodes(node):
         yield from get_bindings(child)
 
 
-@get_bindings.register(ast.FunctionDef, ast.AsyncFunctionDef)
+@get_bindings.register(ast.FunctionDef)
+@get_bindings.register(ast.AsyncFunctionDef)
 def _get_bindings_for_function_def(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[str]:

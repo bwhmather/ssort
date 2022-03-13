@@ -1,35 +1,13 @@
 from __future__ import annotations
 
 import ast
-import functools
 import sys
-from typing import Callable, Generic, Iterable, Type, TypeVar
+from typing import Iterable
 
-_T = TypeVar("_T")
-
-
-class _NodeDispatch(Generic[_T]):
-    def __init__(self, function: Callable[[ast.AST, ...], _T]) -> None:
-        functools.update_wrapper(self, function)
-        self._function = function
-        self._functions = {}
-
-    def register(self, *node_types: Type[ast.AST]):
-        def decorator(function: Callable[[ast.AST, ...], _T]):
-            for node_type in node_types:
-                self._functions[node_type] = function
-            return function
-
-        return decorator
-
-    def __call__(self, node: ast.AST, *args) -> _T:
-        return self._functions.get(type(node), self._function)(node, *args)
+from ssort._utils import single_dispatch
 
 
-node_dispatch = _NodeDispatch
-
-
-@node_dispatch
+@single_dispatch
 def iter_child_nodes(node: ast.AST) -> Iterable[ast.AST]:
     raise NotImplementedError(
         f"AST traversal for {type(node).__name__!r} is not implemented"
@@ -51,7 +29,7 @@ def _iter_child_nodes_of_interactive(
 
 @iter_child_nodes.register(ast.Expression)
 def _iter_child_nodes_of_expression(node: ast.Expression) -> Iterable[ast.AST]:
-    yield from node.body
+    yield node.body
 
 
 @iter_child_nodes.register(ast.FunctionType)
@@ -62,7 +40,8 @@ def _iter_child_nodes_of_function_type(
     yield node.returns
 
 
-@iter_child_nodes.register(ast.FunctionDef, ast.AsyncFunctionDef)
+@iter_child_nodes.register(ast.FunctionDef)
+@iter_child_nodes.register(ast.AsyncFunctionDef)
 def _iter_child_nodes_of_function_def(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[ast.AST]:
@@ -112,7 +91,8 @@ def _iter_child_nodes_of_ann_assign(node: ast.AnnAssign) -> Iterable[ast.AST]:
         yield node.value
 
 
-@iter_child_nodes.register(ast.For, ast.AsyncFor)
+@iter_child_nodes.register(ast.For)
+@iter_child_nodes.register(ast.AsyncFor)
 def _iter_child_nodes_of_for(
     node: ast.For | ast.AsyncFor,
 ) -> Iterable[ast.AST]:
@@ -136,7 +116,8 @@ def _iter_child_nodes_of_if(node: ast.If) -> Iterable[ast.AST]:
     yield from node.orelse
 
 
-@iter_child_nodes.register(ast.With, ast.AsyncWith)
+@iter_child_nodes.register(ast.With)
+@iter_child_nodes.register(ast.AsyncWith)
 def _iter_child_nodes_of_with(
     node: ast.With | ast.AsyncWith,
 ) -> Iterable[ast.AST]:
@@ -146,7 +127,6 @@ def _iter_child_nodes_of_with(
 
 if sys.version_info >= (3, 10):
 
-    # pylint: disable=no-member
     @iter_child_nodes.register(ast.Match)
     def _iter_child_nodes_of_match(node: ast.Match) -> Iterable[ast.AST]:
         yield node.subject
@@ -188,7 +168,8 @@ def _iter_child_nodes_of_import_from(
     yield from node.names
 
 
-@iter_child_nodes.register(ast.Global, ast.Nonlocal)
+@iter_child_nodes.register(ast.Global)
+@iter_child_nodes.register(ast.Nonlocal)
 def _iter_child_nodes_of_scope(
     node: ast.Global | ast.Nonlocal,
 ) -> Iterable[ast.AST]:
@@ -200,7 +181,9 @@ def _iter_child_nodes_of_expr(node: ast.Expr) -> Iterable[ast.AST]:
     yield node.value
 
 
-@iter_child_nodes.register(ast.Pass, ast.Break, ast.Continue)
+@iter_child_nodes.register(ast.Pass)
+@iter_child_nodes.register(ast.Break)
+@iter_child_nodes.register(ast.Continue)
 def _iter_child_nodes_of_control_flow(
     node: ast.Pass | ast.Break | ast.Continue,
 ) -> Iterable[ast.AST]:
@@ -351,7 +334,8 @@ def _iter_child_nodes_of_name(node: ast.Name) -> Iterable[ast.AST]:
     return ()
 
 
-@iter_child_nodes.register(ast.List, ast.Tuple)
+@iter_child_nodes.register(ast.List)
+@iter_child_nodes.register(ast.Tuple)
 def _iter_child_nodes_of_sequence(
     node: ast.List | ast.Tuple,
 ) -> Iterable[ast.AST]:

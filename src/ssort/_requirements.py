@@ -5,9 +5,10 @@ import dataclasses
 import enum
 from typing import Iterable
 
-from ssort._ast import iter_child_nodes, node_dispatch
+from ssort._ast import iter_child_nodes
 from ssort._bindings import get_bindings
 from ssort._builtins import CLASS_BUILTINS
+from ssort._utils import single_dispatch
 
 
 class Scope(enum.Enum):
@@ -25,14 +26,14 @@ class Requirement:
     scope: Scope = Scope.LOCAL
 
 
-@node_dispatch
+@single_dispatch
 def get_requirements(node: ast.AST) -> Iterable[Requirement]:
     for child in iter_child_nodes(node):
         yield from get_requirements(child)
 
 
 def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
-    scope = set()
+    scope: set[str] = set()
     scope.update(arg.arg for arg in args.posonlyargs)
     scope.update(arg.arg for arg in args.args)  # Arghhh.
     if args.vararg:
@@ -43,7 +44,8 @@ def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
     return scope
 
 
-@get_requirements.register(ast.FunctionDef, ast.AsyncFunctionDef)
+@get_requirements.register(ast.FunctionDef)
+@get_requirements.register(ast.AsyncFunctionDef)
 def _get_requirements_for_function_def(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[Requirement]:
@@ -94,7 +96,8 @@ def _get_requirements_for_class_def(
         scope.update(get_bindings(statement))
 
 
-@get_requirements.register(ast.For, ast.AsyncFor)
+@get_requirements.register(ast.For)
+@get_requirements.register(ast.AsyncFor)
 def _get_requirements_for_for(
     node: ast.For | ast.AsyncFor,
 ) -> Iterable[Requirement]:
@@ -114,7 +117,8 @@ def _get_requirements_for_for(
                 yield requirement
 
 
-@get_requirements.register(ast.With, ast.AsyncWith)
+@get_requirements.register(ast.With)
+@get_requirements.register(ast.AsyncWith)
 def _get_requirements_for_with(
     node: ast.With | ast.AsyncWith,
 ) -> Iterable[Requirement]:
@@ -162,9 +166,10 @@ def _get_requirements_for_lambda(node: ast.Lambda) -> Iterable[Requirement]:
             yield requirement
 
 
-@get_requirements.register(
-    ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp
-)
+@get_requirements.register(ast.ListComp)
+@get_requirements.register(ast.SetComp)
+@get_requirements.register(ast.DictComp)
+@get_requirements.register(ast.GeneratorExp)
 def _get_requirements_for_comp(node: ast.AST) -> Iterable[Requirement]:
     bindings = set(get_bindings(node))
     for child in iter_child_nodes(node):

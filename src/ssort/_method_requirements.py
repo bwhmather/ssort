@@ -3,10 +3,11 @@ from __future__ import annotations
 import ast
 from typing import Iterable
 
-from ssort._ast import iter_child_nodes, node_dispatch
+from ssort._ast import iter_child_nodes
+from ssort._utils import single_dispatch
 
 
-@node_dispatch
+@single_dispatch
 def _get_attribute_accesses(node: ast.AST, variable: str) -> Iterable[str]:
     for child in iter_child_nodes(node):
         yield from _get_attribute_accesses(child, variable)
@@ -33,12 +34,13 @@ def _get_attribute_accesses_for_attribute(
         yield node.attr
 
 
-@node_dispatch
+@single_dispatch
 def get_method_requirements(node: ast.AST) -> Iterable[str]:
     return ()
 
 
-@get_method_requirements.register(ast.FunctionDef, ast.AsyncFunctionDef)
+@get_method_requirements.register(ast.FunctionDef)
+@get_method_requirements.register(ast.AsyncFunctionDef)
 def _get_method_requirements_for_function_def(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[str]:
