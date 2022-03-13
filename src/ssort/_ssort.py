@@ -6,7 +6,12 @@ from ssort._dependencies import (
     class_statements_runtime_graph,
     module_statements_graph,
 )
-from ssort._exceptions import ResolutionError, WildcardImportError
+from ssort._exceptions import (
+    DecodingError,
+    ResolutionError,
+    UnknownEncodingError,
+    WildcardImportError,
+)
 from ssort._graphs import (
     is_topologically_sorted,
     replace_cycles,
@@ -332,6 +337,42 @@ def statement_text_sorted(statement):
     return statement_text(statement)
 
 
+def _on_unknown_encoding_ignore(message, **kwargs):
+    pass
+
+
+def _on_unknown_encoding_raise(message, *, encoding, **kwargs):
+    raise UnknownEncodingError(message, encoding=encoding)
+
+
+def _interpret_on_unknown_encoding_action(on_unknown_encoding):
+    if on_unknown_encoding == "ignore":
+        return _on_unknown_encoding_ignore
+
+    if on_unknown_encoding == "raise":
+        return _on_unknown_encoding_raise
+
+    return on_unknown_encoding
+
+
+def _on_decoding_error_ignore(message, **kwargs):
+    pass
+
+
+def _on_decoding_error_raise(message, **kwargs):
+    raise DecodingError(message)
+
+
+def _interpret_on_decoding_error_action(on_decoding_error):
+    if on_decoding_error == "ignore":
+        return _on_decoding_error_ignore
+
+    if on_decoding_error == "raise":
+        return _on_decoding_error_raise
+
+    return on_decoding_error
+
+
 def _on_syntax_error_ignore(message, **kwargs):
     pass
 
@@ -395,20 +436,34 @@ def ssort(
     text,
     *,
     filename="<unknown>",
+    on_unknown_encoding_error="raise",
+    on_decoding_error="raise",
     on_syntax_error="raise",
     on_unresolved="raise",
     on_wildcard_import="raise",
 ):
-    encoding = None
-    if isinstance(text, bytes):
-        encoding = detect_encoding(text)
-        text = text.decode(encoding)
-
+    on_unknown_encoding_error = _interpret_on_unknown_encoding_action(
+        on_unknown_encoding_error
+    )
+    on_decoding_error = _interpret_on_decoding_error_action(on_decoding_error)
     on_syntax_error = _interpret_on_syntax_error_action(on_syntax_error)
     on_unresolved = _interpret_on_unresolved_action(on_unresolved)
     on_wildcard_import = _interpret_on_wildcard_import_action(
         on_wildcard_import
     )
+
+    try:
+        encoding = None
+        if isinstance(text, bytes):
+            encoding = detect_encoding(text)
+            text = text.decode(encoding)
+    except UnknownEncodingError as exc:
+        on_unknown_encoding_error(str(exc), encoding=exc.encoding)
+        return text
+
+    except UnicodeDecodeError as exc:
+        on_decoding_error(str(exc))
+        return text
 
     try:
         statements = list(split(text, filename=filename))

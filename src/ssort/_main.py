@@ -63,6 +63,9 @@ def main():
 
         original_bytes = path.read_bytes()
 
+        # The logic for converting from bytes to text is duplicated in `ssort`
+        # and here because we need access to the text to be able to compute a
+        # diff at the end.
         try:
             encoding = detect_encoding(original_bytes)
         except UnknownEncodingError as exc:
