@@ -19,7 +19,7 @@ def test_samples(sample):
     samples_dir = pathlib.Path("test_data/samples")
     input_path = samples_dir / f"{sample}_input.py"
     output_path = samples_dir / f"{sample}_output.py"
-    input_text = input_path.read_text()
+    input_text = input_path.read_bytes()
 
     actual_text = ssort(
         input_text,
@@ -28,10 +28,10 @@ def test_samples(sample):
     )
 
     # XXX Uncomment to update samples. XXX
-    # output_path.write_text(actual_text)
+    # output_path.write_bytes(actual_text)
     # XXX Don't forget to restore re-comment after. XXX
 
-    expected_text = output_path.read_text()
+    expected_text = output_path.read_bytes()
 
     assert actual_text == expected_text
 
@@ -39,7 +39,7 @@ def test_samples(sample):
 def test_idempotent(sample):
     samples_dir = pathlib.Path("test_data/samples")
     input_path = samples_dir / f"{sample}_input.py"
-    input_text = input_path.read_text()
+    input_text = input_path.read_bytes()
 
     sorted_text = ssort(
         input_text,

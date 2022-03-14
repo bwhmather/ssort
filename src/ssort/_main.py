@@ -3,7 +3,9 @@ import difflib
 import pathlib
 import sys
 
+from ssort._exceptions import UnknownEncodingError
 from ssort._ssort import ssort
+from ssort._utils import detect_encoding
 
 
 def _find_files(patterns):
@@ -58,7 +60,29 @@ def main():
     paths = _find_files(args.files)
     for path in paths:
         errors = False
-        original = path.read_text()
+
+        original_bytes = path.read_bytes()
+
+        # The logic for converting from bytes to text is duplicated in `ssort`
+        # and here because we need access to the text to be able to compute a
+        # diff at the end.
+        try:
+            encoding = detect_encoding(original_bytes)
+        except UnknownEncodingError as exc:
+            sys.stderr.write(
+                f"ERROR: unknown encoding, {exc.encoding!r}, in {str(path)!r}\n"
+            )
+            unsortable += 1
+            continue
+
+        try:
+            original = original_bytes.decode(encoding)
+        except UnicodeDecodeError as exc:
+            sys.stderr.write(
+                f"ERROR: encoding error in {str(path)!r}: {exc}\n"
+            )
+            unsortable += 1
+            continue
 
         def _on_syntax_error(message, *, lineno, col_offset, **kwargs):
             nonlocal errors
@@ -108,7 +132,7 @@ def main():
                 )
             else:
                 sys.stderr.write(f"Sorting {str(path)!r}\n")
-                path.write_text(updated)
+                path.write_text(updated, encoding=encoding)
         else:
             unchanged += 1
 

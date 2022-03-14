@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import functools
+import io
+import re
 import sys
+import tokenize
 from typing import Any, Callable, Generic, TypeVar
+
+from ssort._exceptions import UnknownEncodingError
 
 if sys.version_info < (3, 9):
     memoize = functools.lru_cache(maxsize=None)
@@ -41,3 +46,17 @@ class _SingleDispatch(Generic[_T]):
 
 
 single_dispatch = _SingleDispatch
+
+
+def detect_encoding(bytestring):
+    """
+    Detect the encoding of a python source file based on "coding" comments, as
+    defined in [PEP 263](https://www.python.org/dev/peps/pep-0263/).
+    """
+    try:
+        encoding, _ = tokenize.detect_encoding(io.BytesIO(bytestring).readline)
+    except SyntaxError as exc:
+        raise UnknownEncodingError(
+            exc.msg, encoding=re.match("unknown encoding: (.*)", exc.msg)[1]
+        ) from exc
+    return encoding
