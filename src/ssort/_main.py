@@ -93,7 +93,7 @@ def main():
                 + f"line {lineno}, column {col_offset}\n"
             )
 
-        def _on_unresolved(name, *, lineno, col_offset, **kwargs):
+        def _on_unresolved(message, *, name, lineno, col_offset, **kwargs):
             nonlocal errors
             errors = True
 
