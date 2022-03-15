@@ -844,3 +844,41 @@ def test_reverse_default_dependency():
     )
     actual = ssort(original, reverse=True)
     assert actual == expected
+
+
+def test_reverse_do_not_reorder_imports():
+    original = _clean(
+        """
+        import foo
+        def bar():
+            return foo.bar()
+        """
+    )
+    expected = _clean(
+        """
+        import foo
+        def bar():
+            return foo.bar()
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_do_not_reorder_global_constants():
+    original = _clean(
+        """
+        FOO="BAR"
+        def foo():
+            return FOO
+        """
+    )
+    expected = _clean(
+        """
+        FOO="BAR"
+        def foo():
+            return FOO
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
