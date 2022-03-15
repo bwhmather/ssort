@@ -811,3 +811,36 @@ def test_reverse_decorator_dependency():
     )
     actual = ssort(original, reverse=True)
     assert actual == expected
+
+
+def test_reverse_default_dependency():
+    original = _clean(
+        """
+        def f(name):
+            if name == "b":
+                return g()
+            return False
+        def a(x=f("a")):
+            return x
+        def g():
+            return True
+        def b(x=f("b")):
+            return a(x)
+        """
+    )
+    expected = _clean(
+        """
+        def f(name):
+            if name == "b":
+                return g()
+            return False
+        def g():
+            return True
+        def b(x=f("b")):
+            return a(x)
+        def a(x=f("a")):
+            return x
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
