@@ -436,6 +436,7 @@ def ssort(
     text,
     *,
     filename="<unknown>",
+    reverse=False,
     on_unknown_encoding_error="raise",
     on_decoding_error="raise",
     on_syntax_error="raise",
@@ -473,6 +474,7 @@ def ssort(
 
     graph = module_statements_graph(
         statements,
+        reverse=reverse,
         on_unresolved=on_unresolved,
         on_wildcard_import=on_wildcard_import,
     )

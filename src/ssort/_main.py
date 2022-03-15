@@ -48,6 +48,12 @@ def main():
         "needs to be changed.  Otherwise returns 1.",
     )
     parser.add_argument(
+        "--reverse",
+        dest="reverse",
+        action="store_true",
+        help="Reverse the ordering of soft dependencies.",
+    )
+    parser.add_argument(
         "files", nargs="*", help="One or more python files to sort"
     )
 
@@ -112,6 +118,7 @@ def main():
             updated = ssort(
                 original,
                 filename=str(path),
+                reverse=args.reverse,
                 on_syntax_error=_on_syntax_error,
                 on_unresolved=_on_unresolved,
                 on_wildcard_import=_on_wildcard_import,

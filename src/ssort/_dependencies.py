@@ -8,7 +8,9 @@ from ssort._statements import (
 )
 
 
-def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
+def module_statements_graph(
+    statements, *, reverse=False, on_unresolved, on_wildcard_import
+):
     """
     Constructs a graph of the interdependencies in a list of module level
     statements.
@@ -17,6 +19,8 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
         An ordered list of opaque `Statement` objects from which to construct
         the graph.
 
+    :param reverse:
+        Reverse the dependency direction of deferred (soft) dependencies.
     :param on_unresolved:
         An callback that should be invoked for each unresolved dependency.  Can
         safely raise any arbitrary exception to abort constructing the graph.
@@ -103,7 +107,10 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
     for statement in statements:
         for requirement in statement_requirements(statement):
             if resolved[requirement] is not None:
-                graph.add_dependency(statement, resolved[requirement])
+                if reverse and requirement.deferred:
+                    graph.add_dependency(resolved[requirement], statement)
+                else:
+                    graph.add_dependency(statement, resolved[requirement])
 
     # Add links between statements that overwrite the same binding to make sure
     # that bindings are always applied in the same order.
