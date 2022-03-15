@@ -84,7 +84,7 @@ def main():
             unsortable += 1
             continue
 
-        def _on_syntax_error(message, *, lineno, col_offset, **kwargs):
+        def _on_parse_error(message, *, lineno, col_offset, **kwargs):
             nonlocal errors
             errors = True
 
@@ -112,7 +112,7 @@ def main():
             updated = ssort(
                 original,
                 filename=str(path),
-                on_syntax_error=_on_syntax_error,
+                on_parse_error=_on_parse_error,
                 on_unresolved=_on_unresolved,
                 on_wildcard_import=_on_wildcard_import,
             )

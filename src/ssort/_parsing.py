@@ -4,6 +4,7 @@ from io import StringIO
 from token import NAME
 from tokenize import generate_tokens
 
+from ssort._exceptions import ParseError
 from ssort._statements import (
     Statement,
     statement_node,
@@ -203,5 +204,8 @@ def split_class(statement):
 def parse(root_text, *, filename="<unknown>"):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        root_node = ast.parse(root_text, filename)
+        try:
+            root_node = ast.parse(root_text, filename)
+        except SyntaxError as exc:
+            raise ParseError(exc.msg, lineno=exc.lineno, col_offset=exc.offset)
     return split(root_text, nodes=list(root_node.body))

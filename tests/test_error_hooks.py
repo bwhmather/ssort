@@ -1,6 +1,12 @@
 import pytest
 
-from ssort import DecodingError, ResolutionError, UnknownEncodingError, ssort
+from ssort import (
+    DecodingError,
+    ParseError,
+    ResolutionError,
+    UnknownEncodingError,
+    ssort,
+)
 
 
 class _DummyException(Exception):
@@ -68,6 +74,35 @@ def test_on_decoding_error_callback():
     assert exc_info.value.args == (
         "'ascii' codec can't decode byte 0xfe in position 15: ordinal not in range(128)",
     )
+
+
+# === Parse Error ==============================================================
+
+
+def test_on_parse_error_raise():
+    original = "a ="
+    with pytest.raises(ParseError) as exc_info:
+        ssort(original, on_parse_error="raise")
+    assert str(exc_info.value) == "invalid syntax"
+    assert exc_info.value.lineno == 1
+    assert exc_info.value.col_offset == 4
+
+
+def test_on_parse_error_ignore():
+    original = "a ="
+    actual = ssort(original, on_parse_error="ignore")
+    assert actual == original
+
+
+def test_on_parse_error_callback():
+    original = "a ="
+
+    def on_parse_error(message, *, lineno, col_offset):
+        raise _DummyException(message, lineno, col_offset)
+
+    with pytest.raises(_DummyException) as exc_info:
+        ssort(original, on_parse_error=on_parse_error)
+    assert exc_info.value.args == ("invalid syntax", 1, 4)
 
 
 # === Unresolved ===============================================================
