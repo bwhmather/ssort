@@ -103,7 +103,7 @@ def test_cycle_with_dependant():
     assert actual == expected
 
 
-def test_depencency_order():
+def test_dependency_order():
     # TODO We previously tried to reorder dependencies to match the order they
     # were required in.
     original = _clean(
@@ -525,4 +525,289 @@ def test_lifecycle_class_private():
         """
     )
     actual = ssort(original)
+    assert actual == expected
+
+
+def test_reverse_cycle():
+    original = _clean(
+        """
+        def a():
+            return b()
+        def b():
+            return c()
+        def c():
+            return a()
+        """
+    )
+    expected = _clean(
+        """
+        def a():
+            return b()
+        def b():
+            return c()
+        def c():
+            return a()
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_cycle_reversed():
+    original = _clean(
+        """
+        def a():
+            return c()
+        def b():
+            return a()
+        def c():
+            return b()
+        """
+    )
+    expected = _clean(
+        """
+        def a():
+            return c()
+        def b():
+            return a()
+        def c():
+            return b()
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_cycle_with_dependant():
+    original = _clean(
+        """
+        def c():
+            return a()
+        def a():
+            return b()
+        def b():
+            return a()
+        """
+    )
+    expected = _clean(
+        """
+        def c():
+            return a()
+        def a():
+            return b()
+        def b():
+            return a()
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_isort_finders():
+    original = _clean(
+        """
+        class Base:
+            pass
+
+        def a():
+            pass
+
+        class A(Base):
+            def method():
+                a()
+
+        class B(Base):
+            pass
+
+        def something():
+            return [A, B]
+        """
+    )
+    expected = _clean(
+        """
+        class Base:
+            pass
+        
+        def something():
+            return [A, B]
+
+        class A(Base):
+            def method():
+                a()
+
+        def a():
+            pass
+
+        class B(Base):
+            pass
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_single_dispatch():
+    original = _clean(
+        """
+        import functools
+
+        @functools.singledispatch
+        def fun(x):
+            ...
+
+        @fun.register(str)
+        def _fun_str(x):
+            ...
+
+        @fun.register(int)
+        def _fun_int(x):
+            ...
+
+        if __name__ == "__main__":
+            fun()
+        """
+    )
+    expected = _clean(
+        """
+        import functools
+
+        @functools.singledispatch
+        def fun(x):
+            ...
+
+        @fun.register(str)
+        def _fun_str(x):
+            ...
+
+        @fun.register(int)
+        def _fun_int(x):
+            ...
+
+        if __name__ == "__main__":
+            fun()
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_walrus():
+    original = _clean(
+        """
+        def fun():
+            if (a := nofun()):
+                return a
+            else:
+                return True
+        def nofun():
+            return False
+        """
+    )
+    expected = _clean(
+        """
+        def fun():
+            if (a := nofun()):
+                return a
+            else:
+                return True
+        def nofun():
+            return False
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_overload_decorator():
+    original = _clean(
+        """
+        from typing import overload
+        def g():
+            f(1)
+        @overload
+        def f(x: int) -> int:
+            ...
+        @overload
+        def f(x: str) -> str:
+            ...
+        def f(x: int | str) -> int | str:
+            print(x)
+            return x
+        if __name__ == "__main__":
+            f(5)
+        """
+    )
+    expected = _clean(
+        """
+        from typing import overload
+        def g():
+            f(1)
+        @overload
+        def f(x: int) -> int:
+            ...
+        @overload
+        def f(x: str) -> str:
+            ...
+        def f(x: int | str) -> int | str:
+            print(x)
+            return x
+        if __name__ == "__main__":
+            f(5)
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_concat():
+    original = _clean(
+        """
+        def f():
+            return l
+        l = []
+        l += 1
+        """
+    )
+    expected = _clean(
+        """
+        def f():
+            return l
+        l = []
+        l += 1
+        """
+    )
+    actual = ssort(original, reverse=True)
+    assert actual == expected
+
+
+def test_reverse_decorator_dependency():
+    original = _clean(
+        """
+        def decorator_dependency(f):
+            ...
+        def decorator(*args):
+            return decorator_dependency
+        @decorator()
+        def a():
+            ...
+        @decorator()
+        def b():
+            return a()
+        """
+    )
+    expected = _clean(
+        """
+        def decorator(*args):
+            return decorator_dependency
+        def decorator_dependency(f):
+            ...
+        @decorator()
+        def b():
+            return a()
+        @decorator()
+        def a():
+            ...
+        """
+    )
+    actual = ssort(original, reverse=True)
     assert actual == expected
