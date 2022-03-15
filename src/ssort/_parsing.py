@@ -30,11 +30,10 @@ def _find_end(node):
 def split(
     root_text,
     *,
-    nodes=None,
+    nodes,
     next_row=0,
     next_col=0,
     indent=0,
-    filename="<unknown>"
 ):
     # Build an index of row lengths and start offsets to enable fast string
     # indexing using ast row/column coordinates.
@@ -46,13 +45,7 @@ def split(
             row_offsets.append(offset + 1)
     row_lengths.append(len(root_text) - row_offsets[-1])
 
-    if nodes is None:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            root_node = ast.parse(root_text, filename)
-        nodes = iter(root_node.body)
-    else:
-        nodes = iter(nodes)
+    nodes = iter(nodes)
 
     next_node = next(nodes, None)
 
@@ -205,3 +198,10 @@ def split_class(statement):
         )
 
     return head_text, body_statements
+
+
+def parse(root_text, *, filename="<unknown>"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        root_node = ast.parse(root_text, filename)
+    return split(root_text, nodes=list(root_node.body))

@@ -17,7 +17,7 @@ from ssort._graphs import (
     replace_cycles,
     topological_sort,
 )
-from ssort._parsing import split, split_class
+from ssort._parsing import parse, split_class
 from ssort._statements import (
     statement_bindings,
     statement_node,
@@ -468,7 +468,7 @@ def ssort(
         return text
 
     try:
-        statements = list(split(text, filename=filename))
+        statements = list(parse(text, filename=filename))
     except SyntaxError as exc:
         on_syntax_error(exc.msg, lineno=exc.lineno, col_offset=exc.offset)
         return text
