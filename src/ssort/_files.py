@@ -45,6 +45,8 @@ def is_ignored(path: pathlib.Path) -> bool:
         if _is_project_root(part):
             return False
 
+    return False
+
 
 def find_python_files(
     patterns: Iterable[str | os.PathLike[str]],
