@@ -8,6 +8,7 @@ from ssort._dependencies import (
 )
 from ssort._exceptions import (
     DecodingError,
+    ParseError,
     ResolutionError,
     UnknownEncodingError,
     WildcardImportError,
@@ -373,22 +374,22 @@ def _interpret_on_decoding_error_action(on_decoding_error):
     return on_decoding_error
 
 
-def _on_syntax_error_ignore(message, **kwargs):
+def _on_parse_error_ignore(message, **kwargs):
     pass
 
 
-def _on_syntax_error_raise(message, *, lineno, col_offset, **kwargs):
-    raise SyntaxError(message, lineno=lineno, offset=col_offset)
+def _on_parse_error_raise(message, *, lineno, col_offset, **kwargs):
+    raise ParseError(message, lineno=lineno, col_offset=col_offset)
 
 
-def _interpret_on_syntax_error_action(on_syntax_error):
-    if on_syntax_error == "ignore":
-        return _on_syntax_error_ignore
+def _interpret_on_parse_error_action(on_parse_error):
+    if on_parse_error == "ignore":
+        return _on_parse_error_ignore
 
-    if on_syntax_error == "raise":
-        return _on_syntax_error_raise
+    if on_parse_error == "raise":
+        return _on_parse_error_raise
 
-    return on_syntax_error
+    return on_parse_error
 
 
 def _on_unresolved_ignore(message, *, name, lineno, col_offset, **kwargs):
@@ -440,7 +441,7 @@ def ssort(
     filename="<unknown>",
     on_unknown_encoding_error="raise",
     on_decoding_error="raise",
-    on_syntax_error="raise",
+    on_parse_error="raise",
     on_unresolved="raise",
     on_wildcard_import="raise",
 ):
@@ -448,7 +449,7 @@ def ssort(
         on_unknown_encoding_error
     )
     on_decoding_error = _interpret_on_decoding_error_action(on_decoding_error)
-    on_syntax_error = _interpret_on_syntax_error_action(on_syntax_error)
+    on_parse_error = _interpret_on_parse_error_action(on_parse_error)
     on_unresolved = _interpret_on_unresolved_action(on_unresolved)
     on_wildcard_import = _interpret_on_wildcard_import_action(
         on_wildcard_import
@@ -469,8 +470,8 @@ def ssort(
 
     try:
         statements = list(parse(text, filename=filename))
-    except SyntaxError as exc:
-        on_syntax_error(exc.msg, lineno=exc.lineno, col_offset=exc.offset)
+    except ParseError as exc:
+        on_parse_error(str(exc), lineno=exc.lineno, col_offset=exc.col_offset)
         return text
 
     graph = module_statements_graph(
