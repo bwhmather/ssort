@@ -1,32 +1,11 @@
 import argparse
 import difflib
-import pathlib
 import sys
 
 from ssort._exceptions import UnknownEncodingError
+from ssort._files import find_python_files
 from ssort._ssort import ssort
 from ssort._utils import detect_encoding
-
-
-def _find_files(patterns):
-    if not patterns:
-        patterns = ["."]
-
-    paths_set = set()
-    paths_list = []
-    for pattern in patterns:
-        path = pathlib.Path(pattern)
-        if path.suffix == ".py":
-            subpaths = [path]
-        else:
-            subpaths = list(path.glob("**/*.py"))
-
-        for subpath in sorted(subpaths):
-            if subpath not in paths_set:
-                paths_set.add(subpath)
-                paths_list.append(subpath)
-
-    return paths_list
 
 
 def main():
@@ -57,8 +36,7 @@ def main():
     unsortable = 0
     unchanged = 0
 
-    paths = _find_files(args.files)
-    for path in paths:
+    for path in find_python_files(args.files):
         errors = False
 
         original_bytes = path.read_bytes()
