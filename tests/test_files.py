@@ -35,7 +35,7 @@ def test_ignore_git(
     assert _is_ignored(f"../{tmp_path.name}/ignored/main.py")
 
 
-def test_ignore_git_with_no_git_directory(
+def test_ignore_git_with_no_repo(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
@@ -161,18 +161,58 @@ def test_ignore_git_in_working_parent_directory(
     assert not _is_ignored("sub/../ignored/main.py")
 
 
-def test_ignore_symlink_recursive(
+def test_ignore_git_subdirectory_pattern(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".gitignore").write_text("sub/ignored")
+
+    (tmp_path / "sub").mkdir()
+
+    assert not _is_ignored("sub")
+    assert not _is_ignored("sub/main.py")
+
+    assert _is_ignored("sub/ignored")
+    assert _is_ignored("sub/ignored/main.py")
+
+
+def test_ignore_git_symlink_recursive(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".gitignore").write_text("ignored")
+
     (tmp_path / "dir").mkdir()
     (tmp_path / "dir" / "link").symlink_to(tmp_path / "dir")
 
-    # Just make sure recursive symlinks don't cause unbounded recursion.
     assert not _is_ignored("dir")
     assert not _is_ignored("dir/link")
     assert not _is_ignored("dir/link/link")
+
+    assert _is_ignored("dir/ignored")
+    assert _is_ignored("dir/link/ignored")
+    assert _is_ignored("dir/link/link/ignored")
+
+
+def test_ignore_git_symlink_outside_repo(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    (tmp_path / "repo" / ".git").mkdir(parents=True)
+    (tmp_path / "repo" / ".gitignore").write_text("link")
+
+    (tmp_path / "link").mkdir()
+    (tmp_path / "repo" / "link").symlink_to(tmp_path / "link")
+
+    assert not _is_ignored("link")
+    assert not _is_ignored("link/main.py")
+    assert _is_ignored("repo/link")
+    assert _is_ignored("repo/link/main.py")
 
 
 def test_ignore_symlink_circular(
@@ -183,6 +223,5 @@ def test_ignore_symlink_circular(
     (tmp_path / "link1").symlink_to(tmp_path / "link2")
     (tmp_path / "link2").symlink_to(tmp_path / "link1")
 
-    # Unresolvable links should be ignored.
-    assert _is_ignored("link1")
-    assert _is_ignored("link2")
+    assert not _is_ignored("link1")
+    assert not _is_ignored("link2")

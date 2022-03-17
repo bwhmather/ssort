@@ -11,6 +11,7 @@ from ssort._utils import memoize
 _EMPTY_PATH_SPEC = pathspec.PathSpec([])
 
 
+@memoize
 def _is_project_root(path: pathlib.Path) -> bool:
     if path == path.root or path == path.parent:
         return True
@@ -21,6 +22,7 @@ def _is_project_root(path: pathlib.Path) -> bool:
     return False
 
 
+@memoize
 def _get_ignore_patterns(path: pathlib.Path) -> pathspec.PathSpec:
     git_ignore = path / ".gitignore"
     if git_ignore.is_file():
@@ -30,24 +32,18 @@ def _get_ignore_patterns(path: pathlib.Path) -> pathspec.PathSpec:
     return _EMPTY_PATH_SPEC
 
 
-@memoize
-def _resolve_ignore_patterns(
-    path: pathlib.Path,
-) -> pathspec.PathSpec:
-    if _is_project_root(path):
-        return _get_ignore_patterns(path)
-
-    return _resolve_ignore_patterns(path.parent) + _get_ignore_patterns(path)
-
-
 def is_ignored(path: pathlib.Path) -> bool:
-    try:
-        path = path.resolve()
-    except RuntimeError:
-        return True
+    # Can't use pathlib.Path.resolve() here because we want to maintain
+    # symbolic links.
+    path = pathlib.Path(os.path.abspath(path))
 
-    ignore_patterns = _resolve_ignore_patterns(path)
-    return ignore_patterns.match_file(path)
+    for part in (path, *path.parents):
+        patterns = _get_ignore_patterns(part)
+        if patterns.match_file(path.relative_to(part)):
+            return True
+
+        if _is_project_root(part):
+            return False
 
 
 def find_python_files(
