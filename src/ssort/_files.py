@@ -32,7 +32,7 @@ def _get_ignore_patterns(path: pathlib.Path) -> pathspec.PathSpec:
     return _EMPTY_PATH_SPEC
 
 
-def is_ignored(path: pathlib.Path) -> bool:
+def is_ignored(path: str | os.PathLike) -> bool:
     # Can't use pathlib.Path.resolve() here because we want to maintain
     # symbolic links.
     path = pathlib.Path(os.path.abspath(path))
