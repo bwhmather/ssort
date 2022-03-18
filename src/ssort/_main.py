@@ -142,9 +142,7 @@ def main():
         if unsortable:
             summary.append(f"{_fmt_count(unsortable)} would not be sortable")
         if not unsorted and not unchanged and not unsortable:
-            summary.append(
-                "No files are present to be formatted. Nothing to do."
-            )
+            summary.append("No files are present to be sorted. Nothing to do.")
 
         sys.stderr.write(", ".join(summary) + "\n")
 
@@ -167,9 +165,7 @@ def main():
         if unsortable:
             summary.append(f"{_fmt_count_were(unsortable)} not sortable")
         if not unsorted and not unchanged and not unsortable:
-            summary.append(
-                "No files are present to be formatted. Nothing to do."
-            )
+            summary.append("No files are present to be sorted. Nothing to do.")
 
         sys.stderr.write(", ".join(summary) + "\n")
 
