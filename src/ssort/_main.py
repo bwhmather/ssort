@@ -39,7 +39,12 @@ def main():
     for path in find_python_files(args.files):
         errors = False
 
-        original_bytes = path.read_bytes()
+        try:
+            original_bytes = path.read_bytes()
+        except FileNotFoundError as exc:
+            sys.stderr.write(f"ERROR: {str(path)!r} does not exist\n")
+            unsortable += 1
+            continue
 
         # The logic for converting from bytes to text is duplicated in `ssort`
         # and here because we need access to the text to be able to compute a
@@ -136,6 +141,10 @@ def main():
             summary.append(f"{_fmt_count(unchanged)} would be left unchanged")
         if unsortable:
             summary.append(f"{_fmt_count(unsortable)} would not be sortable")
+        if not unsorted and not unchanged and not unsortable:
+            summary.append(
+                "No files are present to be formatted. Nothing to do."
+            )
 
         sys.stderr.write(", ".join(summary) + "\n")
 
@@ -157,6 +166,10 @@ def main():
             summary.append(f"{_fmt_count_were(unchanged)} left unchanged")
         if unsortable:
             summary.append(f"{_fmt_count_were(unsortable)} not sortable")
+        if not unsorted and not unchanged and not unsortable:
+            summary.append(
+                "No files are present to be formatted. Nothing to do."
+            )
 
         sys.stderr.write(", ".join(summary) + "\n")
 
