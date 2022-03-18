@@ -41,7 +41,7 @@ def main():
 
         try:
             original_bytes = path.read_bytes()
-        except FileNotFoundError as exc:
+        except FileNotFoundError:
             sys.stderr.write(f"ERROR: {str(path)!r} does not exist\n")
             unsortable += 1
             continue
