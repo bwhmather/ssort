@@ -63,7 +63,7 @@ def find_python_files(
             subpaths = [
                 subpath
                 for subpath in path.glob("**/*.py")
-                if not is_ignored(subpath)
+                if not is_ignored(subpath) and subpath.is_file()
             ]
 
         for subpath in sorted(subpaths):
