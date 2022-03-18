@@ -45,6 +45,14 @@ def main():
             sys.stderr.write(f"ERROR: {str(path)!r} does not exist\n")
             unsortable += 1
             continue
+        except IsADirectoryError:
+            sys.stderr.write(f"ERROR: {str(path)!r} is a directory\n")
+            unsortable += 1
+            continue
+        except PermissionError:
+            sys.stderr.write(f"ERROR: {str(path)!r} is not readable\n")
+            unsortable += 1
+            continue
 
         # The logic for converting from bytes to text is duplicated in `ssort`
         # and here because we need access to the text to be able to compute a
