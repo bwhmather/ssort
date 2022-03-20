@@ -57,13 +57,13 @@ def find_python_files(
     paths_set = set()
     for pattern in patterns:
         path = pathlib.Path(pattern)
-        if path.suffix == ".py":
+        if not path.is_dir():
             subpaths = [path]
         else:
             subpaths = [
                 subpath
                 for subpath in path.glob("**/*.py")
-                if not is_ignored(subpath)
+                if not is_ignored(subpath) and subpath.is_file()
             ]
 
         for subpath in sorted(subpaths):
