@@ -322,6 +322,9 @@ def statement_text_sorted(statement):
 def ssort(text, *, filename="<unknown>"):
     statements = list(split(text, filename=filename))
 
+    if not statements:
+        return text
+
     graph = statements_graph(statements)
 
     replace_cycles(graph, key=sort_key_from_iter(statements))
