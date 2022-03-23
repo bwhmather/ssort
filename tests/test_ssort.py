@@ -526,3 +526,18 @@ def test_lifecycle_class_private():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_single_comment():
+    original = _clean(
+        """
+        # This is a file with just a single comment!
+        """
+    )
+    expected = _clean(
+        """
+        # This is a file with just a single comment!
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
