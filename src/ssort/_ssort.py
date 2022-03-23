@@ -474,6 +474,9 @@ def ssort(
         on_parse_error(str(exc), lineno=exc.lineno, col_offset=exc.col_offset)
         return text
 
+    if not statements:
+        return text
+
     graph = module_statements_graph(
         statements,
         on_unresolved=on_unresolved,
