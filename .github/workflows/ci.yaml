@@ -27,6 +27,29 @@ jobs:
       run: |
         pytest -v tests/
 
+  coverage:
+    name: "Coverage"
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov coveralls
+        pip install -e .[test]
+    - name: Run tests
+      run: |
+        pytest --cov=ssort -v tests/
+    - name: Upload coverage report to coveralls
+      run: |
+        coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   black:
     name: "Black"
     runs-on: ubuntu-18.04
