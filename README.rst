@@ -1,11 +1,16 @@
 SSort
 =====
 
-|build-status|
+|build-status| |coverage|
 
 .. |build-status| image:: https://github.com/bwhmather/ssort/actions/workflows/ci.yaml/badge.svg?branch=master
     :target: https://github.com/bwhmather/ssort/actions/workflows/ci.yaml
     :alt: Build Status
+
+.. |coverage| image:: https://coveralls.io/repos/github/bwhmather/ssort/badge.svg?branch=master
+    :target: https://coveralls.io/github/bwhmather/ssort?branch=master
+    :alt: Cocerage
+
 
 .. begin-docs
 
