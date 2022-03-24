@@ -415,13 +415,15 @@ def _interpret_on_unresolved_action(on_unresolved):
     return on_unresolved
 
 
-def _on_wildcard_import_ignore(message, **kwargs):
+def _on_wildcard_import_ignore(**kwargs):
     pass
 
 
-def _on_wildcard_import_raise(message, *, lineno, col_offset, **kwargs):
+def _on_wildcard_import_raise(*, lineno, col_offset, **kwargs):
     raise WildcardImportError(
-        "can't reliably determine dependencies on * import"
+        "can't reliably determine dependencies on * import",
+        lineno=lineno,
+        col_offset=col_offset,
     )
 
 
