@@ -164,7 +164,7 @@ def test_on_wildcard_import_raise():
 
 
 def test_on_wildcard_import_ignore():
-    original = "from module import *"
+    original = "from module import *\n"
 
     actual = ssort(original, on_wildcard_import="ignore")
 
