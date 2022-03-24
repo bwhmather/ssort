@@ -5,6 +5,7 @@ from ssort import (
     ParseError,
     ResolutionError,
     UnknownEncodingError,
+    WildcardImportError,
     ssort,
 )
 
@@ -143,3 +144,40 @@ def test_on_unresolved_callback():
         2,
         4,
     )
+
+
+# === Wildcard Import ==========================================================
+
+
+def test_on_wildcard_import_raise():
+    original = "from module import *"
+
+    with pytest.raises(WildcardImportError) as exc_info:
+        ssort(original, on_wildcard_import="raise")
+
+    assert (
+        str(exc_info.value)
+        == "can't reliably determine dependencies on * import"
+    )
+    assert exc_info.value.lineno == 1
+    assert exc_info.value.col_offset == 0
+
+
+def test_on_wildcard_import_ignore():
+    original = "from module import *"
+
+    actual = ssort(original, on_wildcard_import="ignore")
+
+    assert actual == original
+
+
+def test_on_wildcard_import_callback():
+    original = "from module import *"
+
+    def on_wildcard_import(*, lineno, col_offset):
+        raise _DummyException(lineno, col_offset)
+
+    with pytest.raises(_DummyException) as exc_info:
+        ssort(original, on_wildcard_import=on_wildcard_import)
+
+    assert exc_info.value.args == (1, 0)
