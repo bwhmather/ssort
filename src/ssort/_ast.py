@@ -481,8 +481,8 @@ if sys.version_info >= (3, 10):
         yield from node.patterns
 
 
-@iter_child_nodes.register(ast.type_ignore)
+@iter_child_nodes.register(ast.TypeIgnore)
 def _iter_child_nodes_of_type_ignore(
-    node: ast.type_ignore,
+    node: ast.TypeIgnore,
 ) -> Iterable[ast.AST]:
     return ()
