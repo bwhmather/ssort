@@ -8,12 +8,17 @@ import pytest
 
 from ssort._ast import iter_child_nodes
 
-_deprecated_node_types = (ast.AugLoad, ast.AugStore, ast.Param, ast.Suite)
+_deprecated_node_types: tuple[type[ast.AST], ...] = (
+    ast.AugLoad,
+    ast.AugStore,
+    ast.Param,
+    ast.Suite,
+)
 
 if sys.version_info >= (3, 9):
     _deprecated_node_types += (ast.Index, ast.ExtSlice)
 
-_ignored_node_types = (
+_ignored_node_types: tuple[type[ast.AST], ...] = (
     ast.expr_context,
     ast.boolop,
     ast.operator,
@@ -44,13 +49,25 @@ def _nodes_types(
         yield node_type
 
 
-def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+def _instantiate_node(node_type: type[ast.AST]) -> ast.AST:
+    # AST node fields are either strings or iterables of child AST nodes. The
+    # empty string satisfies both those requirements.
+    return node_type(*([""] * len(node_type._fields)))
+
+
+def parametrize_nodes() -> pytest.MarkDecorator:
     node_types = list(_nodes_types())
-    nodes = [node_type() for node_type in node_types]
+    nodes = [_instantiate_node(node_type) for node_type in node_types]
     ids = [node_type.__name__ for node_type in node_types]
 
-    metafunc.parametrize("node", nodes, ids=ids)
+    return pytest.mark.parametrize("node", nodes, ids=ids)
 
 
+def test_iter_child_nodes_is_not_implemented_for_none() -> None:
+    with pytest.raises(NotImplementedError):
+        iter_child_nodes(None)
+
+
+@parametrize_nodes()
 def test_iter_child_nodes_is_implemented(node: ast.AST) -> None:
-    iter_child_nodes(node)
+    list(iter_child_nodes(node))
