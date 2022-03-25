@@ -365,6 +365,60 @@ if sys.version_info < (3, 9):
         yield node.value
 
 
+@iter_child_nodes.register(ast.Load)
+@iter_child_nodes.register(ast.Store)
+@iter_child_nodes.register(ast.Del)
+def _iter_child_nodes_of_expr_context(
+    node: ast.expr_context,
+) -> Iterable[ast.AST]:
+    return ()
+
+
+@iter_child_nodes.register(ast.And)
+@iter_child_nodes.register(ast.Or)
+def _iter_child_nodes_of_bool_op(node: ast.boolop) -> Iterable[ast.AST]:
+    return ()
+
+
+@iter_child_nodes.register(ast.Add)
+@iter_child_nodes.register(ast.Sub)
+@iter_child_nodes.register(ast.Mult)
+@iter_child_nodes.register(ast.MatMult)
+@iter_child_nodes.register(ast.Div)
+@iter_child_nodes.register(ast.Mod)
+@iter_child_nodes.register(ast.Pow)
+@iter_child_nodes.register(ast.LShift)
+@iter_child_nodes.register(ast.RShift)
+@iter_child_nodes.register(ast.BitOr)
+@iter_child_nodes.register(ast.BitXor)
+@iter_child_nodes.register(ast.BitAnd)
+@iter_child_nodes.register(ast.FloorDiv)
+def _iter_child_nodes_of_operator(node: ast.operator) -> Iterable[ast.AST]:
+    return ()
+
+
+@iter_child_nodes.register(ast.Invert)
+@iter_child_nodes.register(ast.Not)
+@iter_child_nodes.register(ast.UAdd)
+@iter_child_nodes.register(ast.USub)
+def _iter_child_nodes_of_unary_op(node: ast.unaryop) -> Iterable[ast.AST]:
+    return ()
+
+
+@iter_child_nodes.register(ast.Eq)
+@iter_child_nodes.register(ast.NotEq)
+@iter_child_nodes.register(ast.Lt)
+@iter_child_nodes.register(ast.LtE)
+@iter_child_nodes.register(ast.Gt)
+@iter_child_nodes.register(ast.GtE)
+@iter_child_nodes.register(ast.Is)
+@iter_child_nodes.register(ast.IsNot)
+@iter_child_nodes.register(ast.In)
+@iter_child_nodes.register(ast.NotIn)
+def _iter_child_nodes_of_cmp_op(node: ast.cmpop) -> Iterable[ast.AST]:
+    return ()
+
+
 @iter_child_nodes.register(ast.comprehension)
 def _iter_child_nodes_of_comprehension(
     node: ast.comprehension,
@@ -481,8 +535,8 @@ if sys.version_info >= (3, 10):
         yield from node.patterns
 
 
-@iter_child_nodes.register(ast.type_ignore)
+@iter_child_nodes.register(ast.TypeIgnore)
 def _iter_child_nodes_of_type_ignore(
-    node: ast.type_ignore,
+    node: ast.TypeIgnore,
 ) -> Iterable[ast.AST]:
     return ()
