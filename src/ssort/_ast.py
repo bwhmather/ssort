@@ -376,7 +376,7 @@ def _iter_child_nodes_of_expr_context(
 
 @iter_child_nodes.register(ast.And)
 @iter_child_nodes.register(ast.Or)
-def _iter_child_nodes_of_bool_op(node: ast.boolop) -> Iterable[ast.AST]:
+def _iter_child_nodes_of_boolop(node: ast.boolop) -> Iterable[ast.AST]:
     return ()
 
 
@@ -401,7 +401,7 @@ def _iter_child_nodes_of_operator(node: ast.operator) -> Iterable[ast.AST]:
 @iter_child_nodes.register(ast.Not)
 @iter_child_nodes.register(ast.UAdd)
 @iter_child_nodes.register(ast.USub)
-def _iter_child_nodes_of_unary_op(node: ast.unaryop) -> Iterable[ast.AST]:
+def _iter_child_nodes_of_unaryop(node: ast.unaryop) -> Iterable[ast.AST]:
     return ()
 
 
@@ -415,7 +415,7 @@ def _iter_child_nodes_of_unary_op(node: ast.unaryop) -> Iterable[ast.AST]:
 @iter_child_nodes.register(ast.IsNot)
 @iter_child_nodes.register(ast.In)
 @iter_child_nodes.register(ast.NotIn)
-def _iter_child_nodes_of_cmp_op(node: ast.cmpop) -> Iterable[ast.AST]:
+def _iter_child_nodes_of_cmpop(node: ast.cmpop) -> Iterable[ast.AST]:
     return ()
 
 
