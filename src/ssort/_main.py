@@ -5,7 +5,7 @@ import sys
 from ssort._exceptions import UnknownEncodingError
 from ssort._files import find_python_files
 from ssort._ssort import ssort
-from ssort._utils import detect_encoding
+from ssort._utils import detect_encoding, detect_newline, normalize_newlines
 
 
 def main():
@@ -75,6 +75,9 @@ def main():
             unsortable += 1
             continue
 
+        newline = detect_newline(original)
+        original = normalize_newlines(original)
+
         def _on_parse_error(message, *, lineno, col_offset, **kwargs):
             nonlocal errors
             errors = True
@@ -123,7 +126,7 @@ def main():
                 )
             else:
                 sys.stderr.write(f"Sorting {str(path)!r}\n")
-                path.write_text(updated, encoding=encoding)
+                path.write_text(updated, encoding=encoding, newline=newline)
         else:
             unchanged += 1
 
