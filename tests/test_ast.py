@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import ast
+import sys
 from typing import Iterable
 
 import pytest
 
 from ssort._ast import iter_child_nodes
 
+_deprecated_node_types = {ast.AugLoad, ast.AugStore, ast.Param, ast.Suite}
+
+if sys.version_info >= (3, 9):
+    _deprecated_node_types.update({ast.Index, ast.ExtSlice})
+
 
 def _nodes(node_type: type[ast.AST] = ast.AST) -> Iterable[ast.AST]:
     # Skip deprecated AST nodes.
-    if node_type.__doc__ and "deprecated" in node_type.__doc__.lower():
+    if node_type in _deprecated_node_types:
         return
 
     subclasses = node_type.__subclasses__()
