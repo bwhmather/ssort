@@ -1,3 +1,4 @@
+import pathlib
 import subprocess
 import sys
 
@@ -319,6 +320,27 @@ def test_ssort_character_error(ssort, tmp_path):
     actual_msgs, actual_status = ssort(tmp_path)
 
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_preserve_crlf_endlines(ssort, tmp_path):
+    input = b"a = b\r\nb = 4"
+    expected_output = b"b = 4\r\na = b\r\n"
+
+    paths = _write_fixtures(tmp_path, [input])
+
+    expected_msgs = [
+        f"Sorting {paths[0]!r}\n",
+        "1 file was resorted\n",
+    ]
+    expected_status = 0
+
+    actual_msgs, actual_status = ssort(tmp_path)
+
+    assert actual_msgs == expected_msgs
+    assert actual_status == expected_status
+
+    (output,) = [pathlib.Path(path).read_bytes() for path in paths]
+    assert output == expected_output
 
 
 def test_ssort_empty_dir(ssort, tmp_path):
