@@ -1,5 +1,6 @@
 import argparse
 import difflib
+import re
 import sys
 
 from ssort._exceptions import UnknownEncodingError
@@ -126,7 +127,11 @@ def main():
                 )
             else:
                 sys.stderr.write(f"Sorting {str(path)!r}\n")
-                path.write_text(updated, encoding=encoding, newline=newline)
+                if newline != "\n":
+                    # `newline` argument to `write_text` not supported in python
+                    # 3.8 and earlier.
+                    updated = re.sub("\n", newline, updated)
+                path.write_text(updated, encoding=encoding)
         else:
             unchanged += 1
 
