@@ -1,4 +1,5 @@
 import ast
+import re
 import sys
 
 from ssort._dependencies import (
@@ -24,7 +25,12 @@ from ssort._statements import (
     statement_node,
     statement_text,
 )
-from ssort._utils import detect_encoding, sort_key_from_iter
+from ssort._utils import (
+    detect_encoding,
+    detect_newline,
+    normalize_newlines,
+    sort_key_from_iter,
+)
 
 SPECIAL_PROPERTIES = [
     "__doc__",
@@ -470,6 +476,9 @@ def ssort(
         on_decoding_error(str(exc))
         return text
 
+    newline = detect_newline(text)
+    text = normalize_newlines(text)
+
     try:
         statements = list(parse(text, filename=filename))
     except ParseError as exc:
@@ -499,6 +508,8 @@ def ssort(
     if output:
         output += "\n"
 
+    if newline != "\n":
+        output = re.sub("\n", newline, output)
     if encoding is not None:
         output = output.encode(encoding)
     return output
