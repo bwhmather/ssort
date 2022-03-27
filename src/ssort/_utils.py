@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import re
+import shlex
 import sys
 import tokenize
 from typing import Any, Callable, Generic, TypeVar
@@ -46,6 +47,18 @@ class _SingleDispatch(Generic[_T]):
 
 
 single_dispatch = _SingleDispatch
+
+
+def escape_path(path):
+    """
+    Takes a `pathlib.Path` object and returns a string representation that can
+    be safely copied into the system shell.
+    """
+    if sys.platform == "win32":
+        # TODO
+        return str(path)
+    else:
+        return shlex.quote(str(path))
 
 
 def detect_encoding(bytestring):
