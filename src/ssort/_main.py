@@ -127,11 +127,18 @@ def main():
                 )
             else:
                 sys.stderr.write(f"Sorting {str(path)!r}\n")
+
+                # The logic for converting from bytes to text is duplicated in
+                # `ssort` and here because we need access to the text to be able
+                # to compute a diff at the end.
+                # We rename a little prematurely to avoid shadowing `updated`,
+                # which we use later for printing the diff.
+                updated_bytes = updated
                 if newline != "\n":
-                    # `newline` argument to `write_text` not supported in python
-                    # 3.8 and earlier.
-                    updated = re.sub("\n", newline, updated)
-                path.write_text(updated, encoding=encoding)
+                    updated_bytes = re.sub("\n", newline, updated_bytes)
+                updated_bytes = updated_bytes.encode(encoding)
+
+                path.write_bytes(updated_bytes)
         else:
             unchanged += 1
 
