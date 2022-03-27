@@ -1,11 +1,12 @@
 import argparse
 import difflib
+import re
 import sys
 
 from ssort._exceptions import UnknownEncodingError
 from ssort._files import find_python_files
 from ssort._ssort import ssort
-from ssort._utils import detect_encoding
+from ssort._utils import detect_encoding, detect_newline, normalize_newlines
 
 
 def main():
@@ -75,6 +76,9 @@ def main():
             unsortable += 1
             continue
 
+        newline = detect_newline(original)
+        original = normalize_newlines(original)
+
         def _on_parse_error(message, *, lineno, col_offset, **kwargs):
             nonlocal errors
             errors = True
@@ -123,7 +127,18 @@ def main():
                 )
             else:
                 sys.stderr.write(f"Sorting {str(path)!r}\n")
-                path.write_text(updated, encoding=encoding)
+
+                # The logic for converting from bytes to text is duplicated in
+                # `ssort` and here because we need access to the text to be able
+                # to compute a diff at the end.
+                # We rename a little prematurely to avoid shadowing `updated`,
+                # which we use later for printing the diff.
+                updated_bytes = updated
+                if newline != "\n":
+                    updated_bytes = re.sub("\n", newline, updated_bytes)
+                updated_bytes = updated_bytes.encode(encoding)
+
+                path.write_bytes(updated_bytes)
         else:
             unchanged += 1
 

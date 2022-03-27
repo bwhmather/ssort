@@ -60,3 +60,24 @@ def detect_encoding(bytestring):
             exc.msg, encoding=re.match("unknown encoding: (.*)", exc.msg)[1]
         ) from exc
     return encoding
+
+
+_NEWLINE_RE = re.compile("(\r\n)|(\r)|(\n)")
+
+
+def detect_newline(text):
+    """
+    Detects the newline character used in a source file based on the first
+    occurence of '\\n', '\\r' or '\\r\\n'.
+    """
+    match = re.search(_NEWLINE_RE, text)
+    if match is None:
+        return "\n"
+    return match[0]
+
+
+def normalize_newlines(text):
+    """
+    Replaces all occurrences of '\r' and '\\r\\n' with \n.
+    """
+    return re.sub(_NEWLINE_RE, "\n", text)

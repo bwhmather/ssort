@@ -541,3 +541,19 @@ def test_single_comment():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_ssort_preserve_crlf_endlines_bytes():
+    original = b"a = b\r\nb = 4"
+    expected = b"b = 4\r\na = b\r\n"
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_ssort_preserve_crlf_endlines_str():
+    original = "a = b\r\nb = 4"
+    expected = "b = 4\r\na = b\r\n"
+
+    actual = ssort(original)
+    assert actual == expected
