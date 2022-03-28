@@ -17,5 +17,5 @@ assert ResolutionError is not None
 assert UnknownEncodingError is not None
 assert WildcardImportError is not None
 
-__version__ = "0.11.4"
+__version__ = "0.11.5"
 __all__ = ["ssort"]
