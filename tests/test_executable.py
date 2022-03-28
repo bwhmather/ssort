@@ -377,6 +377,9 @@ def test_ssort_no_py_extension(ssort, tmp_path):
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="can't block read on windows"
+)
 def test_ssort_unreadable_file(ssort, tmp_path):
     path = tmp_path / "file.py"
     path.write_bytes(_good)
