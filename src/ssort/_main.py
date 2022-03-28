@@ -6,7 +6,12 @@ import sys
 from ssort._exceptions import UnknownEncodingError
 from ssort._files import find_python_files
 from ssort._ssort import ssort
-from ssort._utils import detect_encoding, detect_newline, normalize_newlines
+from ssort._utils import (
+    detect_encoding,
+    detect_newline,
+    escape_path,
+    normalize_newlines,
+)
 
 
 def main():
@@ -43,15 +48,15 @@ def main():
         try:
             original_bytes = path.read_bytes()
         except FileNotFoundError:
-            sys.stderr.write(f"ERROR: {str(path)!r} does not exist\n")
+            sys.stderr.write(f"ERROR: {escape_path(path)} does not exist\n")
             unsortable += 1
             continue
         except IsADirectoryError:
-            sys.stderr.write(f"ERROR: {str(path)!r} is a directory\n")
+            sys.stderr.write(f"ERROR: {escape_path(path)} is a directory\n")
             unsortable += 1
             continue
         except PermissionError:
-            sys.stderr.write(f"ERROR: {str(path)!r} is not readable\n")
+            sys.stderr.write(f"ERROR: {escape_path(path)} is not readable\n")
             unsortable += 1
             continue
 
@@ -62,7 +67,7 @@ def main():
             encoding = detect_encoding(original_bytes)
         except UnknownEncodingError as exc:
             sys.stderr.write(
-                f"ERROR: unknown encoding, {exc.encoding!r}, in {str(path)!r}\n"
+                f"ERROR: unknown encoding, {exc.encoding!r}, in {escape_path(path)}\n"
             )
             unsortable += 1
             continue
@@ -71,7 +76,7 @@ def main():
             original = original_bytes.decode(encoding)
         except UnicodeDecodeError as exc:
             sys.stderr.write(
-                f"ERROR: encoding error in {str(path)!r}: {exc}\n"
+                f"ERROR: encoding error in {escape_path(path)}: {exc}\n"
             )
             unsortable += 1
             continue
@@ -84,7 +89,7 @@ def main():
             errors = True
 
             sys.stderr.write(
-                f"ERROR: syntax error in {str(path)!r}: "
+                f"ERROR: syntax error in {escape_path(path)}: "
                 + f"line {lineno}, column {col_offset}\n"
             )
 
@@ -94,7 +99,7 @@ def main():
 
             sys.stderr.write(
                 f"ERROR: unresolved dependency {name!r} "
-                + f"in {str(path)!r}: "
+                + f"in {escape_path(path)}: "
                 + f"line {lineno}, column {col_offset}\n"
             )
 
@@ -106,7 +111,7 @@ def main():
         try:
             updated = ssort(
                 original,
-                filename=str(path),
+                filename=escape_path(path),
                 on_parse_error=_on_parse_error,
                 on_unresolved=_on_unresolved,
                 on_wildcard_import=_on_wildcard_import,
@@ -123,10 +128,10 @@ def main():
             unsorted += 1
             if args.check:
                 sys.stderr.write(
-                    f"ERROR: {str(path)!r} is incorrectly sorted\n"
+                    f"ERROR: {escape_path(path)} is incorrectly sorted\n"
                 )
             else:
-                sys.stderr.write(f"Sorting {str(path)!r}\n")
+                sys.stderr.write(f"Sorting {escape_path(path)}\n")
 
                 # The logic for converting from bytes to text is duplicated in
                 # `ssort` and here because we need access to the text to be able
