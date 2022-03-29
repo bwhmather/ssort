@@ -1,5 +1,6 @@
+*****
 SSort
-=====
+*****
 
 |build-status| |coverage|
 
@@ -72,7 +73,7 @@ After:
 
 
 Installation
-------------
+============
 .. begin-installation
 
 SSort can be installed manually using pip.
@@ -85,7 +86,7 @@ SSort can be installed manually using pip.
 
 
 Usage
------
+=====
 .. begin-usage
 
 To check that a file is correctly sorted use the `--check` flag.
@@ -131,7 +132,7 @@ and registering ssort in your `.pre-commit-config.yaml`.
 
 
 Output
-------
+======
 .. begin-output
 
 `ssort` will sort top level statements and statements in classes.
@@ -152,7 +153,7 @@ When sorting top level statements, `ssort` follows three simple rules:
 
 
 Links
------
+=====
 
 - Source code: https://github.com/bwhmather/ssort
 - Issue tracker: https://github.com/bwhmather/ssort/issues
@@ -160,7 +161,7 @@ Links
 
 
 License
--------
+=======
 
 The project is made available under the terms of the MIT license.  See `LICENSE <./LICENSE>`_ for details.
 
