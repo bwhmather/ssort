@@ -32,7 +32,7 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
     resolved = {}
 
     for statement in statements:
-        for requirement in statement.requirements:
+        for requirement in statement.requirements():
             all_requirements.append(requirement)
 
             # TODO error if requirement is not deferred.
@@ -44,7 +44,7 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
                 resolved[requirement] = None
                 continue
 
-        for name in statement.bindings:
+        for name in statement.bindings():
             if name == "*":
                 on_wildcard_import(
                     lineno=statement.node.lineno,
@@ -96,7 +96,7 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
         graph.add_node(statement)
 
     for statement in statements:
-        for requirement in statement.requirements:
+        for requirement in statement.requirements():
             if resolved[requirement] is not None:
                 graph.add_dependency(statement, resolved[requirement])
 
@@ -104,7 +104,7 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
     # that bindings are always applied in the same order.
     scope = {}
     for statement in statements:
-        for name in statement.bindings:
+        for name in statement.bindings():
             if name in scope:
                 graph.add_dependency(statement, scope[name])
             scope[name] = statement
@@ -159,7 +159,7 @@ def class_statements_initialisation_graph(statements):
     for statement in statements:
         graph.add_node(statement)
 
-        for requirement in statement.requirements:
+        for requirement in statement.requirements():
             if requirement.deferred:
                 continue
 
@@ -168,7 +168,7 @@ def class_statements_initialisation_graph(statements):
 
             graph.add_dependency(statement, scope[requirement.name])
 
-        for name in statement.bindings:
+        for name in statement.bindings():
             scope[name] = statement
 
     return graph
@@ -201,11 +201,11 @@ def class_statements_runtime_graph(statements, *, ignore_public):
     for statement in statements:
         graph.add_node(statement)
 
-        for name in statement.bindings:
+        for name in statement.bindings():
             scope[name] = statement
 
     for statement in statements:
-        for name in statement.method_requirements:
+        for name in statement.method_requirements():
             if ignore_public and not name.startswith("_"):
                 continue
             if name not in scope:

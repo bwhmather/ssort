@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import ast
-import functools
+from typing import Iterable
 
 from ssort._bindings import get_bindings
 from ssort._method_requirements import get_method_requirements
 from ssort._requirements import Requirement, get_requirements
+from ssort._utils import cached_method
 
 
 class Statement:
@@ -17,7 +18,7 @@ class Statement:
         self.start_row = start_row
         self.start_col = start_col
 
-    @functools.cached_property
+    @cached_method
     def text_padded(self) -> str:
         """
         Return the statement text padded with leading whitespace so that
@@ -25,26 +26,26 @@ class Statement:
         """
         return ("\n" * self.start_row) + (" " * self.start_col) + self.text
 
-    @functools.cached_property
-    def requirements(self) -> tuple[Requirement, ...]:
+    @cached_method
+    def requirements(self) -> Iterable[Requirement]:
         """
         Returns an iterable yielding Requirement objects describing the
-        bindings that a statement references.
+        bindings that this statement references.
         """
         return tuple(get_requirements(self.node))
 
-    @functools.cached_property
-    def method_requirements(self) -> tuple[str, ...]:
+    @cached_method
+    def method_requirements(self) -> Iterable[str]:
         """
         Returns an iterable yielding the names of attributes of the `self`
-        parameter that a statement depends on.
+        parameter that this statement depends on.
         """
         return tuple(get_method_requirements(self.node))
 
-    @functools.cached_property
-    def bindings(self) -> tuple[str, ...]:
+    @cached_method
+    def bindings(self) -> Iterable[str]:
         """
-        Returns an iterable yielding the names bound by a statement.
+        Returns an iterable yielding the names bound by this statement.
         """
         return tuple(get_bindings(self.node))
 

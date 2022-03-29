@@ -104,7 +104,7 @@ def split(
 def split_class(statement):
     node = statement.node
     text = statement.text
-    text_padded = statement.text_padded
+    text_padded = statement.text_padded()
 
     # Build an index of row lengths and start offsets to enable fast string
     # indexing using ast row/column coordinates.

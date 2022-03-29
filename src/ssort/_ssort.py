@@ -187,17 +187,21 @@ def _is_string(statement):
 
 
 def _is_special_property(statement):
-    return any(binding in SPECIAL_PROPERTIES for binding in statement.bindings)
+    return any(
+        binding in SPECIAL_PROPERTIES for binding in statement.bindings()
+    )
 
 
 def _is_lifecycle_operation(statement):
     return any(
-        binding in LIFECYCLE_OPERATIONS for binding in statement.bindings
+        binding in LIFECYCLE_OPERATIONS for binding in statement.bindings()
     )
 
 
 def _is_regular_operation(statement):
-    return any(binding in REGULAR_OPERATIONS for binding in statement.bindings)
+    return any(
+        binding in REGULAR_OPERATIONS for binding in statement.bindings()
+    )
 
 
 def _is_property(statement):
@@ -218,7 +222,7 @@ def _statement_binding_sort_key(binding_key):
             return sys.maxsize
 
     def _key(statement):
-        bindings = statement.bindings
+        bindings = statement.bindings()
         return min(_safe_binding_key(binding) for binding in bindings)
 
     return _key

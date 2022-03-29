@@ -49,6 +49,21 @@ class _SingleDispatch(Generic[_T]):
 single_dispatch = _SingleDispatch
 
 
+def cached_method(function: Callable[[Any], _T]) -> Callable[[Any], _T]:
+    cached_attribute_name = f"_{function.__name__}_cache"
+
+    @functools.wraps(function)
+    def wrapper(self) -> _T:
+        try:
+            return getattr(self, cached_attribute_name)
+        except AttributeError:
+            value = function(self)
+            setattr(self, cached_attribute_name, value)
+            return value
+
+    return wrapper
+
+
 def escape_path(path):
     """
     Takes a `pathlib.Path` object and returns a string representation that can
