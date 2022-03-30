@@ -20,11 +20,6 @@ from ssort._graphs import (
     topological_sort,
 )
 from ssort._parsing import parse, split_class
-from ssort._statements import (
-    statement_bindings,
-    statement_node,
-    statement_text,
-)
 from ssort._utils import (
     detect_encoding,
     detect_newline,
@@ -180,7 +175,7 @@ def _partition(values, predicate):
 
 
 def _is_string(statement):
-    expr_node = statement_node(statement)
+    expr_node = statement.node
     if not isinstance(expr_node, ast.Expr):
         return False
 
@@ -188,40 +183,35 @@ def _is_string(statement):
     if not isinstance(node, ast.Constant):
         return False
 
-    if not isinstance(node.value, str):
-        return False
-
-    return True
+    return isinstance(node.value, str)
 
 
 def _is_special_property(statement):
-    bindings = statement_bindings(statement)
-
-    return any(binding in SPECIAL_PROPERTIES for binding in bindings)
+    return any(
+        binding in SPECIAL_PROPERTIES for binding in statement.bindings()
+    )
 
 
 def _is_lifecycle_operation(statement):
-    bindings = statement_bindings(statement)
-
-    return any(binding in LIFECYCLE_OPERATIONS for binding in bindings)
+    return any(
+        binding in LIFECYCLE_OPERATIONS for binding in statement.bindings()
+    )
 
 
 def _is_regular_operation(statement):
-    bindings = statement_bindings(statement)
-
-    return any(binding in REGULAR_OPERATIONS for binding in bindings)
+    return any(
+        binding in REGULAR_OPERATIONS for binding in statement.bindings()
+    )
 
 
 def _is_property(statement):
-    node = statement_node(statement)
-
-    return isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
+    return isinstance(
+        statement.node, (ast.Assign, ast.AnnAssign, ast.AugAssign)
+    )
 
 
 def _is_class(statement):
-    node = statement_node(statement)
-
-    return isinstance(node, ast.ClassDef)
+    return isinstance(statement.node, ast.ClassDef)
 
 
 def _statement_binding_sort_key(binding_key):
@@ -232,7 +222,7 @@ def _statement_binding_sort_key(binding_key):
             return sys.maxsize
 
     def _key(statement):
-        bindings = statement_bindings(statement)
+        bindings = statement.bindings()
         return min(_safe_binding_key(binding) for binding in bindings)
 
     return _key
@@ -338,10 +328,10 @@ def _statement_text_sorted_class(statement):
 
 
 def statement_text_sorted(statement):
-    node = statement_node(statement)
+    node = statement.node
     if isinstance(node, ast.ClassDef):
         return _statement_text_sorted_class(statement)
-    return statement_text(statement)
+    return statement.text
 
 
 def _on_unknown_encoding_ignore(message, **kwargs):

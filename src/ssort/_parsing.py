@@ -5,12 +5,7 @@ from token import NAME
 from tokenize import generate_tokens
 
 from ssort._exceptions import ParseError
-from ssort._statements import (
-    Statement,
-    statement_node,
-    statement_text,
-    statement_text_padded,
-)
+from ssort._statements import Statement
 
 
 def _find_start(node):
@@ -107,9 +102,9 @@ def split(
 
 
 def split_class(statement):
-    node = statement_node(statement)
-    text = statement_text(statement)
-    text_padded = statement_text_padded(statement)
+    node = statement.node
+    text = statement.text
+    text_padded = statement.text_padded()
 
     # Build an index of row lengths and start offsets to enable fast string
     # indexing using ast row/column coordinates.
