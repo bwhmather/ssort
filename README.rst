@@ -180,7 +180,7 @@ Top-down ordering is only possible when lookups are deferred, but in most cases,
 
 In this example python will try to find ``dependency`` in the ``locals()`` dict when the first line is evaluated, and fail because the statement that defines it has not been evaluated yet.
 
-In a limited set of cases, basically only when a function definition closes over a variable in module scope, it's possible for you to reference a variable that hasn't been bound yet.
+As far as I am aware, there is only one way to reference a variable that has not been bound yet, and that is to close over it in a function definition.
 
 .. code:: python
 
@@ -195,8 +195,8 @@ In a limited set of cases, basically only when a function definition closes over
 This is because the lookup is deferred until after ``function`` is called, which in this case doesn't happen until both functions are defined.
 
 
-Unsafe to do even when a function closes over a variable
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Top-down ordering fails unsafe
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In cases where lookups are deferred, they may not be deferred sufficiently far to allow the dependant statement to be sorted before its dependencies.
 
@@ -217,7 +217,7 @@ Take the following example formatted in bottom-up order.
     def top_level():
         _shared_dep()
 
-A naive analysis would suggest that `_shared_dep` is a runtime dependency and can safely be moved to the bottom of the script.
+A naive analysis would suggest that ``_shared_dep`` is a runtime dependency and can safely be moved to the bottom of the script.
 
 .. code:: python
 
@@ -234,11 +234,18 @@ A naive analysis would suggest that `_shared_dep` is a runtime dependency and ca
     def _shared_dep():
         ...
 
-Unfortunately, this will result in a ``NameError`` as `_shared_dep` will not have been bound when `_decorator` is invoked.
+This will result in a ``NameError`` as ``_shared_dep`` will not have been bound when ``_decorator`` is invoked.
+
+More powerful static analysls can mitigate this problem, but any missed hard references are likely to result in the program being broken.
+Bottom-up sorting can only force broken reorderings when static analysis misses a reference that results in a cycle.
 
 
-Needs to be overridden for constants and imports
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Top-down ordering needs special cases for constants and imports
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Even the most die hard proponent of top down ordering would not argue that ``import`` statements should be moved to the bottom of the file.
+
+Take the following example:
 
 .. code:: python
 
@@ -247,13 +254,18 @@ Needs to be overridden for constants and imports
     def second_dep():
         ...
 
+    @decorator
     def function():
         first_dep()
         second_dep()
 
+A strict top-down sort would see it reordered with the ``first_dep`` import at the bottom of the file.
 
 .. code:: python
 
+    from other_module import decorator
+
+    @decorator
     def function():
         first_dep()
         second_dep()
@@ -264,55 +276,17 @@ Needs to be overridden for constants and imports
     from module import first_dep
 
 
-Workarounds exist.
-Read module from bottom to top.
+Top-down ordering makes code navigation difficult
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+With bottom-up ordering, navigation is easy.
+If you want to find where a variable is defined you scroll up.
+If you want to find where a variable is used you scroll down.
+These rules are very easy for programmers to learn and apply.
 
-
-
-It undermines the reason for having `ssort`.
-`ssort` exists primarily because the author was fed up with inconsistently applied top-down sorting making it impossible to know which way to scroll to get to the definition of a variable.
-
-With top-down:
-  - Scroll down to look for definition in module.
-  - Scroll up to look for imports and special cases.
-
-With bottom-up:
-  - Scroll up
-
-
-Ecosystem-wide consistency is valuable.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-In short, because top-down requires too many special cases and, even if those special
-
-In short, because there it is impossible to consistently define things after that are referenced.
-
-
-Python is a scripting language so modules are actually evaluated from top to bottom.
-Putting high level logic up top is nice when you just have functions, which defer lookup until they are called, but you quickly run into places (decorators, base classes) where it doesn't work and then you have to switch. Better to use the same convention everywhere. You quickly get used to reading a module from bottom to top.
-
-
-With enough special cases, and with deep enough static analysis, all of this might be overcome, but the we hit the final obstable which is that expecting our users to internalize this logic and build a mental model that matches it is untenable.
-
+With top-down order, navigation is more tricky.
+If you want to find where a variable is defined you scroll down, unless the variable is a constant or an import, or the variable is referenced here at import time, or the variable is referenced somewhere else at import time, or any of the many other special cases.
+If you want to find where a variable is used, you basically have to scan the whole file.
+Every special case added to the sorting tool is a special case that programmers need to learn if they are to navigate quickly, and top-down ordering requires a lot of special cases.
 
 .. end-output
 
