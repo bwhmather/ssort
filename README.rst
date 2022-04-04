@@ -154,7 +154,7 @@ When sorting top level statements, `ssort` follows three simple rules:
 
 Frequently Asked Questions
 ==========================
-.. begin-output
+.. begin-faq
 
 Why does ``ssort`` sort bottom-up rather than top-down?
 -------------------------------------------------------
@@ -288,7 +288,28 @@ If you want to find where a variable is defined you scroll down, unless the vari
 If you want to find where a variable is used, you basically have to scan the whole file.
 Every special case added to the sorting tool is a special case that programmers need to learn if they are to navigate quickly, and top-down ordering requires a lot of special cases.
 
-.. end-output
+
+Why doesn't ssort allow me to configure X?
+------------------------------------------
+
+``ssort`` aims to bring about ecosystem wide consistency in how python source files are organised.
+If this can be achieved then it will help all programmers familiar with its conventions to navigate unfamiliar codebases, and it will reduce arguments between programmers who prefer different conventions.
+This only works if those conventions can't be changed.
+
+
+Why was ssort created?
+----------------------
+The author maintains his own `fork of gedit <https://github.com/bwhmather/bedit>`_, that does not support jump-to-definition.
+The author adopted bottom-up sorting to facilitate navigation in his own code despite this limitation.
+The author had a colleague from C++ land who was used to using forward declarations as a check against missing entries in headers.
+The colleague carried this convention over to python, and attempted to sort all of his code top-down.
+The author found this irritating because it prevented him from being able to find code.
+The author, on a trip to the pub, attempted to persuade his colleague of the error of his ways, and convert him to the one true sort order.
+The colleague, being sensible, told the the author that he was being melodramatic and that he wouldn't follow any convention that wasn't automated.
+The author took this as a challenge and, having nothing better to do, spent the next several months writing a tool to enforce the one true sort order.
+That tool was ssort.
+
+.. end-faq
 
 
 Links
