@@ -281,7 +281,7 @@ Top-down ordering makes code navigation difficult
 With bottom-up ordering, navigation is easy.
 If you want to find where a variable is defined you scroll up.
 If you want to find where a variable is used you scroll down.
-These rules are very easy for programmers to learn and apply.
+These rules are reliable, and straightforward for programmers to learn and apply.
 
 With top-down order, navigation is more tricky.
 If you want to find where a variable is defined you scroll down, unless the variable is a constant or an import, or the variable is referenced here at import time, or the variable is referenced somewhere else at import time, or any of the many other special cases.
