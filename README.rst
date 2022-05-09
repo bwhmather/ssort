@@ -1,5 +1,6 @@
+*****
 SSort
-=====
+*****
 
 |build-status| |coverage|
 
@@ -72,7 +73,7 @@ After:
 
 
 Installation
-------------
+============
 .. begin-installation
 
 SSort can be installed manually using pip.
@@ -85,7 +86,7 @@ SSort can be installed manually using pip.
 
 
 Usage
------
+=====
 .. begin-usage
 
 To check that a file is correctly sorted use the `--check` flag.
@@ -131,7 +132,7 @@ and registering ssort in your `.pre-commit-config.yaml`.
 
 
 Output
-------
+======
 .. begin-output
 
 `ssort` will sort top level statements and statements in classes.
@@ -151,8 +152,162 @@ When sorting top level statements, `ssort` follows three simple rules:
 .. end-output
 
 
+Frequently Asked Questions
+==========================
+.. begin-faq
+
+Why does ``ssort`` sort bottom-up rather than top-down?
+-------------------------------------------------------
+
+Python is a scripting language, which means that the body of each module is evaluated, statement by statement, from top to bottom.
+In almost all cases, things must be defined before they can be used.
+Attempting, in the subset of cases where it is possible, to reverse the order is difficult to do safely and leads to inconsistency with the cases where top-down ordering is impossible.
+
+
+Top-down ordering is only possible when lookups are deferred
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Top-down ordering is only possible when lookups are deferred, but in most cases, lookups happen immediately.
+
+.. code:: python
+
+    # Broken.
+
+    variable = dependency()
+
+    def dependency():
+        ...
+
+In this example python will try to find ``dependency`` in the ``locals()`` dict when the first line is evaluated, and fail because the statement that defines it has not been evaluated yet.
+
+As far as I am aware, there is only one way to reference a variable that has not been bound yet, and that is to close over it in a function definition.
+
+.. code:: python
+
+    # Working.
+
+    def function():
+        return dependency()
+
+    def dependency():
+        ...
+
+This is because the lookup is deferred until after ``function`` is called, which in this case doesn't happen until both functions are defined.
+
+
+Top-down ordering fails unsafe
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In cases where lookups are deferred, they may not be deferred sufficiently far to allow the dependant statement to be sorted before its dependencies.
+
+Take the following example formatted in bottom-up order.
+
+.. code:: python
+
+    # Hidden runtime dependency example sorted bottom-up.
+
+    def _shared_dep():
+        ...
+
+    def _decorator(fn):
+        _shared_dep()
+        return fn
+
+    @_decorator
+    def top_level():
+        _shared_dep()
+
+A naive analysis would suggest that ``_shared_dep`` is a runtime dependency and can safely be moved to the bottom of the script.
+
+.. code:: python
+
+    # Hidden runtime dependency example sorted top-down using naive analysis.
+
+    def _decorator(fn):
+        _shared_dep()
+        return fn
+
+    @_decorator
+    def top_level():
+        _shared_dep()
+
+    def _shared_dep():
+        ...
+
+This will result in a ``NameError`` as ``_shared_dep`` will not have been bound when ``_decorator`` is invoked.
+
+More powerful static analysls can mitigate this problem, but any missed hard references are likely to result in the program being broken.
+Bottom-up sorting can only force broken reorderings when static analysis misses a reference that results in a cycle.
+
+
+Top-down ordering needs special cases for constants and imports
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Even the most die hard proponent of top down ordering would not argue that ``import`` statements should be moved to the bottom of the file.
+
+Take the following example:
+
+.. code:: python
+
+    from module import first_dep
+
+    def second_dep():
+        ...
+
+    @decorator
+    def function():
+        first_dep()
+        second_dep()
+
+A strict top-down sort would see it reordered with the ``first_dep`` import at the bottom of the file.
+
+.. code:: python
+
+    from other_module import decorator
+
+    @decorator
+    def function():
+        first_dep()
+        second_dep()
+
+    def second_dep():
+        ...
+
+    from module import first_dep
+
+
+Top-down ordering makes code navigation difficult
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+With bottom-up ordering, navigation is easy.
+If you want to find where a variable is defined you scroll up.
+If you want to find where a variable is used you scroll down.
+These rules are reliable, and straightforward for programmers to learn and apply.
+
+With top-down order, navigation is more tricky.
+If you want to find where a variable is defined you scroll down, unless the variable is a constant or an import, or the variable is referenced here at import time, or the variable is referenced somewhere else at import time, or any of the many other special cases.
+If you want to find where a variable is used, you basically have to scan the whole file.
+
+Every special case added to the sorting tool is a special case that programmers need to learn if they are to navigate quickly, and top-down ordering requires a lot of special cases.
+
+
+Why doesn't ssort allow me to configure X?
+------------------------------------------
+
+``ssort`` aims to bring about ecosystem wide consistency in how python source files are organised.
+If this can be achieved then it will help all programmers familiar with its conventions to navigate unfamiliar codebases, and it will reduce arguments between programmers who prefer different conventions.
+This only works if those conventions can't be changed.
+
+
+Why was ssort created?
+----------------------
+
+``ssort`` exists because its author was too lazy to implement jump-to-definition in his text editor, and decided that it would be easier to just reformat all of the world's python code to make it possible to navigate by scrolling.
+
+.. end-faq
+
+
 Links
------
+=====
 
 - Source code: https://github.com/bwhmather/ssort
 - Issue tracker: https://github.com/bwhmather/ssort/issues
@@ -160,7 +315,7 @@ Links
 
 
 License
--------
+=======
 
 The project is made available under the terms of the MIT license.  See `LICENSE <./LICENSE>`_ for details.
 
