@@ -300,15 +300,8 @@ This only works if those conventions can't be changed.
 
 Why was ssort created?
 ----------------------
-The author maintains his own `fork of gedit <https://github.com/bwhmather/bedit>`_, that does not support jump-to-definition.
-The author adopted bottom-up sorting to facilitate navigation in his own code despite this limitation.
-The author had a colleague from C++ land who was used to using forward declarations as a check against missing entries in headers.
-The colleague carried this convention over to python, and attempted to sort all of his code top-down.
-The author found this irritating because it prevented him from being able to find code.
-The author, on a trip to the pub, attempted to persuade his colleague of the error of his ways, and convert him to the one true sort order.
-The colleague, being sensible, told the the author that he was being melodramatic and that he wouldn't follow any convention that wasn't automated.
-The author took this as a challenge and, having nothing better to do, spent the next several months writing a tool to enforce the one true sort order.
-That tool was ssort.
+
+``ssort`` exists because its author was too lazy to implement jump-to-definition in his text editor, and decided that it would be easier to just reformat all of the world's python code to make it possible to navigate by scrolling.
 
 .. end-faq
 
