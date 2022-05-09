@@ -159,9 +159,9 @@ Frequently Asked Questions
 Why does ``ssort`` sort bottom-up rather than top-down?
 -------------------------------------------------------
 
-In short, python is a scripting language, which means that the body of each module is evaluated, statement by statement, from top to bottom.  In almost all cases, things must be defined before they can be used.
-
-Many people, particularly those with a background in non-scripting languages
+Python is a scripting language, which means that the body of each module is evaluated, statement by statement, from top to bottom.
+In almost all cases, things must be defined before they can be used.
+Attempting, in the subset of cases where it is possible, to reverse the order is difficult to do safely and leads to inconsistency with the cases where top-down ordering is impossible.
 
 
 Top-down ordering is only possible when lookups are deferred
@@ -286,6 +286,7 @@ These rules are very easy for programmers to learn and apply.
 With top-down order, navigation is more tricky.
 If you want to find where a variable is defined you scroll down, unless the variable is a constant or an import, or the variable is referenced here at import time, or the variable is referenced somewhere else at import time, or any of the many other special cases.
 If you want to find where a variable is used, you basically have to scan the whole file.
+
 Every special case added to the sorting tool is a special case that programmers need to learn if they are to navigate quickly, and top-down ordering requires a lot of special cases.
 
 
