@@ -135,19 +135,38 @@ Output
 ======
 .. begin-output
 
-`ssort` will sort top level statements and statements in classes.
+``ssort`` will sort top level statements and statements in class bodies.
 
-When sorting top level statements, `ssort` follows three simple rules:
-  - Statements must always be moved after the statements that they depend on, unless there is a cycle.
-  - If there is a cycle, the order of statements within the cycle must not be changed.
-  - If there is no dependency between statements then, to the greatest extent possible, the original order should be kept.
+When sorting top level statements, ``ssort`` follows three simple rules:
 
+- Statements must always be moved after the statements that they depend on, unless there is a cycle.
+- If there is a cycle, the order of statements within the cycle must not be changed.
+- If there is no dependency between statements then, to the greatest extent possible, the original order should be kept.
 
-`ssort` is more opinionated about the order of statements in classes:
-  - Class attributes should be moved to the top of the class and must always be kept in their original order.
-  - Lifecycle (`__init__`, `__new__`, etc) methods, and the methods they depend on, should go next.
-  - Regular methods follow, dependencies always ahead of the methods that depend on them.
-  - Other d'under methods should go at the end in a fixed order.
+These rules result in low level building blocks being moved to the top of modules, with higher level logic going at the bottom.
+The `FAQ <#why-does-ssort-sort-bottom-up-rather-than-top-down>`_ goes into some detail about why this order was chosen.
+
+The rules for sorting class bodies are more complicated.
+Class methods are generally only called from outside the class and so there aren't usually many interdependencies from which to derive structure.
+``ssort`` therefore ignores (deferred) dependencies between d`under and public methods and instead divides up class statements into hard-coded groups that it arranges in the following order:
+
+- The class docstring.
+- Special attributes, i.e. ``__slots__`` or ``__doc__``.
+- Inner classes.
+- Regular attributes.
+- Lifecycle d'under methods, e.g. ``__init__`` or ``__new__``.
+- Public methods, and unused private methods.
+- Other d'under methods, e.g. ``__getattr__`` or ``__len__``.
+
+Apart from the docstring, this order is essentially arbitrary.
+It is was chosen as being representative of current standard industry practice.
+
+D'under methods are arranged in a hard coded order within their group.
+Statements in other groups are left in their original order.
+
+Private methods should only be called from other methods in the class, and so are mixed in topologically.
+
+If a class-definition-time dependency is detected between two statements preserving the relative order of the linked statements will take priority.
 
 .. end-output
 
