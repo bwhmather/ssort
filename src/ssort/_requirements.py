@@ -161,6 +161,7 @@ def _get_requirements_for_nonlocal(
 def _get_requirements_for_lambda(node: ast.Lambda) -> Iterable[Requirement]:
     yield from get_requirements(node.args)
     scope = _get_scope_from_arguments(node.args)
+    scope.update(get_bindings(node.body))
     for requirement in get_requirements(node.body):
         if requirement.name not in scope:
             yield requirement
