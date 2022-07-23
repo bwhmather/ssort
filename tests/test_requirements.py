@@ -741,6 +741,11 @@ def test_lambda_requirements_default():
     assert _dep_names(node) == ["b"]
 
 
+def test_lambda_requirements_walrus_operator():
+    node = _parse("lambda: (a := 1) + a")
+    assert _dep_names(node) == []
+
+
 def test_if_exp_requirements():
     """
     ..code:: python
