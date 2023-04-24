@@ -849,7 +849,6 @@ def test_bool_op_bindings_walrus_multiple():
 
 
 def test_bin_op_bindings():
-
     """
     ..code:: python
 
