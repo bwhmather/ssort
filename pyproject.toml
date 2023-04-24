@@ -1,13 +1,19 @@
 [tool.black]
-line_length = 79
 force-exclude = 'test_data/samples/*'
+line_length = 79
 
 [tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 79
 extend_skip = ["test_data/samples"]
+line_length = 79
+multi_line_output = 3
+profile = "black"
 
 [[tool.mypy.overrides]]
-module = "pathspec"
 ignore_missing_imports = true
+module = "pathspec"
+
+[tool.tomlsort]
+all = true
+in_place = true
+spaces_before_inline_comment = 2
+spaces_indent_inline_array = 4
