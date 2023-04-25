@@ -1,0 +1,36 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: end-of-file-fixer
+        exclude: test_data
+    -   id: trailing-whitespace
+        exclude: test_data
+    -   id: check-toml
+-   repo: https://github.com/pappasam/toml-sort
+    rev: v0.23.0
+    hooks:
+    -   id: toml-sort-fix
+-   repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+    -   id: black
+# -   repo: https://github.com/charliermarsh/ruff-pre-commit
+#     rev: 'v0.0.261'
+#     hooks:
+#     -   id: ruff
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.1.1'
+    hooks:
+    -   id: mypy
+        exclude: tests|test_data
+-   repo: local
+    hooks:
+    -   id: pytest
+        name: pytest
+        entry: pytest
+        language: conda
+        pass_filenames: false
+        always_run: true
+fail_fast: false
