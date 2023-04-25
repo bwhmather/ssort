@@ -100,7 +100,7 @@ jobs:
         pip install -e .
     - name: Run ssort
       run: |
-        ssort --check --diff src/ tests/ setup.py
+        ssort --check --diff src/ tests/
 
   pyflakes:
     name: "PyFlakes"
@@ -117,7 +117,7 @@ jobs:
         pip install pyflakes
     - name: Run pyflakes
       run: |
-        pyflakes src/ tests/ setup.py
+        pyflakes src/ tests/
 
   pylint:
     name: "PyLint"
@@ -136,7 +136,7 @@ jobs:
         pip install pylint
     - name: Run pylint
       run: |
-        pylint -E src/ tests/ setup.py
+        pylint -E src/ tests/
 
   mypy:
     name: "Mypy"
