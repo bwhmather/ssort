@@ -1,10 +1,15 @@
 [tool.black]
+force-exclude = 'test_data/samples/*'
 line_length = 79
 
 [tool.isort]
-profile = "black"
-multi_line_output = 3
+extend_skip = ["test_data/samples"]
 line_length = 79
+multi_line_output = 3
+profile = "black"
+
+[tool.mypy]
+exclude = "test_data/samples/*"
 
 [[tool.mypy.overrides]]
 module = "pathspec"
