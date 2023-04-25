@@ -66,7 +66,7 @@ jobs:
         pip install black
     - name: Run black
       run: |
-        black --check --diff src/ tests/ setup.py
+        black --check --diff .
 
   isort:
     name: "ISort"
@@ -83,7 +83,7 @@ jobs:
         pip install isort
     - name: Run isort
       run: |
-        isort --check-only --diff src/ tests/ setup.py
+        isort --check-only --diff .
 
   ssort:
     name: "SSort"
@@ -155,4 +155,4 @@ jobs:
           pip install types-setuptools
       - name: Run mypy
         run: |
-          mypy src/ssort tests setup.py
+          mypy .
