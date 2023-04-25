@@ -29,7 +29,10 @@ def test_dependencies_ordered_by_first_use():
     )
     c, a, b = statements = list(parse(source, filename="<unknown>"))
     graph = module_statements_graph(
-        statements, on_unresolved=_unreachable, on_wildcard_import=_unreachable
+        "<unknown>",
+        statements,
+        on_unresolved=_unreachable,
+        on_wildcard_import=_unreachable,
     )
 
     assert list(graph.dependencies[a]) == [b, c]
