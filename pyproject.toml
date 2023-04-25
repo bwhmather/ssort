@@ -1,6 +1,55 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools>=61.2"
+]
+
+[project]
+authors = [
+    {email = "bwhmather@bwhmather.com", name = "Ben Mather"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance"
+]
+dependencies = [
+    "pathspec >=0.9.0"
+]
+description = "The python statement sorter"
+dynamic = [
+    "version"
+]
+maintainers = [
+    {email = "bwhmather@bwhmather.com", name = "Ben Mather"}
+]
+name = "ssort"
+readme = "README.rst"
+requires-python = ">=3.8"
+
+[project.license]
+text = "MIT"
+
+[project.scripts]
+ssort = "ssort._main:main"
+
+[project.urls]
+Homepage = "https://github.com/bwhmather/ssort"
+
 [tool.black]
 force-exclude = 'test_data/samples/*'
 line_length = 79
+
+[tool.distutils.bdist_wheel]
+universal = 1
 
 [tool.isort]
 extend_skip = ["test_data/samples"]
@@ -12,5 +61,17 @@ profile = "black"
 exclude = "test_data/samples/*"
 
 [[tool.mypy.overrides]]
-module = "pathspec"
 ignore_missing_imports = true
+module = "pathspec"
+
+[tool.setuptools]
+include-package-data = false
+license-files = [
+    "LICENSE"
+]
+
+[tool.setuptools.dynamic.version]
+attr = "ssort.__version__"
+
+[tool.setuptools.packages.find]
+where = ["src"]
