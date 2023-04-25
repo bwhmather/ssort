@@ -1,11 +1,16 @@
-from ssort._builtins import MODULE_BUILTINS
+from ssort._builtins import MODULE_BUILTINS, INIT_BUILTINS
 from ssort._graphs import Graph
 
 
-def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
+def module_statements_graph(
+    filename, statements, *, on_unresolved, on_wildcard_import
+):
     """
     Constructs a graph of the interdependencies in a list of module level
     statements.
+
+    :param filename:
+        The filename of the file being parsed.
 
     :param statements:
         An ordered list of opaque `Statement` objects from which to construct
@@ -41,6 +46,13 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
                 continue
 
             if requirement.name in MODULE_BUILTINS:
+                resolved[requirement] = None
+                continue
+
+            if (
+                filename.endswith("__init__.py")
+                and requirement.name in INIT_BUILTINS
+            ):
                 resolved[requirement] = None
                 continue
 

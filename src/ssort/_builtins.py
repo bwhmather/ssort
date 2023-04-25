@@ -179,3 +179,7 @@ CLASS_BUILTINS = {
     "__module__",
     "__qualname__",
 }
+
+INIT_BUILTINS = {
+    "__path__",
+}

@@ -479,6 +479,7 @@ def ssort(
         return text
 
     graph = module_statements_graph(
+        filename,
         statements,
         on_unresolved=on_unresolved,
         on_wildcard_import=on_wildcard_import,
