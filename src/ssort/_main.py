@@ -47,7 +47,7 @@ def main():
     root = find_project_root(args.files)
     config = get_config_from_root(root)
 
-    for path in config.files():
+    for path in config.iterate_files_matching_pattern(args.files):
         errors = False
 
         try:

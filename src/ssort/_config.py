@@ -52,16 +52,23 @@ def iter_valid_python_files_recursive(folder, *, is_invalid):
 
 @dataclass(frozen=True)
 class Config:
-    root: Path
     skip: frozenset | list = DEFAULT_SKIP
     extend_skip: list = field(default_factory=list)
 
-    def files(self):
-        invalid_names = set(self.skip) | set(self.extend_skip)
-        yield from iter_valid_python_files_recursive(
-            self.root,
-            is_invalid=lambda x: x.name in invalid_names,
-        )
+    def iterate_files_matching_pattern(self, pattern):
+        for pat in pattern:
+            path = Path(pat).resolve()
+
+            if path.is_file() and path.suffix == ".py":
+                yield path
+                continue
+
+            if path.is_dir():
+                invalid_names = set(self.skip) | set(self.extend_skip)
+                yield from iter_valid_python_files_recursive(
+                    path,
+                    is_invalid=lambda x: x.name in invalid_names,
+                )
 
 
 def parse_pyproject_toml(path):
@@ -82,4 +89,4 @@ def get_config_from_root(root):
     else:
         config_dict = {}
 
-    return Config(**config_dict, root=root)
+    return Config(**config_dict)
