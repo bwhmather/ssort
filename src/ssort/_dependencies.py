@@ -1,4 +1,4 @@
-from ssort._builtins import MODULE_BUILTINS, INIT_BUILTINS
+from ssort._builtins import INIT_BUILTINS, MODULE_BUILTINS
 from ssort._graphs import Graph
 
 
