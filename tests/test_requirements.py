@@ -706,7 +706,6 @@ def test_named_expr_requirements():
 
 
 def test_bin_op_requirements():
-
     """
     ..code:: python
 
@@ -995,7 +994,6 @@ def test_starred_requirements():
 
 
 def test_name_requirements():
-
     """
     ..code:: python
 
@@ -1006,7 +1004,6 @@ def test_name_requirements():
 
 
 def test_list_requirements():
-
     """
     ..code:: python
 
