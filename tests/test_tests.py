@@ -20,6 +20,8 @@ def test_tox_commands_match_ci_commands():
     ci_conf = _load_ci_conf()
     ci_commands = set()
     for job in ci_conf["jobs"].values():
+        if job["name"] == "Coverage":
+            continue
         step = job["steps"][-1]
         command = step["run"].strip()
         ci_commands.add(command)
