@@ -104,7 +104,7 @@ We recommend that you reformat using `isort <https://pycqa.github.io/isort/>`_ a
 
 .. code:: bash
 
-    $ ssort src/ tests/ setup.py; isort src/ tests/ setup.py; black src/ tests/ setup.py
+    $ ssort src/ tests/; isort src/ tests/; black src/ tests/
 
 You can also setup ssort to run automatically before commit by setting up `pre-commit <https://pre-commit.com/index.html>`_,
 and registering ssort in your `.pre-commit-config.yaml`.
