@@ -6,9 +6,15 @@ def find_project_root(patterns):
         patterns = ["."]
 
     paths = [Path(p).resolve() for p in patterns]
-    parents = [([p] if p.is_dir() else []) + list(p.parents) for p in paths]
+    parents_and_self = [
+        list(reversed(p.parents)) + ([p] if p.is_dir() else []) for p in paths
+    ]
 
-    *_, (common_base, *_) = zip(*(reversed(p) for p in parents))
+    *_, (common_base, *_) = (
+        common_parent
+        for same_lvl_parent in zip(*parents_and_self)
+        if len(common_parent := set(same_lvl_parent)) == 1
+    )
 
     for directory in (common_base, *common_base.parents):
         if (directory / ".git").exists() or (
@@ -16,4 +22,4 @@ def find_project_root(patterns):
         ).is_file():
             return directory
 
-    return directory
+    return common_base
