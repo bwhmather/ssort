@@ -1,6 +1,14 @@
-import tomllib
+from __future__ import annotations
+
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+if sys.version_info >= (3, 11):
+    from tomllib import load
+else:
+    from tomli import load
+
 
 DEFAULT_SKIP = frozenset(
     {
@@ -42,11 +50,11 @@ def iter_valid_python_files_recursive(folder, *, is_invalid):
             )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class Config:
+    root: Path
     skip: frozenset | list = DEFAULT_SKIP
     extend_skip: list = field(default_factory=list)
-    root: Path
 
     def files(self):
         invalid_names = set(self.skip) | set(self.extend_skip)
@@ -58,7 +66,7 @@ class Config:
 
 def parse_pyproject_toml(path):
     with open(path, "rb") as fh:
-        pyproject_toml = tomllib.load(fh)
+        pyproject_toml = load(fh)
 
     config = pyproject_toml.get("tool", {}).get("ssort", {})
     config = {key.replace("-", "_"): val for key, val in config.items()}
