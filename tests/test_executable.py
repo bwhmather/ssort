@@ -65,6 +65,11 @@ def _write_fixtures(dirpath, texts):
     return paths
 
 
+@pytest.fixture(autouse=True)
+def root(mocker, tmp_path):
+    mocker.patch("ssort._main.find_project_root", return_value=tmp_path)
+
+
 @pytest.fixture(params=["entrypoint", "module"])
 def check(request):
     def _check(dirpath):
