@@ -114,17 +114,17 @@ and registering ssort in your `.pre-commit-config.yaml`.
   repos:
   # ...
   - repo: https://github.com/bwhmather/ssort
-    rev: 0.11.5
+    rev: master
     hooks:
     - id: ssort
   - repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+    rev: master
     hooks:
     - id: isort
       name: isort (python)
       args: [--profile=black]
   - repo: https://github.com/psf/black
-    rev: 22.1.0
+    rev: master
     hooks:
     - id: black
 

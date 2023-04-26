@@ -706,7 +706,6 @@ def test_named_expr_requirements():
 
 
 def test_bin_op_requirements():
-
     """
     ..code:: python
 
@@ -739,6 +738,11 @@ def test_lambda_requirements():
 def test_lambda_requirements_default():
     node = _parse("lambda a=b: a")
     assert _dep_names(node) == ["b"]
+
+
+def test_lambda_requirements_walrus_operator():
+    node = _parse("lambda: (a := 1) + a")
+    assert _dep_names(node) == []
 
 
 def test_if_exp_requirements():
@@ -990,7 +994,6 @@ def test_starred_requirements():
 
 
 def test_name_requirements():
-
     """
     ..code:: python
 
@@ -1001,7 +1004,6 @@ def test_name_requirements():
 
 
 def test_list_requirements():
-
     """
     ..code:: python
 
