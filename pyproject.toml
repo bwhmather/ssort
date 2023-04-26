@@ -75,3 +75,6 @@ attr = "ssort.__version__"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ssort]
+extend_skip = ['test_data']
