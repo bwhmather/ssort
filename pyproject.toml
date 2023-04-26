@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance"
 ]
 dependencies = [
-    "pathspec >=0.9.0"
+    "tomli; python_version<'3.11'"
 ]
 description = "The python statement sorter"
 dynamic = [
