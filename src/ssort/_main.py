@@ -4,7 +4,7 @@ import re
 import sys
 
 from ssort._exceptions import UnknownEncodingError
-from ssort._files import find_python_files
+from ssort._files import find_project_root
 from ssort._ssort import ssort
 from ssort._utils import (
     detect_encoding,
@@ -12,6 +12,8 @@ from ssort._utils import (
     escape_path,
     normalize_newlines,
 )
+
+from ._config import get_config_from_root
 
 
 def main():
@@ -42,7 +44,10 @@ def main():
     unsortable = 0
     unchanged = 0
 
-    for path in find_python_files(args.files):
+    root = find_project_root(args.files)
+    config = get_config_from_root(root)
+
+    for path in config.files():
         errors = False
 
         try:
