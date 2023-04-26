@@ -60,10 +60,6 @@ profile = "black"
 [tool.mypy]
 exclude = "test_data/samples/*"
 
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-module = "pathspec"
-
 [tool.setuptools]
 include-package-data = false
 license-files = [
