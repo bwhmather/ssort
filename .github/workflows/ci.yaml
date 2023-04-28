@@ -23,10 +23,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest
+        pip install pyyaml==6.0
         pip install -e .[test]
     - name: Run tests
       run: |
-        pytest -v tests/
+        pytest -vv tests/
 
   coverage:
     name: "Coverage"
@@ -41,6 +42,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest pytest-cov coveralls
+        pip install pyyaml==6.0
         pip install -e .[test]
     - name: Run tests
       run: |
@@ -133,6 +135,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[test]
         pip install pytest
+        pip install pyyaml==6.0
         pip install pylint
     - name: Run pylint
       run: |
@@ -152,6 +155,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install mypy
           pip install pytest
+          pip install pyyaml==6.0
+          pip install types-PyYAML
           pip install types-setuptools
       - name: Run mypy
         run: |
