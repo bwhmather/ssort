@@ -16,12 +16,6 @@ else:
     memoize = functools.cache
 
 
-def sort_key_from_iter(values):
-    index = {statement: index for index, statement in enumerate(values)}
-    key = lambda value: index[value]
-    return key
-
-
 _T = TypeVar("_T")
 
 
