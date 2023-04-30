@@ -142,8 +142,7 @@ def _iter_child_nodes_of_raise(node: ast.Raise) -> Iterable[ast.AST]:
 
 
 @iter_child_nodes.register(ast.Try)
-@iter_child_nodes.register(ast.TryStar)
-def _iter_child_nodes_of_try(node: ast.Try | ast.TryStar) -> Iterable[ast.AST]:
+def _iter_child_nodes_of_try(node: ast.Try) -> Iterable[ast.AST]:
     yield from node.body
     yield from node.handlers
     yield from node.orelse
@@ -480,6 +479,16 @@ if sys.version_info >= (3, 10):
     @iter_child_nodes.register(ast.MatchOr)
     def _iter_child_nodes_of_match_or(node: ast.MatchOr) -> Iterable[ast.AST]:
         yield from node.patterns
+
+
+if sys.version_info >= (3, 11):
+
+    @iter_child_nodes.register(ast.TryStar)
+    def _iter_child_nodes_of_try(node: ast.TryStar) -> Iterable[ast.AST]:
+        yield from node.body
+        yield from node.handlers
+        yield from node.orelse
+        yield from node.finalbody
 
 
 @iter_child_nodes.register(ast.TypeIgnore)
