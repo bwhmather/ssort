@@ -102,7 +102,7 @@ jobs:
         pip install -e .
     - name: Run ssort
       run: |
-        ssort --check --diff src/ tests/
+        ssort --check --diff .
 
   pyflakes:
     name: "PyFlakes"
