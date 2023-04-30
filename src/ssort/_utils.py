@@ -6,7 +6,7 @@ import re
 import shlex
 import sys
 import tokenize
-from typing import Any, Callable, TypeVar
+from typing import TypeVar
 
 from ssort._exceptions import UnknownEncodingError
 
@@ -17,21 +17,6 @@ else:
 
 
 _T = TypeVar("_T")
-
-
-def cached_method(function: Callable[[Any], _T]) -> Callable[[Any], _T]:
-    cached_attribute_name = f"_{function.__name__}_cache"
-
-    @functools.wraps(function)
-    def wrapper(self) -> _T:
-        try:
-            return getattr(self, cached_attribute_name)
-        except AttributeError:
-            value = function(self)
-            setattr(self, cached_attribute_name, value)
-            return value
-
-    return wrapper
 
 
 def escape_path(path):
