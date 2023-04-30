@@ -1,53 +1,44 @@
 from __future__ import annotations
 
 import ast
-from typing import Iterable
 
-from ssort._ast import iter_child_nodes
-from ssort._single_dispatch import single_dispatch
+__all__ = ["get_method_requirements"]
 
 
-@single_dispatch
-def _get_attribute_accesses(node: ast.AST, variable: str) -> Iterable[str]:
-    for child in iter_child_nodes(node):
-        yield from _get_attribute_accesses(child, variable)
+class SelfAccesses(ast.NodeVisitor):
+    def __init__(self, variable: str):
+        self.stack: list[str] = []
+        self.variable = variable
 
-
-@_get_attribute_accesses.register(ast.ClassDef)
-def _get_attribute_accesses_for_class_def(
-    node: ast.ClassDef, variable: str
-) -> Iterable[str]:
-    # TODO
-    return ()
-
-
-@_get_attribute_accesses.register(ast.Attribute)
-def _get_attribute_accesses_for_attribute(
-    node: ast.Attribute, variable: str
-) -> Iterable[str]:
-    yield from _get_attribute_accesses(node.value, variable)
-    if (
-        isinstance(node.ctx, ast.Load)
-        and isinstance(node.value, ast.Name)
-        and node.value.id == variable
-    ):
-        yield node.attr
-
-
-@single_dispatch
-def get_method_requirements(node: ast.AST) -> Iterable[str]:
-    return ()
-
-
-@get_method_requirements.register(ast.FunctionDef)
-@get_method_requirements.register(ast.AsyncFunctionDef)
-def _get_method_requirements_for_function_def(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-) -> Iterable[str]:
-    if not node.args.args:
+    def visit_ClassDef(self, _: ast.ClassDef):
+        # TODO
         return
 
-    self_arg = node.args.args[0].arg
+    def visit_Attribute(self, node: ast.Attribute):
+        if not isinstance(node.value, ast.Name):
+            super().visit(node.value)
+        elif isinstance(node.ctx, ast.Load) and node.value.id == self.variable:
+            self.stack.append(node.attr)
 
-    for statement in node.body:
-        yield from _get_attribute_accesses(statement, self_arg)
+
+class MethodRequirements(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.stack: list[str] = []
+
+    def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef):
+        if not node.args.args:
+            return
+
+        self_arg = node.args.args[0].arg
+
+        self_access = SelfAccesses(self_arg)
+        self_access.visit(node)
+        self.stack.extend(self_access.stack)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+
+
+def get_method_requirements(node: ast.AST):
+    method_requirements = MethodRequirements()
+    method_requirements.visit(node)
+    yield from method_requirements.stack
