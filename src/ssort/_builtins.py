@@ -1,6 +1,9 @@
 MODULE_BUILTINS = {
     "_",
+    "__annotations__",
     "__build_class__",
+    "__builtins__",
+    "__cached__",
     "__debug__",
     "__doc__",
     "__file__",
@@ -8,6 +11,7 @@ MODULE_BUILTINS = {
     "__loader__",
     "__name__",
     "__package__",
+    "__path__",
     "__spec__",
     "ArithmeticError",
     "AssertionError",
