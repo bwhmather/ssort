@@ -359,10 +359,24 @@ def test_ssort_empty_dir(ssort, tmp_path):
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
 
 
+def test_ssort_non_existent_file(ssort, tmp_path):
+    path = tmp_path / "file.py"
+
+    expected_msgs = [
+        f"ERROR: {escape_path(path)} does not exist\n",
+        "1 file was not sortable\n",
+    ]
+    expected_status = 1
+
+    actual_msgs, actual_status = ssort(path)
+
+    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
 def test_ssort_no_py_extension(ssort, tmp_path):
     path = tmp_path / "file"
     path.write_bytes(_good)
-    expected_msgs = ["No files are present to be sorted. Nothing to do.\n"]
+    expected_msgs = ["1 file was left unchanged\n"]
     expected_status = 0
     actual_msgs, actual_status = ssort(path)
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
