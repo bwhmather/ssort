@@ -11,6 +11,11 @@ match_statement = pytest.mark.skipif(
     reason="match statements were introduced in python 3.10",
 )
 
+exception_group = pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="exception groups were introduced in python 3.11",
+)
+
 
 def _parse(source):
     source = textwrap.dedent(source)
@@ -1157,3 +1162,36 @@ def test_match_statement_requirements_as():
         """
     )
     assert _dep_names(node) == ["a"]
+
+
+@exception_group
+def test_try_star_requirements():
+    """
+    ..code:: python
+
+        TryStar(
+            stmt* body,
+            excepthandler* handlers,
+            stmt* orelse,
+            stmt* finalbody,
+        )
+    """
+    node = _parse(
+        """
+        try:
+            a = something_stupid()
+        except* ExceptionGroup as exc:
+            b = recover()
+        else:
+            c = otherwise()
+        finally:
+            d = finish()
+        """
+    )
+    assert _dep_names(node) == [
+        "something_stupid",
+        "ExceptionGroup",
+        "recover",
+        "otherwise",
+        "finish",
+    ]
