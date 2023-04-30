@@ -52,10 +52,6 @@ def main():
 
         try:
             original_bytes = path.read_bytes()
-        except FileNotFoundError:
-            sys.stderr.write(f"ERROR: {escape_path(path)} does not exist\n")
-            unsortable += 1
-            continue
         except IsADirectoryError:
             sys.stderr.write(f"ERROR: {escape_path(path)} is a directory\n")
             unsortable += 1
