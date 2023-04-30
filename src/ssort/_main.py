@@ -3,6 +3,7 @@ import difflib
 import re
 import sys
 
+from ssort._config import get_config_from_root
 from ssort._exceptions import UnknownEncodingError
 from ssort._files import find_project_root
 from ssort._ssort import ssort
@@ -12,8 +13,6 @@ from ssort._utils import (
     escape_path,
     normalize_newlines,
 )
-
-from ._config import get_config_from_root
 
 
 def main():
