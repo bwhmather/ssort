@@ -142,7 +142,8 @@ def _iter_child_nodes_of_raise(node: ast.Raise) -> Iterable[ast.AST]:
 
 
 @iter_child_nodes.register(ast.Try)
-def _iter_child_nodes_of_try(node: ast.Try) -> Iterable[ast.AST]:
+@iter_child_nodes.register(ast.TryStar)
+def _iter_child_nodes_of_try(node: ast.Try | ast.TryStar) -> Iterable[ast.AST]:
     yield from node.body
     yield from node.handlers
     yield from node.orelse
