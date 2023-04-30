@@ -5,14 +5,14 @@ import sys
 
 from ssort._config import get_config_from_root
 from ssort._exceptions import UnknownEncodingError
-from ssort._files import find_project_root
-from ssort._ssort import ssort
-from ssort._utils import (
+from ssort._files import (
     detect_encoding,
     detect_newline,
     escape_path,
+    find_project_root,
     normalize_newlines,
 )
+from ssort._ssort import ssort
 
 
 def main():

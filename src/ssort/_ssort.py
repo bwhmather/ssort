@@ -14,6 +14,7 @@ from ssort._exceptions import (
     UnknownEncodingError,
     WildcardImportError,
 )
+from ssort._files import detect_encoding, detect_newline, normalize_newlines
 from ssort._graphs import (
     is_topologically_sorted,
     replace_cycles,
@@ -21,7 +22,6 @@ from ssort._graphs import (
     topological_sort,
 )
 from ssort._parsing import parse, split_class
-from ssort._utils import detect_encoding, detect_newline, normalize_newlines
 
 SPECIAL_PROPERTIES = [
     "__doc__",

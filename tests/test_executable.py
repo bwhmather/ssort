@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from ssort._utils import escape_path
+from ssort._files import escape_path
 
 _good = b"""
 def _private():
