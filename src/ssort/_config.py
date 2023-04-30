@@ -10,6 +10,9 @@ else:
     from tomli import load
 
 
+__all__ = ["get_config_from_root"]
+
+
 DEFAULT_SKIP = frozenset(
     {
         ".bzr",
