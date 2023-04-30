@@ -1,111 +1,97 @@
 from __future__ import annotations
 
 import ast
-import sys
-from typing import Iterable
+from typing import Sequence
 
-from ssort._ast import iter_child_nodes
-from ssort._single_dispatch import single_dispatch
+__all__ = ["get_bindings"]
 
 
-@single_dispatch
-def get_bindings(node: ast.AST) -> Iterable[str]:
-    for child in iter_child_nodes(node):
-        yield from get_bindings(child)
+class Bindings(ast.NodeVisitor):
+    def __init__(self):
+        self.stack = []
 
+    def append(self, name: list[str] | str | None):
+        if name is None:
+            return
 
-@get_bindings.register(ast.FunctionDef)
-@get_bindings.register(ast.AsyncFunctionDef)
-def _get_bindings_for_function_def(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-) -> Iterable[str]:
-    for decorator in node.decorator_list:
-        yield from get_bindings(decorator)
-    yield node.name
-    yield from get_bindings(node.args)
-    if node.returns is not None:
-        yield from get_bindings(node.returns)
+        if isinstance(name, list):
+            self.stack.extend(name)
 
-
-@get_bindings.register(ast.ClassDef)
-def _get_bindings_for_class_def(node: ast.ClassDef) -> Iterable[str]:
-    for decorator in node.decorator_list:
-        yield from get_bindings(decorator)
-    for base in node.bases:
-        yield from get_bindings(base)
-    for keyword in node.keywords:
-        yield from get_bindings(keyword.value)
-    yield node.name
-
-
-@get_bindings.register(ast.Import)
-def _get_bindings_for_import(node: ast.Import) -> Iterable[str]:
-    for name in node.names:
-        if name.asname:
-            yield name.asname
         else:
-            root, *rest = name.name.split(".", 1)
-            yield root
+            self.stack.append(name)
+
+    def flexible_visit(self, node: Sequence[ast.AST] | ast.AST | None):
+        if node is None:
+            return
+
+        if isinstance(node, Sequence):
+            for n in node:
+                self.flexible_visit(n)
+        else:
+            self.visit(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef):
+        self.flexible_visit(node.decorator_list)
+        self.append(node.name)
+        # body is missing
+        self.flexible_visit(node.args)
+        self.flexible_visit(node.returns)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+
+    def visit_ClassDef(self, node: ast.ClassDef):
+        self.flexible_visit(node.decorator_list)
+        self.flexible_visit(node.bases)
+        self.flexible_visit(node.keywords)
+        self.append(node.name)
+        # missing keywords, starargs, body
+
+    def visit_Import(self, node):
+        for name in node.names:
+            if name.asname:
+                self.append(name.asname)
+            else:
+                root, *rest = name.name.split(".", 1)
+                self.append(root)
+
+    def visit_ImportFrom(self, node):
+        for name in node.names:
+            self.append(name.asname if name.asname else name.name)
+
+    def visit_Global(self, node: ast.Global | ast.Nonlocal):
+        self.append(node.names)
+
+    visit_Nonlocal = visit_Global
+
+    def visit_Lambda(self, node):
+        self.flexible_visit(node.args)
+
+    # def visit_alias(self, node: ast.alias):
+    #     self.append(node.asname if node.asname else node.name)
+
+    def visit_Name(self, node: ast.Name):
+        if isinstance(node.ctx, ast.Store):
+            self.append(node.id)
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler):
+        self.flexible_visit(node.type)
+        self.append(node.name)
+        self.flexible_visit(node.body)
+
+    def visit_MatchStar(self, node: ast.MatchStar):
+        self.append(node.name)
+
+    def visit_MatchMapping(self, node: ast.MatchMapping):
+        self.flexible_visit(node.keys)
+        self.flexible_visit(node.patterns)
+        self.append(node.rest)
+
+    def visit_MatchAs(self, node: ast.MatchAs):
+        self.flexible_visit(node.pattern)
+        self.append(node.name)
 
 
-@get_bindings.register(ast.ImportFrom)
-def _get_bindings_for_import_from(node: ast.ImportFrom) -> Iterable[str]:
-    for name in node.names:
-        yield name.asname if name.asname else name.name
-
-
-@get_bindings.register(ast.Global)
-def _get_bindings_for_global(node: ast.Global) -> Iterable[str]:
-    yield from node.names
-
-
-@get_bindings.register(ast.Nonlocal)
-def _get_bindings_for_nonlocal(node: ast.Nonlocal) -> Iterable[str]:
-    yield from node.names
-
-
-@get_bindings.register(ast.Lambda)
-def _get_bindings_for_lambda(node: ast.Lambda) -> Iterable[str]:
-    yield from get_bindings(node.args)
-
-
-@get_bindings.register(ast.Name)
-def _get_bindings_for_name(node: ast.Name) -> Iterable[str]:
-    if isinstance(node.ctx, ast.Store):
-        yield node.id
-
-
-@get_bindings.register(ast.ExceptHandler)
-def _get_bindings_for_except_handler(node: ast.ExceptHandler) -> Iterable[str]:
-    if node.type:
-        yield from get_bindings(node.type)
-    if node.name:
-        yield node.name
-    for statement in node.body:
-        yield from get_bindings(statement)
-
-
-if sys.version_info >= (3, 10):
-
-    @get_bindings.register(ast.MatchStar)
-    def _get_bindings_for_match_star(node: ast.MatchStar) -> Iterable[str]:
-        if node.name is not None:
-            yield node.name
-
-    @get_bindings.register(ast.MatchMapping)
-    def _get_bindings_for_match_mapping(
-        node: ast.MatchMapping,
-    ) -> Iterable[str]:
-        for key in node.keys:
-            yield from get_bindings(key)
-        for pattern in node.patterns:
-            yield from get_bindings(pattern)
-        if node.rest is not None:
-            yield node.rest
-
-    @get_bindings.register(ast.MatchAs)
-    def _get_bindings_for_match_as(node: ast.MatchAs) -> Iterable[str]:
-        if node.pattern is not None:
-            yield from get_bindings(node.pattern)
-        if node.name is not None:
-            yield node.name
+def get_bindings(node: ast.AST):
+    bindings = Bindings()
+    bindings.visit(node)
+    yield from bindings.stack
