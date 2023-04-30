@@ -5,7 +5,7 @@ import sys
 from typing import Iterable
 
 from ssort._ast import iter_child_nodes
-from ssort._utils import single_dispatch
+from ssort._single_dispatch import single_dispatch
 
 
 @single_dispatch

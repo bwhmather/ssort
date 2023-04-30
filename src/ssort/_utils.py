@@ -6,7 +6,7 @@ import re
 import shlex
 import sys
 import tokenize
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Callable, TypeVar
 
 from ssort._exceptions import UnknownEncodingError
 
@@ -17,30 +17,6 @@ else:
 
 
 _T = TypeVar("_T")
-
-
-class _SingleDispatch(Generic[_T]):
-    """A more performant implementation of functools.singledispatch."""
-
-    def __init__(self, function: Callable[..., _T]) -> None:
-        functools.update_wrapper(self, function)
-        self._function: Callable[..., _T] = function
-        self._functions: dict[type[Any], Callable[..., _T]] = {}
-
-    def register(
-        self, cls: type[Any]
-    ) -> Callable[[Callable[..., _T]], Callable[..., _T]]:
-        def decorator(function: Callable[..., _T]) -> Callable[..., _T]:
-            self._functions[cls] = function
-            return function
-
-        return decorator
-
-    def __call__(self, arg: Any, *args: Any) -> _T:
-        return self._functions.get(type(arg), self._function)(arg, *args)
-
-
-single_dispatch = _SingleDispatch
 
 
 def cached_method(function: Callable[[Any], _T]) -> Callable[[Any], _T]:
