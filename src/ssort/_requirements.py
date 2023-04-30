@@ -8,7 +8,7 @@ from typing import Iterable
 from ssort._ast import iter_child_nodes
 from ssort._bindings import get_bindings
 from ssort._builtins import CLASS_BUILTINS
-from ssort._utils import single_dispatch
+from ssort._single_dispatch import single_dispatch
 
 
 class Scope(enum.Enum):
