@@ -52,10 +52,6 @@ def main():
 
         try:
             original_bytes = path.read_bytes()
-        except IsADirectoryError:
-            sys.stderr.write(f"ERROR: {escape_path(path)} is a directory\n")
-            unsortable += 1
-            continue
         except PermissionError:
             sys.stderr.write(f"ERROR: {escape_path(path)} is not readable\n")
             unsortable += 1
