@@ -64,6 +64,11 @@ exclude = "test_data/samples/*"
 ignore_missing_imports = true
 module = "pathspec"
 
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
+
 [tool.setuptools]
 include-package-data = false
 license-files = [

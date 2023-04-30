@@ -27,7 +27,7 @@ jobs:
         pip install -e .[test]
     - name: Run tests
       run: |
-        pytest -vv tests/
+        pytest -vv
 
   coverage:
     name: "Coverage"
@@ -46,7 +46,7 @@ jobs:
         pip install -e .[test]
     - name: Run tests
       run: |
-        pytest --cov=ssort -v tests/
+        pytest --cov=ssort -v
     - name: Upload coverage report to coveralls
       run: |
         coveralls --service=github
