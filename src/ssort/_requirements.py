@@ -3,12 +3,12 @@ from __future__ import annotations
 import ast
 import dataclasses
 import enum
-from typing import Iterable
+from typing import Sequence
 
-from ssort._ast import iter_child_nodes
 from ssort._bindings import get_bindings
 from ssort._builtins import CLASS_BUILTINS
-from ssort._single_dispatch import single_dispatch
+
+__all__ = ["get_requirements", "Requirement"]
 
 
 class Scope(enum.Enum):
@@ -26,13 +26,7 @@ class Requirement:
     scope: Scope = Scope.LOCAL
 
 
-@single_dispatch
-def get_requirements(node: ast.AST) -> Iterable[Requirement]:
-    for child in iter_child_nodes(node):
-        yield from get_requirements(child)
-
-
-def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
+def get_scope_from_arguments(args: ast.arguments) -> set[str]:
     scope: set[str] = set()
     scope.update(arg.arg for arg in args.posonlyargs)
     scope.update(arg.arg for arg in args.args)  # Arghhh.
@@ -44,144 +38,150 @@ def _get_scope_from_arguments(args: ast.arguments) -> set[str]:
     return scope
 
 
-@get_requirements.register(ast.FunctionDef)
-@get_requirements.register(ast.AsyncFunctionDef)
-def _get_requirements_for_function_def(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-) -> Iterable[Requirement]:
-    for decorator in node.decorator_list:
-        yield from get_requirements(decorator)
-
-    yield from get_requirements(node.args)
-
-    if node.returns is not None:
-        yield from get_requirements(node.returns)
-
-    scope = _get_scope_from_arguments(node.args)
-
-    requirements = []
-    for statement in node.body:
-        scope.update(get_bindings(statement))
-        for requirement in get_requirements(statement):
-            if not requirement.deferred:
-                requirement = dataclasses.replace(requirement, deferred=True)
-            requirements.append(requirement)
-
-    for requirement in requirements:
-        if requirement.scope == Scope.GLOBAL:
-            yield requirement
-        elif requirement.scope == Scope.NONLOCAL:
-            yield dataclasses.replace(requirement, scope=Scope.LOCAL)
-        elif requirement.name not in scope:
-            yield requirement
+def get_requirements(node: ast.AST):
+    requirements = Requirements()
+    requirements.visit(node)
+    yield from requirements.stack
 
 
-@get_requirements.register(ast.ClassDef)
-def _get_requirements_for_class_def(
-    node: ast.ClassDef,
-) -> Iterable[Requirement]:
-    for decorator in node.decorator_list:
-        yield from get_requirements(decorator)
+class Requirements(ast.NodeVisitor):
+    def __init__(self):
+        self.stack = []
 
-    for base in node.bases:
-        yield from get_requirements(base)
+    def flexible_visit(self, node: Sequence[ast.AST] | ast.AST | None):
+        if node is None:
+            return
 
-    scope = set(CLASS_BUILTINS)
+        if isinstance(node, Sequence):
+            for n in node:
+                self.flexible_visit(n)
+        else:
+            self.visit(node)
 
-    for statement in node.body:
-        for stmt_dep in get_requirements(statement):
-            if stmt_dep.deferred or stmt_dep.name not in scope:
-                yield stmt_dep
+    def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef):
+        self.flexible_visit(node.decorator_list)
+        self.flexible_visit(node.args)
+        self.flexible_visit(node.returns)
 
-        scope.update(get_bindings(statement))
+        scope = get_scope_from_arguments(node.args)
 
+        requirements = []
+        for statement in node.body:
+            scope.update(get_bindings(statement))
+            for requirement in get_requirements(statement):
+                if not requirement.deferred:
+                    requirement = dataclasses.replace(
+                        requirement, deferred=True
+                    )
+                requirements.append(requirement)
 
-@get_requirements.register(ast.For)
-@get_requirements.register(ast.AsyncFor)
-def _get_requirements_for_for(
-    node: ast.For | ast.AsyncFor,
-) -> Iterable[Requirement]:
-    bindings = set(get_bindings(node))
+        for requirement in requirements:
+            if requirement.scope == Scope.GLOBAL:
+                self.stack.append(requirement)
+            elif requirement.scope == Scope.NONLOCAL:
+                self.stack.append(
+                    dataclasses.replace(requirement, scope=Scope.LOCAL)
+                )
+            elif requirement.name not in scope:
+                self.stack.append(requirement)
 
-    yield from get_requirements(node.target)
-    yield from get_requirements(node.iter)
+    visit_AsyncFunctionDef = visit_FunctionDef
 
-    for stmt in node.body:
-        for requirement in get_requirements(stmt):
-            if requirement.name not in bindings:
-                yield requirement
+    def visit_ClassDef(self, node: ast.ClassDef):
+        self.flexible_visit(node.decorator_list)
+        self.flexible_visit(node.bases)
 
-    for stmt in node.orelse:
-        for requirement in get_requirements(stmt):
-            if requirement.name not in bindings:
-                yield requirement
+        scope = set(CLASS_BUILTINS)
 
+        for statement in node.body:
+            for stmt_dep in get_requirements(statement):
+                if stmt_dep.deferred or stmt_dep.name not in scope:
+                    self.stack.append(stmt_dep)
 
-@get_requirements.register(ast.With)
-@get_requirements.register(ast.AsyncWith)
-def _get_requirements_for_with(
-    node: ast.With | ast.AsyncWith,
-) -> Iterable[Requirement]:
-    bindings = set(get_bindings(node))
+            scope.update(get_bindings(statement))
 
-    for item in node.items:
-        yield from get_requirements(item)
+    def visit_For(self, node: ast.For | ast.AsyncFor):
+        bindings = set(get_bindings(node))
 
-    for stmt in node.body:
-        for requirement in get_requirements(stmt):
-            if requirement.name not in bindings:
-                yield requirement
+        self.flexible_visit(node.target)
+        self.flexible_visit(node.iter)
 
+        for stmt in node.body:
+            for requirement in get_requirements(stmt):
+                if requirement.name not in bindings:
+                    self.stack.append(requirement)
 
-@get_requirements.register(ast.Global)
-def _get_requirements_for_global(node: ast.Global) -> Iterable[Requirement]:
-    for name in node.names:
-        yield Requirement(
-            name=name,
-            lineno=node.lineno,
-            col_offset=node.col_offset,
-            scope=Scope.GLOBAL,
-        )
+        for stmt in node.orelse:
+            for requirement in get_requirements(stmt):
+                if requirement.name not in bindings:
+                    self.stack.append(requirement)
 
+    visit_AsyncFor = visit_For
 
-@get_requirements.register(ast.Nonlocal)
-def _get_requirements_for_nonlocal(
-    node: ast.Nonlocal,
-) -> Iterable[Requirement]:
-    for name in node.names:
-        yield Requirement(
-            name=name,
-            lineno=node.lineno,
-            col_offset=node.col_offset,
-            scope=Scope.NONLOCAL,
-        )
+    def visit_With(self, node: ast.With | ast.AsyncWith):
+        bindings = set(get_bindings(node))
 
+        self.flexible_visit(node.items)
 
-@get_requirements.register(ast.Lambda)
-def _get_requirements_for_lambda(node: ast.Lambda) -> Iterable[Requirement]:
-    yield from get_requirements(node.args)
-    scope = _get_scope_from_arguments(node.args)
-    scope.update(get_bindings(node.body))
-    for requirement in get_requirements(node.body):
-        if requirement.name not in scope:
-            yield requirement
+        for stmt in node.body:
+            for requirement in get_requirements(stmt):
+                if requirement.name not in bindings:
+                    self.stack.append(requirement)
 
+    visit_AsyncWith = visit_With
 
-@get_requirements.register(ast.ListComp)
-@get_requirements.register(ast.SetComp)
-@get_requirements.register(ast.DictComp)
-@get_requirements.register(ast.GeneratorExp)
-def _get_requirements_for_comp(node: ast.AST) -> Iterable[Requirement]:
-    bindings = set(get_bindings(node))
-    for child in iter_child_nodes(node):
-        for requirement in get_requirements(child):
-            if requirement.name not in bindings:
-                yield requirement
+    def visit_Global(self, node: ast.Global):
+        for name in node.names:
+            self.stack.append(
+                Requirement(
+                    name=name,
+                    lineno=node.lineno,
+                    col_offset=node.col_offset,
+                    scope=Scope.GLOBAL,
+                )
+            )
 
+    def visit_Nonlocal(self, node: ast.Nonlocal):
+        for name in node.names:
+            self.stack.append(
+                Requirement(
+                    name=name,
+                    lineno=node.lineno,
+                    col_offset=node.col_offset,
+                    scope=Scope.NONLOCAL,
+                )
+            )
 
-@get_requirements.register(ast.Name)
-def _get_requirements_for_name(node: ast.Name) -> Iterable[Requirement]:
-    if isinstance(node.ctx, (ast.Load, ast.Del)):
-        yield Requirement(
-            name=node.id, lineno=node.lineno, col_offset=node.col_offset
-        )
+    def visit_Lambda(self, node: ast.Lambda):
+        self.flexible_visit(node.args)
+
+        scope = get_scope_from_arguments(node.args)
+        scope.update(get_bindings(node.body))
+
+        for requirement in get_requirements(node.body):
+            if requirement.name not in scope:
+                self.stack.append(requirement)
+
+    def visit_ListComp(
+        self,
+        node: ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp,
+    ):
+        bindings = set(get_bindings(node))
+        for child in ast.iter_child_nodes(node):
+            for requirement in get_requirements(child):
+                if requirement.name not in bindings:
+                    self.stack.append(requirement)
+
+    visit_SetComp = visit_ListComp
+    visit_DictComp = visit_ListComp
+    visit_GeneratorExp = visit_ListComp
+
+    def visit_Name(self, node: ast.Name):
+        if isinstance(node.ctx, (ast.Load, ast.Del)):
+            self.stack.append(
+                Requirement(
+                    name=node.id,
+                    lineno=node.lineno,
+                    col_offset=node.col_offset,
+                )
+            )
