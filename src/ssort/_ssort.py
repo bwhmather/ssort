@@ -17,15 +17,11 @@ from ssort._exceptions import (
 from ssort._graphs import (
     is_topologically_sorted,
     replace_cycles,
+    sort_key_from_iter,
     topological_sort,
 )
 from ssort._parsing import parse, split_class
-from ssort._utils import (
-    detect_encoding,
-    detect_newline,
-    normalize_newlines,
-    sort_key_from_iter,
-)
+from ssort._utils import detect_encoding, detect_newline, normalize_newlines
 
 SPECIAL_PROPERTIES = [
     "__doc__",

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Callable, Generic, Hashable, TypeVar
 
-from ssort._utils import sort_key_from_iter
-
 _T = TypeVar("_T", bound=Hashable)
 
 
@@ -138,6 +136,11 @@ def is_topologically_sorted(nodes: list[_T], graph: Graph[_T]) -> bool:
             if dependency not in visited:
                 return False
     return True
+
+
+def sort_key_from_iter(values):
+    index = {statement: index for index, statement in enumerate(values)}
+    return lambda value: index[value]
 
 
 def topological_sort(
