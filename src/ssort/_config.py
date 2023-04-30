@@ -41,10 +41,10 @@ def iter_valid_python_files_recursive(folder, *, is_invalid):
         if is_invalid(child):
             continue
 
-        if child.is_file() and child.suffix == ".py":
+        elif child.is_file() and child.suffix == ".py":
             yield child
 
-        if child.is_dir():
+        elif child.is_dir():
             yield from iter_valid_python_files_recursive(
                 child, is_invalid=is_invalid
             )
@@ -55,19 +55,19 @@ class Config:
     skip: frozenset | list = DEFAULT_SKIP
     extend_skip: list = field(default_factory=list)
 
-    def iterate_files_matching_pattern(self, pattern):
+    def is_invalid(self, x):
+        return x.name in set(self.skip) | set(self.extend_skip)
+
+    def iterate_files_matching_patterns(self, pattern):
         for pat in pattern:
             path = Path(pat).resolve()
 
             if path.is_file() and path.suffix == ".py":
                 yield path
-                continue
 
-            if path.is_dir():
-                invalid_names = set(self.skip) | set(self.extend_skip)
+            elif path.is_dir():
                 yield from iter_valid_python_files_recursive(
-                    path,
-                    is_invalid=lambda x: x.name in invalid_names,
+                    path, is_invalid=self.is_invalid
                 )
 
 
@@ -75,10 +75,7 @@ def parse_pyproject_toml(path):
     with open(path, "rb") as fh:
         pyproject_toml = load(fh)
 
-    config = pyproject_toml.get("tool", {}).get("ssort", {})
-    config = {key.replace("-", "_"): val for key, val in config.items()}
-
-    return config
+    return pyproject_toml.get("tool", {}).get("ssort", {})
 
 
 def get_config_from_root(root):
