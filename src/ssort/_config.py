@@ -23,11 +23,13 @@ DEFAULT_SKIP = frozenset(
         ".mypy_cache",
         ".nox",
         ".pants.d",
+        ".pytest_cache",
         ".pytype",
         ".ruff_cache",
         ".svn",
         ".tox",
         ".venv",
+        "__pycache__",
         "__pypackages__",
         "_build",
         "buck-out",
@@ -56,10 +58,18 @@ def iter_valid_python_files_recursive(folder, *, is_invalid):
 @dataclass(frozen=True)
 class Config:
     skip: frozenset | list = DEFAULT_SKIP
+    skip_glob: list = field(default_factory=list)
     extend_skip: list = field(default_factory=list)
 
-    def is_invalid(self, x):
-        return x.name in set(self.skip) | set(self.extend_skip)
+    def is_invalid(self, path):
+        if path.name in (set(self.skip) | set(self.extend_skip)):
+            return True
+
+        for pat in self.skip_glob:
+            if path.match(pat):
+                return True
+
+        return False
 
     def iterate_files_matching_patterns(self, pattern):
         for pat in pattern:
