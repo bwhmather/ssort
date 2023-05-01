@@ -8,6 +8,8 @@ from typing import Sequence
 from ssort._bindings import get_bindings
 from ssort._builtins import CLASS_BUILTINS
 
+from ._node_visitor import SmartNodeVisitor
+
 __all__ = ["get_requirements", "Requirement"]
 
 
@@ -44,24 +46,11 @@ def get_requirements(node: ast.AST):
     yield from requirements.stack
 
 
-class Requirements(ast.NodeVisitor):
-    def __init__(self):
-        self.stack = []
-
-    def flexible_visit(self, node: Sequence[ast.AST] | ast.AST | None):
-        if node is None:
-            return
-
-        if isinstance(node, Sequence):
-            for n in node:
-                self.flexible_visit(n)
-        else:
-            self.visit(node)
-
+class Requirements(SmartNodeVisitor):
     def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef):
-        self.flexible_visit(node.decorator_list)
-        self.flexible_visit(node.args)
-        self.flexible_visit(node.returns)
+        self.smart_visit(node.decorator_list)
+        self.smart_visit(node.args)
+        self.smart_visit(node.returns)
 
         scope = get_scope_from_arguments(node.args)
 
@@ -88,8 +77,8 @@ class Requirements(ast.NodeVisitor):
     visit_AsyncFunctionDef = visit_FunctionDef
 
     def visit_ClassDef(self, node: ast.ClassDef):
-        self.flexible_visit(node.decorator_list)
-        self.flexible_visit(node.bases)
+        self.smart_visit(node.decorator_list)
+        self.smart_visit(node.bases)
 
         scope = set(CLASS_BUILTINS)
 
@@ -103,8 +92,8 @@ class Requirements(ast.NodeVisitor):
     def visit_For(self, node: ast.For | ast.AsyncFor):
         bindings = set(get_bindings(node))
 
-        self.flexible_visit(node.target)
-        self.flexible_visit(node.iter)
+        self.smart_visit(node.target)
+        self.smart_visit(node.iter)
 
         for stmt in node.body:
             for requirement in get_requirements(stmt):
@@ -121,7 +110,7 @@ class Requirements(ast.NodeVisitor):
     def visit_With(self, node: ast.With | ast.AsyncWith):
         bindings = set(get_bindings(node))
 
-        self.flexible_visit(node.items)
+        self.smart_visit(node.items)
 
         for stmt in node.body:
             for requirement in get_requirements(stmt):
@@ -153,7 +142,7 @@ class Requirements(ast.NodeVisitor):
             )
 
     def visit_Lambda(self, node: ast.Lambda):
-        self.flexible_visit(node.args)
+        self.smart_visit(node.args)
 
         scope = get_scope_from_arguments(node.args)
         scope.update(get_bindings(node.body))
