@@ -12,7 +12,31 @@ def test_default_skip_defined():
 class TestIterValidPythonFiles:
     @pytest.fixture()
     def names(self):
-        return ["dog.py", "cat.py", "apple.py", "dir/meow.py"]
+        return [
+            "apple.py",
+            "cat.py",
+            "cats.py",
+            "dir/bark.py",
+            "dir/meow.py",
+            "dog.py",
+            "cats/not_a_cat.py",
+        ]
+
+    @pytest.fixture()
+    def skip_glob(self):
+        return ["dir/*", "cat*"]
+
+    @pytest.fixture()
+    def is_invalid_glob(self, tmp_path):
+        def fun(path):
+            return path.relative_to(tmp_path) in [
+                Path("cat.py"),
+                Path("cats.py"),
+                Path("dir/bark.py"),
+                Path("dir/meow.py"),
+            ]
+
+        return fun
 
     @pytest.fixture()
     def is_invalid(self, names):
@@ -28,6 +52,48 @@ class TestIterValidPythonFiles:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.touch()
         return tmp_path
+
+    @pytest.fixture()
+    def files(self, names, folder):
+        return [folder / name for name in names]
+
+    def test_is_invalid_skip_only(self, names, folder, is_invalid, files):
+        cfg = config.Config(skip=names)
+
+        valid = folder / "banana.py"
+        valid.touch()
+        files.append(valid)
+
+        valid = folder / "dir" / "banana.py"
+        valid.touch()
+        files.append(valid)
+
+        for file in files:
+            assert is_invalid(file.name) == cfg.is_invalid(file)
+
+    def test_is_invalid_extend_skip_only(
+        self, names, folder, is_invalid, files
+    ):
+        cfg = config.Config(skip=[], extend_skip=names)
+
+        valid = folder / "banana.py"
+        valid.touch()
+        files.append(valid)
+
+        valid = folder / "dir" / "banana.py"
+        valid.touch()
+        files.append(valid)
+
+        for file in files:
+            assert is_invalid(file.name) == cfg.is_invalid(file)
+
+    def test_is_invalid_skip_glob_only(
+        self, skip_glob, is_invalid_glob, files
+    ):
+        cfg = config.Config(skip=[], skip_glob=skip_glob)
+
+        for file in files:
+            assert is_invalid_glob(file) == cfg.is_invalid(file)
 
     def test_iter_valid_python_files_recursive(
         self, folder, is_invalid, names
