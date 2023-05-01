@@ -66,7 +66,7 @@ class Config:
             return True
 
         for pat in self.skip_glob:
-            if path.match(pat):
+            if path.is_file() and path.match(pat):
                 return True
 
         return False
