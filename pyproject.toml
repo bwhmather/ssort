@@ -73,4 +73,8 @@ attr = "ssort.__version__"
 where = ["src"]
 
 [tool.ssort]
-extend_skip = ['test_data']
+extend_skip = [
+    ".pytest_cache",
+    "__pycache__",
+    "test_data"
+]
