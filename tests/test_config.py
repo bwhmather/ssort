@@ -94,6 +94,7 @@ class TestIterValidPythonFiles:
 
         for file in files:
             assert is_invalid_glob(file) == cfg.is_invalid(file)
+            assert is_invalid_glob(file.parent) == cfg.is_invalid(file.parent)
 
     def test_iter_valid_python_files_recursive(
         self, folder, is_invalid, names
