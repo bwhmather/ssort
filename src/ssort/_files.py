@@ -1,8 +1,14 @@
 from pathlib import Path
 
+__all__ = ["find_project_root"]
+
+
+def current_working_dir():
+    return Path(".").resolve()
+
 
 def find_project_root(patterns):
-    all_patterns = [Path(".").resolve()]
+    all_patterns = [current_working_dir()]
 
     if patterns:
         all_patterns.extend(patterns)
