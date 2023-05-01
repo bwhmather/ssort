@@ -2,10 +2,12 @@ from pathlib import Path
 
 
 def find_project_root(patterns):
-    if not patterns:
-        patterns = ["."]
+    all_patterns = [Path(".").resolve()]
 
-    paths = [Path(p).resolve() for p in patterns]
+    if patterns:
+        all_patterns.extend(patterns)
+
+    paths = [Path(p).resolve() for p in all_patterns]
     parents_and_self = [
         list(reversed(p.parents)) + ([p] if p.is_dir() else []) for p in paths
     ]
