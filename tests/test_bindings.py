@@ -19,6 +19,11 @@ match_statement = pytest.mark.skipif(
     reason="match statements were introduced in python 3.10",
 )
 
+exception_group = pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="exception groups were introduced in python 3.11",
+)
+
 
 def _parse(source):
     source = textwrap.dedent(source)
@@ -1546,3 +1551,84 @@ def test_match_statement_bindings_as():
         """
     )
     assert list(get_bindings(node)) == ["b", "c"]
+
+
+@exception_group
+def test_try_star_no_binding():
+    """
+    ..code:: python
+
+        TryStar(
+            stmt* body,
+            excepthandler* handlers,
+            stmt* orelse,
+            stmt* finalbody,
+        )
+    """
+    node = _parse(
+        """
+        try:
+            a = something_stupid()
+        except* ExceptionGroup:
+            b = recover()
+        else:
+            c = otherwise()
+        finally:
+            d = finish()
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "b", "c", "d"]
+
+
+@exception_group
+def test_try_star_binding():
+    """
+    ..code:: python
+
+        TryStar(
+            stmt* body,
+            excepthandler* handlers,
+            stmt* orelse,
+            stmt* finalbody,
+        )
+    """
+    node = _parse(
+        """
+        try:
+            a = something_stupid()
+        except* ExceptionGroup as exc:
+            b = recover()
+        else:
+            c = otherwise()
+        finally:
+            d = finish()
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "exc", "b", "c", "d"]
+
+
+@exception_group
+def test_try_star_binding_walrus_exeption_type():
+    """
+    ..code:: python
+
+        TryStar(
+            stmt* body,
+            excepthandler* handlers,
+            stmt* orelse,
+            stmt* finalbody,
+        )
+    """
+    node = _parse(
+        """
+        try:
+            a = something_stupid()
+        except* (grp_type := ExceptionGroup) as grp:
+            b = recover()
+        else:
+            c = otherwise()
+        finally:
+            d = finish()
+        """
+    )
+    assert list(get_bindings(node)) == ["a", "grp_type", "grp", "b", "c", "d"]
