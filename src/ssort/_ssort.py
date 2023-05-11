@@ -7,13 +7,7 @@ from ssort._dependencies import (
     class_statements_runtime_graph,
     module_statements_graph,
 )
-from ssort._exceptions import (
-    DecodingError,
-    ParseError,
-    ResolutionError,
-    UnknownEncodingError,
-    WildcardImportError,
-)
+from ssort._exceptions import DecodingError, ParseError, UnknownEncodingError
 from ssort._graphs import (
     is_topologically_sorted,
     replace_cycles,
@@ -393,51 +387,6 @@ def _interpret_on_parse_error_action(on_parse_error):
     return on_parse_error
 
 
-def _on_unresolved_ignore(message, *, name, lineno, col_offset, **kwargs):
-    pass
-
-
-def _on_unresolved_raise(message, *, name, lineno, col_offset, **kwargs):
-    raise ResolutionError(
-        message,
-        name=name,
-        lineno=lineno,
-        col_offset=col_offset,
-    )
-
-
-def _interpret_on_unresolved_action(on_unresolved):
-    if on_unresolved == "ignore":
-        return _on_unresolved_ignore
-
-    if on_unresolved == "raise":
-        return _on_unresolved_raise
-
-    return on_unresolved
-
-
-def _on_wildcard_import_ignore(**kwargs):
-    pass
-
-
-def _on_wildcard_import_raise(*, lineno, col_offset, **kwargs):
-    raise WildcardImportError(
-        "can't reliably determine dependencies on * import",
-        lineno=lineno,
-        col_offset=col_offset,
-    )
-
-
-def _interpret_on_wildcard_import_action(on_wildcard_import):
-    if on_wildcard_import == "ignore":
-        return _on_wildcard_import_ignore
-
-    if on_wildcard_import == "raise":
-        return _on_wildcard_import_raise
-
-    return on_wildcard_import
-
-
 def ssort(
     text,
     *,
@@ -445,18 +394,12 @@ def ssort(
     on_unknown_encoding_error="raise",
     on_decoding_error="raise",
     on_parse_error="raise",
-    on_unresolved="raise",
-    on_wildcard_import="raise",
 ):
     on_unknown_encoding_error = _interpret_on_unknown_encoding_action(
         on_unknown_encoding_error
     )
     on_decoding_error = _interpret_on_decoding_error_action(on_decoding_error)
     on_parse_error = _interpret_on_parse_error_action(on_parse_error)
-    on_unresolved = _interpret_on_unresolved_action(on_unresolved)
-    on_wildcard_import = _interpret_on_wildcard_import_action(
-        on_wildcard_import
-    )
 
     try:
         encoding = None
@@ -483,13 +426,7 @@ def ssort(
     if not statements:
         return text
 
-    graph = module_statements_graph(
-        statements,
-        on_unresolved=on_unresolved,
-        on_wildcard_import=on_wildcard_import,
-    )
-    if graph is None:
-        return text
+    graph = module_statements_graph(statements)
 
     replace_cycles(graph, key=sort_key_from_iter(statements))
 

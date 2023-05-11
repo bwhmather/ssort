@@ -176,10 +176,9 @@ def test_check_resolution_error(ssort, tmp_path):
 
     assert stdout == b""
     assert _messages(stderr) == [
-        f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
-        "2 files would be left unchanged, 1 file would not be sortable\n",
+        "3 files would be left unchanged\n",
     ]
-    assert status == 1
+    assert status == 0
     assert _read_fixtures(paths) == [_resolution, _good, _good]
 
 
@@ -190,11 +189,9 @@ def test_check_double_resolution_error(ssort, tmp_path):
 
     assert stdout == b""
     assert _messages(stderr) == [
-        f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
-        f"ERROR: unresolved dependency '_same' in {escape_path(paths[0])}: line 6, column 22\n",
-        "2 files would be left unchanged, 1 file would not be sortable\n",
+        "3 files would be left unchanged\n",
     ]
-    assert status == 1
+    assert status == 0
     assert _read_fixtures(paths) == [_double_resolution, _good, _good]
 
 
@@ -293,10 +290,9 @@ def test_ssort_resolution_error(ssort, tmp_path):
 
     assert stdout == b""
     assert _messages(stderr) == [
-        f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
-        "2 files were left unchanged, 1 file was not sortable\n",
+        "3 files were left unchanged\n",
     ]
-    assert status == 1
+    assert status == 0
     assert _read_fixtures(paths) == [_resolution, _good, _good]
 
 
@@ -434,8 +430,8 @@ def test_diff_stdin_unchanged(ssort):
 
 @pytest.mark.parametrize(
     "stdin",
-    (_encoding, _character, _syntax, _resolution),
-    ids=("encoding", "character", "syntax", "resolution"),
+    (_encoding, _character, _syntax),
+    ids=("encoding", "character", "syntax"),
 )
 def test_diff_stdin_unsortable(stdin, ssort):
     stdout, stderr, status = ssort("--diff", "-", input=stdin)
@@ -467,8 +463,8 @@ def test_check_stdin_unchanged(ssort):
 
 @pytest.mark.parametrize(
     "stdin",
-    (_encoding, _character, _syntax, _resolution),
-    ids=("encoding", "character", "syntax", "resolution"),
+    (_encoding, _character, _syntax),
+    ids=("encoding", "character", "syntax"),
 )
 def test_check_stdin_unsortable(stdin, ssort):
     stdout, stderr, status = ssort("--check", "-", input=stdin)
