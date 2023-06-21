@@ -171,7 +171,9 @@ def _get_requirements_for_lambda(node: ast.Lambda) -> Iterable[Requirement]:
 @get_requirements.register(ast.SetComp)
 @get_requirements.register(ast.DictComp)
 @get_requirements.register(ast.GeneratorExp)
-def _get_requirements_for_comp(node: ast.AST) -> Iterable[Requirement]:
+def _get_requirements_for_comp(
+    node: ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp,
+) -> Iterable[Requirement]:
     bindings = {
         binding
         for generator in node.generators
