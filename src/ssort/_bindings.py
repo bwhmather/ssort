@@ -75,6 +75,14 @@ def _get_bindings_for_name(node: ast.Name) -> Iterable[str]:
         yield node.id
 
 
+@get_bindings.register(ast.comprehension)
+def _get_bindings_for_comprehension(node: ast.comprehension) -> Iterable[str]:
+    # Ignore target, it can never produce bindings
+    yield from get_bindings(node.iter)
+    for condition in node.ifs:
+        yield from get_bindings(condition)
+
+
 @get_bindings.register(ast.ExceptHandler)
 def _get_bindings_for_except_handler(node: ast.ExceptHandler) -> Iterable[str]:
     if node.type:
