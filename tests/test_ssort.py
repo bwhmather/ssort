@@ -557,3 +557,99 @@ def test_ssort_preserve_crlf_endlines_str():
 
     actual = ssort(original)
     assert actual == expected
+
+
+def test_ssort_list_comp_conflicts_with_global_scope():
+    original = _clean(
+        """
+        def f():
+            g()
+            return [g for g in range(10)]
+        def g():
+            pass
+        """
+    )
+    expected = _clean(
+        """
+        def g():
+            pass
+        def f():
+            g()
+            return [g for g in range(10)]
+        """
+    )
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_ssort_set_comp_conflicts_with_global_scope():
+    original = _clean(
+        """
+        def f():
+            g()
+            return {g for g in range(10)}
+        def g():
+            pass
+        """
+    )
+    expected = _clean(
+        """
+        def g():
+            pass
+        def f():
+            g()
+            return {g for g in range(10)}
+        """
+    )
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_ssort_dict_comp_conflicts_with_global_scope():
+    original = _clean(
+        """
+        def f():
+            g()
+            return {g: 1 for g in range(10)}
+        def g():
+            pass
+        """
+    )
+    expected = _clean(
+        """
+        def g():
+            pass
+        def f():
+            g()
+            return {g: 1 for g in range(10)}
+        """
+    )
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_ssort_generator_exp_conflicts_with_global_scope():
+    original = _clean(
+        """
+        def f():
+            g()
+            return (g for g in range(10))
+        def g():
+            pass
+        """
+    )
+    expected = _clean(
+        """
+        def g():
+            pass
+        def f():
+            g()
+            return (g for g in range(10))
+        """
+    )
+
+    actual = ssort(original)
+    assert actual == expected

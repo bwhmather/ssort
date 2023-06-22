@@ -1023,22 +1023,22 @@ def test_list_comp_bindings():
         ListComp(expr elt, comprehension* generators)
     """
     node = _parse("[item for item in iterator if condition(item)]")
-    assert list(get_bindings(node)) == ["item"]
+    assert list(get_bindings(node)) == []
 
 
 def test_list_comp_bindings_walrus_target():
     node = _parse("[( a:= item) for item in iterator if condition(item)]")
-    assert list(get_bindings(node)) == ["a", "item"]
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_list_comp_bindings_walrus_iter():
     node = _parse("[item for item in (it := iterator) if condition(item)]")
-    assert list(get_bindings(node)) == ["item", "it"]
+    assert list(get_bindings(node)) == ["it"]
 
 
 def test_list_comp_bindings_walrus_condition():
     node = _parse("[item for item in iterator if (c := condition(item))]")
-    assert list(get_bindings(node)) == ["item", "c"]
+    assert list(get_bindings(node)) == ["c"]
 
 
 def test_set_comp_bindings():
@@ -1049,22 +1049,22 @@ def test_set_comp_bindings():
         SetComp(expr elt, comprehension* generators)
     """
     node = _parse("{item for item in iterator if condition(item)}")
-    assert list(get_bindings(node)) == ["item"]
+    assert list(get_bindings(node)) == []
 
 
 def test_set_comp_bindings_walrus_target():
     node = _parse("{( a:= item) for item in iterator if condition(item)}")
-    assert list(get_bindings(node)) == ["a", "item"]
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_set_comp_bindings_walrus_iter():
     node = _parse("{item for item in (it := iterator) if condition(item)}")
-    assert list(get_bindings(node)) == ["item", "it"]
+    assert list(get_bindings(node)) == ["it"]
 
 
 def test_set_comp_bindings_walrus_condition():
     node = _parse("{item for item in iterator if (c := condition(item))}")
-    assert list(get_bindings(node)) == ["item", "c"]
+    assert list(get_bindings(node)) == ["c"]
 
 
 def test_dict_comp_bindings():
@@ -1074,40 +1074,40 @@ def test_dict_comp_bindings():
         DictComp(expr key, expr value, comprehension* generators)
     """
     node = _parse("{item[0]: item[1] for item in iterator if check(item)}")
-    assert list(get_bindings(node)) == ["item"]
+    assert list(get_bindings(node)) == []
 
 
 def test_dict_comp_bindings_unpack():
     node = _parse("{key: value for key, value in iterator}")
-    assert list(get_bindings(node)) == ["key", "value"]
+    assert list(get_bindings(node)) == []
 
 
 def test_dict_comp_bindings_walrus_key():
     node = _parse(
         "{(key := item[0]): item[1] for item in iterator if check(item)}"
     )
-    assert list(get_bindings(node)) == ["key", "item"]
+    assert list(get_bindings(node)) == ["key"]
 
 
 def test_dict_comp_bindings_walrus_value():
     node = _parse(
         "{item[0]: (value := item[1]) for item in iterator if check(item)}"
     )
-    assert list(get_bindings(node)) == ["value", "item"]
+    assert list(get_bindings(node)) == ["value"]
 
 
 def test_dict_comp_bindings_walrus_iter():
     node = _parse(
         "{item[0]: item[1] for item in (it := iterator) if check(item)}"
     )
-    assert list(get_bindings(node)) == ["item", "it"]
+    assert list(get_bindings(node)) == ["it"]
 
 
 def test_dict_comp_bindings_walrus_condition():
     node = _parse(
         "{item[0]: item[1] for item in iterator if (c := check(item))}"
     )
-    assert list(get_bindings(node)) == ["item", "c"]
+    assert list(get_bindings(node)) == ["c"]
 
 
 def test_generator_exp_bindings():
@@ -1117,22 +1117,22 @@ def test_generator_exp_bindings():
         GeneratorExp(expr elt, comprehension* generators)
     """
     node = _parse("(item for item in iterator if condition(item))")
-    assert list(get_bindings(node)) == ["item"]
+    assert list(get_bindings(node)) == []
 
 
 def test_generator_exp_bindings_walrus_target():
     node = _parse("(( a:= item) for item in iterator if condition(item))")
-    assert list(get_bindings(node)) == ["a", "item"]
+    assert list(get_bindings(node)) == ["a"]
 
 
 def test_generator_exp_bindings_walrus_iter():
     node = _parse("(item for item in (it := iterator) if condition(item))")
-    assert list(get_bindings(node)) == ["item", "it"]
+    assert list(get_bindings(node)) == ["it"]
 
 
 def test_generator_exp_bindings_walrus_condition():
     node = _parse("(item for item in iterator if (c := condition(item)))")
-    assert list(get_bindings(node)) == ["item", "c"]
+    assert list(get_bindings(node)) == ["c"]
 
 
 def test_await_bindings():
