@@ -30,6 +30,9 @@ jobs:
       # scheme described in PEP-440.
       run:
         python scripts/freeze_version.py 0.0.1.dev`git rev-list --count HEAD`
+    - name: Write release version
+      run:
+        python scripts/freeze_version.py "$GITHUB_REF_NAME"
     - name: Build package
       run: python -m build --sdist
    # - name: Publish distribution to PyPI
