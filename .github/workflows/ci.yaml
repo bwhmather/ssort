@@ -68,7 +68,7 @@ jobs:
         pip install black
     - name: Run black
       run: |
-        black --check --diff .
+        black --check --diff setup.py src/ tests/
 
   isort:
     name: "ISort"
@@ -85,7 +85,7 @@ jobs:
         pip install isort
     - name: Run isort
       run: |
-        isort --check-only --diff .
+        isort --check-only --diff setup.py src/ tests/
 
   ssort:
     name: "SSort"
@@ -102,7 +102,7 @@ jobs:
         pip install -e .
     - name: Run ssort
       run: |
-        ssort --check --diff src/ tests/
+        ssort --check --diff setup.py src/ tests/
 
   pyflakes:
     name: "PyFlakes"
@@ -119,7 +119,7 @@ jobs:
         pip install pyflakes
     - name: Run pyflakes
       run: |
-        pyflakes src/ tests/
+        pyflakes setup.py src/ tests/
 
   pylint:
     name: "PyLint"
@@ -139,7 +139,7 @@ jobs:
         pip install pylint
     - name: Run pylint
       run: |
-        pylint -E src/ tests/
+        pylint -E setup.py src/ tests/
 
   mypy:
     name: "Mypy"
