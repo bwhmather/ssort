@@ -6,13 +6,13 @@ on:
       - published
   push:
     branches:
-      - master
+      - release-testing
 
 jobs:
   upload:
     name: "Upload to Python Package Index"
     runs-on: ubuntu-22.04
-    if: success() && startsWith(github.ref, 'refs/tags')
+#    if: success() && startsWith(github.ref, 'refs/tags')
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -27,7 +27,7 @@ jobs:
       # We use the commit count rather than the short hash to comply with the
       # scheme described in PEP-440.
       run:
-        python scripts/wrap_version.py 0.0.1.dev`git rev-list --count HEAD` | src/ssort/_version.py
+        python scripts/wrap_version.py 0.0.1.dev`git rev-list --count HEAD` > src/ssort/_version.py
     - name: Build package
       run: python -m build --sdist
    # - name: Publish distribution to PyPI
