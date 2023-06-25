@@ -6,7 +6,7 @@ on:
       - published
   push:
     branches:
-      - release-testing
+      - master
 
 jobs:
   upload:
@@ -24,18 +24,18 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install build
-    - name: Write development version
-      # We use the commit count rather than the short hash to comply with the
-      # scheme described in PEP-440.
-      run:
-        python scripts/freeze_version.py 0.0.1.dev`git rev-list --count HEAD`
-    - name: Write release version
-      if: success() && startsWith(github.ref, 'refs/tags')
-      run:
-        python scripts/freeze_version.py "$GITHUB_REF_NAME"
+    - name: Write version
+      run: |
+        if [ $GITHUB_REF_TYPE == 'tag' ]; then
+          python scripts/freeze_version.py "$GITHUB_REF_NAME"
+        else
+          # We use the commit count rather than the short hash to comply with
+          # the scheme described in PEP-440.
+          python scripts/freeze_version.py 0.0.1.dev`git rev-list --count HEAD`
+        fi
     - name: Build package
       run: python -m build --sdist
-   # - name: Publish distribution to PyPI
-   #   uses: pypa/gh-action-pypi-publish@master
-   #   with:
-   #     password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Publish distribution to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
