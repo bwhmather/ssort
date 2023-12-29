@@ -5,7 +5,6 @@ global-exclude *
 recursive-include src *.py
 
 # Include coniguration files.
-include setup.cfg
 include pyproject.toml
 
 # Include documentation.
