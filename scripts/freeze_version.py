@@ -5,7 +5,6 @@ to stdout.
 
 import argparse
 import pathlib
-import sys
 
 
 def main():
