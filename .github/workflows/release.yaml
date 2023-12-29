@@ -34,7 +34,7 @@ jobs:
           python scripts/freeze_version.py 0.0.1.dev`git rev-list --count HEAD`
         fi
     - name: Build package
-      run: python -m build --sdist
+      run: python -m build
     - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@master
       with:
