@@ -17,5 +17,9 @@ assert ResolutionError is not None
 assert UnknownEncodingError is not None
 assert WildcardImportError is not None
 
-__version__ = "0.12.0"
+try:
+    from ssort._version import VERSION as __version__  # type: ignore
+except ImportError:
+    __version__ = "0.0.1+dev"
+
 __all__ = ["ssort"]
