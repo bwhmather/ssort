@@ -1,223 +1,89 @@
-from __future__ import annotations
-
-import pathlib
+from pathlib import Path
 
 import pytest
 
-from ssort._files import is_ignored
-
-
-def test_ignore_git(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".gitignore").write_text("ignored")
-
-    assert not is_ignored("src")
-    assert not is_ignored("src/main.py")
-
-    assert is_ignored("ignored")
-    assert is_ignored("ignored/main.py")
-
-    assert is_ignored("src/ignored")
-    assert is_ignored("src/ignored/main.py")
-
-    assert not is_ignored("../ignored")
-    assert not is_ignored("../ignored/main.py")
-
-    assert is_ignored(f"../{tmp_path.name}/ignored")
-    assert is_ignored(f"../{tmp_path.name}/ignored/main.py")
-
-
-def test_ignore_git_with_no_repo(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    (tmp_path / ".gitignore").write_text("ignored")
-
-    assert not is_ignored("src")
-    assert not is_ignored("src/main.py")
-
-    assert is_ignored("ignored")
-    assert is_ignored("ignored/main.py")
-
-    assert is_ignored("src/ignored")
-    assert is_ignored("src/ignored/main.py")
-
-    assert not is_ignored("../ignored")
-    assert not is_ignored("../ignored/main.py")
-
-    assert is_ignored(f"../{tmp_path.name}/ignored")
-    assert is_ignored(f"../{tmp_path.name}/ignored/main.py")
-
-
-def test_ignore_git_in_subdirectory(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".gitignore").write_text("parent")
-
-    (tmp_path / "sub").mkdir()
-    (tmp_path / "sub" / ".gitignore").write_text("child")
-
-    assert not is_ignored("src")
-    assert not is_ignored("src/main.py")
-    assert not is_ignored("sub/src")
-    assert not is_ignored("sub/src/main.py")
-
-    assert is_ignored("parent")
-    assert is_ignored("parent/main.py")
-    assert is_ignored("sub/parent")
-    assert is_ignored("sub/parent/main.py")
-
-    assert is_ignored("src/parent")
-    assert is_ignored("src/parent/main.py")
-    assert is_ignored("sub/src/parent")
-    assert is_ignored("sub/src/parent/main.py")
-
-    assert not is_ignored("../parent")
-    assert not is_ignored("../parent/main.py")
-    assert not is_ignored("../sub/parent")
-    assert not is_ignored("../sub/parent/main.py")
-
-    assert is_ignored(f"../{tmp_path.name}/parent")
-    assert is_ignored(f"../{tmp_path.name}/parent/main.py")
-    assert is_ignored(f"../{tmp_path.name}/sub/parent")
-    assert is_ignored(f"../{tmp_path.name}/sub/parent/main.py")
-
-    assert not is_ignored("child")
-    assert not is_ignored("child/main.py")
-    assert is_ignored("sub/child")
-    assert is_ignored("sub/child/main.py")
-
-    assert not is_ignored("src/child")
-    assert not is_ignored("src/child/main.py")
-    assert is_ignored("sub/src/child")
-    assert is_ignored("sub/src/child/main.py")
-
-    assert not is_ignored("sub/../child")
-    assert not is_ignored("sub/../child/main.py")
-
-    assert is_ignored(f"../{tmp_path.name}/sub/child")
-    assert is_ignored(f"../{tmp_path.name}/sub/child/main.py")
-
-
-def test_ignore_git_in_working_subdirectory(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".gitignore").write_text("ignored")
-
-    (tmp_path / "sub").mkdir()
-    monkeypatch.chdir(tmp_path / "sub")
-
-    assert not is_ignored("src")
-    assert not is_ignored("src/main.py")
-
-    assert is_ignored("ignored")
-    assert is_ignored("ignored/main.py")
-
-    assert is_ignored("src/ignored")
-    assert is_ignored("src/ignored/main.py")
-
-    assert is_ignored("../ignored")
-    assert is_ignored("../ignored/main.py")
-
-    assert is_ignored("../sub/ignored")
-    assert is_ignored("../sub/ignored/main.py")
-
-    assert not is_ignored("../../ignored")
-    assert not is_ignored("../../ignored/main.py")
-
-
-def test_ignore_git_in_working_parent_directory(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    (tmp_path / "sub").mkdir()
-    (tmp_path / "sub" / ".git").mkdir()
-    (tmp_path / "sub" / ".gitignore").write_text("ignored")
-
-    assert not is_ignored("ignored")
-    assert not is_ignored("ignored/main.py")
-
-    assert is_ignored("sub/ignored")
-    assert is_ignored("sub/ignored/main.py")
-
-    assert is_ignored("sub/src/ignored")
-    assert is_ignored("sub/src/ignored/main.py")
-
-    assert not is_ignored("sub/../ignored")
-    assert not is_ignored("sub/../ignored/main.py")
-
-
-def test_ignore_git_subdirectory_pattern(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".gitignore").write_text("sub/ignored")
-
-    (tmp_path / "sub").mkdir()
-
-    assert not is_ignored("sub")
-    assert not is_ignored("sub/main.py")
-
-    assert is_ignored("sub/ignored")
-    assert is_ignored("sub/ignored/main.py")
-
-
-def test_ignore_git_symlink_recursive(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".gitignore").write_text("ignored")
-
-    (tmp_path / "dir").mkdir()
-    (tmp_path / "dir" / "link").symlink_to(tmp_path / "dir")
-
-    assert not is_ignored("dir")
-    assert not is_ignored("dir/link")
-    assert not is_ignored("dir/link/link")
-
-    assert is_ignored("dir/ignored")
-    assert is_ignored("dir/link/ignored")
-    assert is_ignored("dir/link/link/ignored")
-
-
-def test_ignore_git_symlink_outside_repo(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    (tmp_path / "repo" / ".git").mkdir(parents=True)
-    (tmp_path / "repo" / ".gitignore").write_text("link")
-
-    (tmp_path / "link").mkdir()
-    (tmp_path / "repo" / "link").symlink_to(tmp_path / "link")
-
-    assert not is_ignored("link")
-    assert not is_ignored("link/main.py")
-    assert is_ignored("repo/link")
-    assert is_ignored("repo/link/main.py")
-
-
-def test_ignore_symlink_circular(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    (tmp_path / "link1").symlink_to(tmp_path / "link2")
-    (tmp_path / "link2").symlink_to(tmp_path / "link1")
-
-    assert not is_ignored("link1")
-    assert not is_ignored("link2")
+from ssort._files import current_working_dir, find_project_root
+
+
+def test_current_working_dir():
+    assert current_working_dir() == Path(".").resolve()
+
+
+class TestFindProjectRoot:
+    @pytest.fixture(
+        params=[
+            (".",),
+            (".", "dir"),
+            ("dir", "dirA/B"),
+            ("dirA/B", "dir"),
+            ("a/a/a", "b/b/b"),
+            ("dir/a", "dir/b"),
+        ]
+    )
+    def subdir(self, request):
+        return request.param
+
+    @pytest.fixture()
+    def mock_current_working_dir(self, mocker, tmp_path):
+        return mocker.patch(
+            "ssort._files.current_working_dir", return_value=tmp_path / "root"
+        )
+
+    @pytest.fixture()
+    def git(self, tmp_path):
+        root = tmp_path / "root"
+        (root / ".git").mkdir(parents=True)
+        return root
+
+    def test_find_project_root_git(
+        self, subdir, git, mock_current_working_dir
+    ):
+        print(subdir)
+        patterns = [git / sub for sub in subdir]
+
+        for p in patterns:
+            p.mkdir(parents=True, exist_ok=True)
+
+        assert git == find_project_root(patterns)
+        mock_current_working_dir.assert_called_once()
+
+    @pytest.fixture()
+    def pyproject(self, tmp_path):
+        root = tmp_path / "root"
+        root.mkdir()
+        (root / "pyproject.toml").touch()
+        return root
+
+    def test_find_project_root_pyproject(
+        self, subdir, pyproject, mock_current_working_dir
+    ):
+        patterns = [pyproject / sub for sub in subdir]
+
+        for p in patterns:
+            p.mkdir(parents=True, exist_ok=True)
+
+        assert pyproject == find_project_root(patterns)
+        mock_current_working_dir.assert_called_once()
+
+    @pytest.fixture()
+    def neither(self, tmp_path):
+        root = tmp_path / "root"
+        root.mkdir()
+        return root
+
+    def test_find_project_root_neither(
+        self, subdir, neither, mocker, tmp_path
+    ):
+        mocker.patch(
+            "ssort._files.current_working_dir",
+            return_value=tmp_path / "root" / "dir",
+        )
+        patterns = [neither / sub for sub in subdir]
+
+        if all(s.startswith("dir/") for s in subdir):
+            neither = neither / "dir"
+
+        for p in patterns:
+            p.mkdir(parents=True, exist_ok=True)
+
+        assert neither == find_project_root(patterns)

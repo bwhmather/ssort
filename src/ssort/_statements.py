@@ -1,12 +1,31 @@
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+import functools
+from typing import Any, Callable, Iterable, TypeVar
 
 from ssort._bindings import get_bindings
 from ssort._method_requirements import get_method_requirements
 from ssort._requirements import Requirement, get_requirements
-from ssort._utils import cached_method
+
+_T = TypeVar("_T")
+
+__all__ = ["Statement"]
+
+
+def cached_method(function: Callable[[Any], _T]) -> Callable[[Any], _T]:
+    cached_attribute_name = f"_{function.__name__}_cache"
+
+    @functools.wraps(function)
+    def wrapper(self) -> _T:
+        try:
+            return getattr(self, cached_attribute_name)
+        except AttributeError:
+            value = function(self)
+            setattr(self, cached_attribute_name, value)
+            return value
+
+    return wrapper
 
 
 class Statement:

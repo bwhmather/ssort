@@ -17,12 +17,13 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Quality Assurance"
 ]
 dependencies = [
-    "pathspec >=0.9.0"
+    "tomli; python_version<'3.11'"
 ]
 description = "The python statement sorter"
 dynamic = [
@@ -60,9 +61,10 @@ profile = "black"
 [tool.mypy]
 exclude = "test_data/samples/*"
 
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-module = "pathspec"
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
 
 [tool.setuptools]
 include-package-data = false
@@ -75,3 +77,10 @@ attr = "ssort.__version__"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ssort]
+extend_skip = [
+    ".pytest_cache",
+    "__pycache__",
+    "test_data"
+]

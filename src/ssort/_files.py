@@ -1,72 +1,95 @@
 from __future__ import annotations
 
-import os
-import pathlib
-from typing import Iterable
+import io
+import re
+import shlex
+import sys
+import tokenize
+from pathlib import Path
 
-import pathspec
+from ssort._exceptions import UnknownEncodingError
 
-from ssort._utils import memoize
-
-_EMPTY_PATH_SPEC = pathspec.PathSpec([])
-
-
-@memoize
-def _is_project_root(path: pathlib.Path) -> bool:
-    if path == path.root or path == path.parent:
-        return True
-
-    if (path / ".git").is_dir():
-        return True
-
-    return False
+__all__ = [
+    "detect_encoding",
+    "detect_newline",
+    "escape_path",
+    "find_project_root",
+    "normalize_newlines",
+]
 
 
-@memoize
-def _get_ignore_patterns(path: pathlib.Path) -> pathspec.PathSpec:
-    git_ignore = path / ".gitignore"
-    if git_ignore.is_file():
-        with git_ignore.open() as f:
-            return pathspec.PathSpec.from_lines("gitwildmatch", f)
-
-    return _EMPTY_PATH_SPEC
+_NEWLINE_RE = re.compile("(\r\n)|(\r)|(\n)")
 
 
-def is_ignored(path: str | os.PathLike) -> bool:
-    # Can't use pathlib.Path.resolve() here because we want to maintain
-    # symbolic links.
-    path = pathlib.Path(os.path.abspath(path))
-
-    for part in (path, *path.parents):
-        patterns = _get_ignore_patterns(part)
-        if patterns.match_file(path.relative_to(part)):
-            return True
-
-        if _is_project_root(part):
-            return False
-
-    return False
+def current_working_dir():
+    return Path(".").resolve()
 
 
-def find_python_files(
-    patterns: Iterable[str | os.PathLike[str]],
-) -> Iterable[pathlib.Path]:
-    if not patterns:
-        patterns = ["."]
+def find_project_root(patterns):
+    all_patterns = [current_working_dir()]
 
-    paths_set = set()
-    for pattern in patterns:
-        path = pathlib.Path(pattern)
-        if not path.is_dir():
-            subpaths = [path]
-        else:
-            subpaths = [
-                subpath
-                for subpath in path.glob("**/*.py")
-                if not is_ignored(subpath) and subpath.is_file()
-            ]
+    if patterns:
+        all_patterns.extend(patterns)
 
-        for subpath in sorted(subpaths):
-            if subpath not in paths_set:
-                paths_set.add(subpath)
-                yield subpath
+    paths = [Path(p).resolve() for p in all_patterns]
+    parents_and_self = [
+        list(reversed(p.parents)) + ([p] if p.is_dir() else []) for p in paths
+    ]
+
+    *_, (common_base, *_) = (
+        common_parent
+        for same_lvl_parent in zip(*parents_and_self)
+        if len(common_parent := set(same_lvl_parent)) == 1
+    )
+
+    for directory in (common_base, *common_base.parents):
+        if (directory / ".git").exists() or (
+            directory / "pyproject.toml"
+        ).is_file():
+            return directory
+
+    return common_base
+
+
+def escape_path(path):
+    """
+    Takes a `pathlib.Path` object and returns a string representation that can
+    be safely copied into the system shell.
+    """
+    if sys.platform == "win32":
+        # TODO
+        return str(path)
+    else:
+        return shlex.quote(str(path))
+
+
+def detect_encoding(bytestring):
+    """
+    Detect the encoding of a python source file based on "coding" comments, as
+    defined in [PEP 263](https://www.python.org/dev/peps/pep-0263/).
+    """
+    try:
+        encoding, _ = tokenize.detect_encoding(io.BytesIO(bytestring).readline)
+    except SyntaxError as exc:
+        raise UnknownEncodingError(
+            exc.msg, encoding=re.match("unknown encoding: (.*)", exc.msg)[1]
+        ) from exc
+    return encoding
+
+
+def detect_newline(text):
+    """
+    Detects the newline character used in a source file based on the first
+    occurence of '\\n', '\\r' or '\\r\\n'.
+    """
+    match = re.search(_NEWLINE_RE, text)
+    if match is None:
+        return "\n"
+    return match[0]
+
+
+def normalize_newlines(text):
+    """
+    Replaces all occurrences of '\r' and '\\r\\n' with \n.
+    """
+    return re.sub(_NEWLINE_RE, "\n", text)

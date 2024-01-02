@@ -3,15 +3,16 @@ import difflib
 import re
 import sys
 
+from ssort._config import get_config_from_root
 from ssort._exceptions import UnknownEncodingError
-from ssort._files import find_python_files
-from ssort._ssort import ssort
-from ssort._utils import (
+from ssort._files import (
     detect_encoding,
     detect_newline,
     escape_path,
+    find_project_root,
     normalize_newlines,
 )
+from ssort._ssort import ssort
 
 
 def main():
@@ -42,19 +43,14 @@ def main():
     unsortable = 0
     unchanged = 0
 
-    for path in find_python_files(args.files):
+    root = find_project_root(args.files)
+    config = get_config_from_root(root)
+
+    for path in config.iterate_files_matching_patterns(args.files):
         errors = False
 
         try:
             original_bytes = path.read_bytes()
-        except FileNotFoundError:
-            sys.stderr.write(f"ERROR: {escape_path(path)} does not exist\n")
-            unsortable += 1
-            continue
-        except IsADirectoryError:
-            sys.stderr.write(f"ERROR: {escape_path(path)} is a directory\n")
-            unsortable += 1
-            continue
         except PermissionError:
             sys.stderr.write(f"ERROR: {escape_path(path)} is not readable\n")
             unsortable += 1
