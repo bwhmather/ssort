@@ -1,72 +1,33 @@
-from __future__ import annotations
+from pathlib import Path
 
-import os
-import pathlib
-from typing import Iterable
-
-import pathspec
-
-from ssort._utils import memoize
-
-_EMPTY_PATH_SPEC = pathspec.PathSpec([])
+__all__ = ["find_project_root"]
 
 
-@memoize
-def _is_project_root(path: pathlib.Path) -> bool:
-    if path == path.root or path == path.parent:
-        return True
-
-    if (path / ".git").is_dir():
-        return True
-
-    return False
+def current_working_dir():
+    return Path(".").resolve()
 
 
-@memoize
-def _get_ignore_patterns(path: pathlib.Path) -> pathspec.PathSpec:
-    git_ignore = path / ".gitignore"
-    if git_ignore.is_file():
-        with git_ignore.open() as f:
-            return pathspec.PathSpec.from_lines("gitwildmatch", f)
+def find_project_root(patterns):
+    all_patterns = [current_working_dir()]
 
-    return _EMPTY_PATH_SPEC
+    if patterns:
+        all_patterns.extend(patterns)
 
+    paths = [Path(p).resolve() for p in all_patterns]
+    parents_and_self = [
+        list(reversed(p.parents)) + ([p] if p.is_dir() else []) for p in paths
+    ]
 
-def is_ignored(path: str | os.PathLike) -> bool:
-    # Can't use pathlib.Path.resolve() here because we want to maintain
-    # symbolic links.
-    path = pathlib.Path(os.path.abspath(path))
+    *_, (common_base, *_) = (
+        common_parent
+        for same_lvl_parent in zip(*parents_and_self)
+        if len(common_parent := set(same_lvl_parent)) == 1
+    )
 
-    for part in (path, *path.parents):
-        patterns = _get_ignore_patterns(part)
-        if patterns.match_file(path.relative_to(part)):
-            return True
+    for directory in (common_base, *common_base.parents):
+        if (directory / ".git").exists() or (
+            directory / "pyproject.toml"
+        ).is_file():
+            return directory
 
-        if _is_project_root(part):
-            return False
-
-    return False
-
-
-def find_python_files(
-    patterns: Iterable[str | os.PathLike[str]],
-) -> Iterable[pathlib.Path]:
-    if not patterns:
-        patterns = ["."]
-
-    paths_set = set()
-    for pattern in patterns:
-        path = pathlib.Path(pattern)
-        if not path.is_dir():
-            subpaths = [path]
-        else:
-            subpaths = [
-                subpath
-                for subpath in path.glob("**/*.py")
-                if not is_ignored(subpath) and subpath.is_file()
-            ]
-
-        for subpath in sorted(subpaths):
-            if subpath not in paths_set:
-                paths_set.add(subpath)
-                yield subpath
+    return common_base

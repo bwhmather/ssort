@@ -65,6 +65,11 @@ def _write_fixtures(dirpath, texts):
     return paths
 
 
+@pytest.fixture(autouse=True)
+def root(mocker, tmp_path):
+    mocker.patch("ssort._main.find_project_root", return_value=tmp_path)
+
+
 @pytest.fixture(params=["entrypoint", "module"])
 def check(request):
     def _check(dirpath):
@@ -357,11 +362,8 @@ def test_ssort_empty_dir(ssort, tmp_path):
 def test_ssort_non_existent_file(ssort, tmp_path):
     path = tmp_path / "file.py"
 
-    expected_msgs = [
-        f"ERROR: {escape_path(path)} does not exist\n",
-        "1 file was not sortable\n",
-    ]
-    expected_status = 1
+    expected_msgs = ["No files are present to be sorted. Nothing to do.\n"]
+    expected_status = 0
 
     actual_msgs, actual_status = ssort(path)
 
@@ -371,7 +373,7 @@ def test_ssort_non_existent_file(ssort, tmp_path):
 def test_ssort_no_py_extension(ssort, tmp_path):
     path = tmp_path / "file"
     path.write_bytes(_good)
-    expected_msgs = ["1 file was left unchanged\n"]
+    expected_msgs = ["No files are present to be sorted. Nothing to do.\n"]
     expected_status = 0
     actual_msgs, actual_status = ssort(path)
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
