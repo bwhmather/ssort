@@ -48,9 +48,6 @@ Homepage = "https://github.com/bwhmather/ssort"
 force-exclude = 'test_data/samples/*'
 line_length = 79
 
-[tool.distutils.bdist_wheel]
-universal = 1
-
 [tool.isort]
 extend_skip = ["test_data/samples"]
 line_length = 79
