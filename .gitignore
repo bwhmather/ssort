@@ -1,3 +1,4 @@
 __pycache__/
 *.egg-info/
 .tox
+src/ssort/_version.py
