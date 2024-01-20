@@ -653,3 +653,28 @@ def test_ssort_generator_exp_conflicts_with_global_scope():
 
     actual = ssort(original)
     assert actual == expected
+
+
+def test_ssort_self_positional_only():
+    original = _clean(
+        """
+        class C:
+            def fun(self, arg, /, notself):
+                return notself._notdep()
+
+            def _notdep(self):
+                pass
+        """
+    )
+    expected = _clean(
+        """
+        class C:
+            def fun(self, arg, /, notself):
+                return notself._notdep()
+
+            def _notdep(self):
+                pass
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected

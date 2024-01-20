@@ -315,3 +315,13 @@ def test_method_requirements_match_statement():
         """
     )
     assert reqs == ["a", "b"]
+
+
+def test_method_requirements_positional_only_self():
+    reqs = _method_requirements(
+        """
+        def fun(self, /, arg):
+            return self.method(arg)
+        """
+    )
+    assert reqs == ["method"]

@@ -44,10 +44,12 @@ def get_method_requirements(node: ast.AST) -> Iterable[str]:
 def _get_method_requirements_for_function_def(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[str]:
-    if not node.args.args:
+    if node.args.posonlyargs:
+        self_arg = node.args.posonlyargs[0].arg
+    elif node.args.args:
+        self_arg = node.args.args[0].arg
+    else:
         return
-
-    self_arg = node.args.args[0].arg
 
     for statement in node.body:
         yield from _get_attribute_accesses(statement, self_arg)
