@@ -4,6 +4,7 @@ import sys
 
 import pytest
 
+from ssort import __version__
 from ssort._utils import escape_path
 
 _good = b"""
@@ -391,6 +392,16 @@ def test_ssort_unreadable_file(ssort, tmp_path):
     expected_status = 1
     actual_msgs, actual_status = ssort(path)
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+
+def test_ssort_version():
+    result = subprocess.run(
+        ["ssort", "--version"],
+        capture_output=True,
+        encoding="utf-8",
+    )
+    output = result.stdout
+    assert output == f"ssort {__version__}\n"
 
 
 def test_ssort_run_module():

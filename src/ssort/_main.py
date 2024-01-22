@@ -3,6 +3,7 @@ import difflib
 import re
 import sys
 
+from ssort import __version__
 from ssort._exceptions import UnknownEncodingError
 from ssort._files import find_python_files
 from ssort._ssort import ssort
@@ -19,6 +20,12 @@ def main():
         description="Sort python statements into dependency order",
     )
 
+    parser.add_argument(
+        "--version",
+        dest="version",
+        action="store_true",
+        help="Outputs version information and then exit",
+    )
     parser.add_argument(
         "--diff",
         dest="show_diff",
@@ -37,6 +44,10 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.version:
+        sys.stdout.write(f"ssort {__version__}\n")
+        return
 
     unsorted = 0
     unsortable = 0
