@@ -678,3 +678,19 @@ def test_ssort_self_positional_only():
     )
     actual = ssort(original)
     assert actual == expected
+
+
+def test_single_line_dummy_function():
+    original = "def fun(): ...\n"
+    expected = "def fun(): ...\n"
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_single_line_dummy_class():
+    original = "class Class: ...\n"
+    expected = "class Class: ...\n"
+
+    actual = ssort(original)
+    assert actual == expected
