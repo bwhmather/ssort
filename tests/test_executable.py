@@ -161,24 +161,17 @@ def test_check_all_syntax_error(check, tmp_path):
 
 
 def test_check_resolution_error(check, tmp_path):
-    paths = _write_fixtures(tmp_path, [_resolution, _good, _good])
-    expected_msgs = [
-        f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
-        "2 files would be left unchanged, 1 file would not be sortable\n",
-    ]
-    expected_status = 1
+    _write_fixtures(tmp_path, [_resolution, _good, _good])
+    expected_msgs = ["3 files would be left unchanged\n"]
+    expected_status = 0
     actual_msgs, actual_status = check(tmp_path)
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
 
 
 def test_check_double_resolution_error(check, tmp_path):
-    paths = _write_fixtures(tmp_path, [_double_resolution, _good, _good])
-    expected_msgs = [
-        f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
-        f"ERROR: unresolved dependency '_same' in {escape_path(paths[0])}: line 6, column 22\n",
-        "2 files would be left unchanged, 1 file would not be sortable\n",
-    ]
-    expected_status = 1
+    _write_fixtures(tmp_path, [_double_resolution, _good, _good])
+    expected_msgs = ["3 files would be left unchanged\n"]
+    expected_status = 0
     actual_msgs, actual_status = check(tmp_path)
     assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
 
@@ -269,13 +262,10 @@ def test_ssort_all_syntax_error(ssort, tmp_path):
 
 
 def test_ssort_resolution_error(ssort, tmp_path):
-    paths = _write_fixtures(tmp_path, [_resolution, _good, _good])
+    _write_fixtures(tmp_path, [_resolution, _good, _good])
 
-    expected_msgs = [
-        f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
-        "2 files were left unchanged, 1 file was not sortable\n",
-    ]
-    expected_status = 1
+    expected_msgs = ["3 files were left unchanged\n"]
+    expected_status = 0
 
     actual_msgs, actual_status = ssort(tmp_path)
 

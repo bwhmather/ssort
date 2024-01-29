@@ -24,7 +24,6 @@ def test_samples(sample):
     actual_text = ssort(
         input_text,
         filename=str(input_path),
-        on_wildcard_import=lambda **kwargs: None,
     )
 
     # XXX Uncomment to update samples. XXX
@@ -44,12 +43,10 @@ def test_idempotent(sample):
     sorted_text = ssort(
         input_text,
         filename=str(input_path),
-        on_wildcard_import=lambda **kwargs: None,
     )
     resorted_text = ssort(
         sorted_text,
         filename=str(input_path),
-        on_wildcard_import=lambda **kwargs: None,
     )
 
     assert resorted_text == sorted_text
