@@ -229,7 +229,9 @@ def _statement_binding_sort_key(binding_key):
 
 
 def _statement_text_sorted_class(statement):
-    head_text, statements = split_class(statement)
+    head_text, unsorted_statements = split_class(statement)
+
+    statements = list(unsorted_statements)
 
     # Take a snapshot of any hard dependencies between statements so that we can
     # restore them later.
@@ -316,6 +318,9 @@ def _statement_text_sorted_class(statement):
     sorted_statements = topological_sort(
         sorted_statements, graph=runtime_graph
     )
+
+    if sorted_statements == unsorted_statements:
+        return statement.text
 
     return (
         head_text
