@@ -1,6 +1,7 @@
 """
 The python source code statement sorter.
 """
+
 from ssort._exceptions import (
     DecodingError,
     ParseError,
