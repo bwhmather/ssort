@@ -1,6 +1,14 @@
+import sys
 import textwrap
 
+import pytest
+
 from ssort import ssort
+
+type_parameter_syntax = pytest.mark.skipif(
+    sys.version_info < (3, 12),
+    reason="type parameter syntax was introduced in python 3.12",
+)
 
 
 def _clean(text):
@@ -692,5 +700,31 @@ def test_single_line_dummy_class():
     original = "class Class: ...\n"
     expected = "class Class: ...\n"
 
+    actual = ssort(original)
+    assert actual == expected
+
+
+@type_parameter_syntax
+def test_ssort_type_alias():
+    original = _clean(
+        """
+        from decimal import Decimal
+
+        def roundint(n: N) -> int:
+            return int(round(n))
+
+        type N = Decimal | float
+        """
+    )
+    expected = _clean(
+        """
+        from decimal import Decimal
+
+        type N = Decimal | float
+
+        def roundint(n: N) -> int:
+            return int(round(n))
+        """
+    )
     actual = ssort(original)
     assert actual == expected

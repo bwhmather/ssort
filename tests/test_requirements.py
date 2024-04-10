@@ -16,6 +16,11 @@ exception_group = pytest.mark.skipif(
     reason="exception groups were introduced in python 3.11",
 )
 
+type_parameter_syntax = pytest.mark.skipif(
+    sys.version_info < (3, 12),
+    reason="type parameter syntax was introduced in python 3.12",
+)
+
 
 def _parse(source):
     source = textwrap.dedent(source)
@@ -1195,3 +1200,21 @@ def test_try_star_requirements():
         "otherwise",
         "finish",
     ]
+
+
+@type_parameter_syntax
+def test_type_var_requirements():
+    node = _parse("type Alias[T: (str, bytes)] = list[T]")
+    assert _dep_names(node) == ["str", "bytes", "list", "T"]
+
+
+@type_parameter_syntax
+def test_param_spec_requirements():
+    node = _parse("type Alias[**P] = Callable[P, int]")
+    assert _dep_names(node) == ["Callable", "P", "int"]
+
+
+@type_parameter_syntax
+def test_type_var_tuple_requirements():
+    node = _parse("type Alias[*Ts] = tuple[*Ts]")
+    assert _dep_names(node) == ["tuple", "Ts"]
