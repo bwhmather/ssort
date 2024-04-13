@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import dataclasses
 import enum
+import sys
 from typing import Iterable
 
 from ssort._ast import iter_child_nodes
@@ -52,12 +53,22 @@ def _get_requirements_for_function_def(
     for decorator in node.decorator_list:
         yield from get_requirements(decorator)
 
-    yield from get_requirements(node.args)
+    scope: set[str] = set()
+    if sys.version_info >= (3, 12):
+        for type_param in node.type_params:
+            yield from get_requirements(type_param)
+        scope.update(type_param.name for type_param in node.type_params)  # type: ignore[attr-defined]
+
+    for requirement in get_requirements(node.args):
+        if requirement.name not in scope:
+            yield requirement
 
     if node.returns is not None:
-        yield from get_requirements(node.returns)
+        for requirement in get_requirements(node.returns):
+            if requirement.name not in scope:
+                yield requirement
 
-    scope = _get_scope_from_arguments(node.args)
+    scope.update(_get_scope_from_arguments(node.args))
 
     requirements = []
     for statement in node.body:
@@ -83,10 +94,18 @@ def _get_requirements_for_class_def(
     for decorator in node.decorator_list:
         yield from get_requirements(decorator)
 
-    for base in node.bases:
-        yield from get_requirements(base)
+    scope: set[str] = set()
+    if sys.version_info >= (3, 12):
+        for type_param in node.type_params:
+            yield from get_requirements(type_param)
+        scope.update(type_param.name for type_param in node.type_params)  # type: ignore[attr-defined]
 
-    scope = set(CLASS_BUILTINS)
+    for base in node.bases:
+        for requirement in get_requirements(base):
+            if requirement.name not in scope:
+                yield requirement
+
+    scope.update(CLASS_BUILTINS)
 
     for statement in node.body:
         for stmt_dep in get_requirements(statement):
@@ -191,3 +210,21 @@ def _get_requirements_for_name(node: ast.Name) -> Iterable[Requirement]:
         yield Requirement(
             name=node.id, lineno=node.lineno, col_offset=node.col_offset
         )
+
+
+if sys.version_info >= (3, 12):
+
+    @get_requirements.register(ast.TypeAlias)
+    def _get_requirements_for_type_alias(
+        node: ast.TypeAlias,
+    ) -> Iterable[Requirement]:
+        for type_param in node.type_params:
+            yield from get_requirements(type_param)
+        scope: set[str] = set()
+        scope.update(type_param.name for type_param in node.type_params)  # type: ignore[attr-defined]
+        scope.add(node.name.id)
+        for requirement in get_requirements(node.value):
+            if not requirement.deferred:
+                requirement = dataclasses.replace(requirement, deferred=True)
+            if requirement.name not in scope:
+                yield requirement

@@ -50,6 +50,8 @@ def _iter_child_nodes_of_function_def(
     if node.returns is not None:
         yield node.returns
     yield from node.body
+    if sys.version_info >= (3, 12):
+        yield from node.type_params
 
 
 @iter_child_nodes.register(ast.ClassDef)
@@ -58,6 +60,8 @@ def _iter_child_nodes_of_class_def(node: ast.ClassDef) -> Iterable[ast.AST]:
     yield from node.bases
     yield from node.keywords
     yield from node.body
+    if sys.version_info >= (3, 12):
+        yield from node.type_params
 
 
 @iter_child_nodes.register(ast.Return)

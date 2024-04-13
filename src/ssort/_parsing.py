@@ -128,6 +128,16 @@ def split_class(statement):
     assert token.type == NAME
 
     token = next(tokens)
+    if token.string == "[":
+        token = next(tokens)
+        depth = 1
+        while depth:
+            if token.string == "[":
+                depth += 1
+            if token.string == "]":
+                depth -= 1
+            token = next(tokens)
+
     if token.string == "(":
         token = next(tokens)
         depth = 1

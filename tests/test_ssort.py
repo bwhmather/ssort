@@ -710,6 +710,8 @@ def test_ssort_type_alias():
         """
         from decimal import Decimal
 
+        roundint(3.14)
+        
         def roundint(n: N) -> int:
             return int(round(n))
 
@@ -724,6 +726,52 @@ def test_ssort_type_alias():
 
         def roundint(n: N) -> int:
             return int(round(n))
+            
+        roundint(3.14)
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+@type_parameter_syntax
+def test_ssort_generic_function():
+    original = _clean(
+        """
+        func(4)
+        def func[T](a: T) -> T:
+            return a
+        """
+    )
+    expected = _clean(
+        """
+        def func[T](a: T) -> T:
+            return a
+        func(4)
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+@type_parameter_syntax
+def test_ssort_generic_class():
+    original = _clean(
+        """
+        obj = ClassA[str]()
+        class ClassA[T: (str, bytes)](BaseClass[T]):
+            attr1: T
+        class BaseClass[T]:
+            pass
+        """
+    )
+    expected = _clean(
+        """
+        class BaseClass[T]:
+            pass
+        class ClassA[T: (str, bytes)](BaseClass[T]):
+            attr1: T
+        obj = ClassA[str]()
         """
     )
     actual = ssort(original)

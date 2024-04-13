@@ -1204,17 +1204,71 @@ def test_try_star_requirements():
 
 @type_parameter_syntax
 def test_type_var_requirements():
-    node = _parse("type Alias[T: (str, bytes)] = list[T]")
-    assert _dep_names(node) == ["str", "bytes", "list", "T"]
+    node = _parse('type Alias[T: ("ForwardReference", bytes)] = list[T]')
+    assert _dep_names(node) == ["bytes", "list"]
+
+
+@type_parameter_syntax
+def test_type_var_requirements_recursive():
+    node = _parse("type RecursiveList[T] = T | list[RecursiveList[T]]")
+    assert _dep_names(node) == ["list"]
 
 
 @type_parameter_syntax
 def test_param_spec_requirements():
     node = _parse("type Alias[**P] = Callable[P, int]")
-    assert _dep_names(node) == ["Callable", "P", "int"]
+    assert _dep_names(node) == ["Callable", "int"]
 
 
 @type_parameter_syntax
 def test_type_var_tuple_requirements():
     node = _parse("type Alias[*Ts] = tuple[*Ts]")
-    assert _dep_names(node) == ["tuple", "Ts"]
+    assert _dep_names(node) == ["tuple"]
+
+
+@type_parameter_syntax
+def test_generic_type_alias_requirements():
+    node = _parse("type ListOrSet[T] = list[T] | set[T]")
+    assert _dep_names(node) == ["list", "set"]
+
+
+@type_parameter_syntax
+def test_generic_function_requirements():
+    node = _parse(
+        """
+        def func[T1, T2](a: T1, b: T2) -> tuple[T1, T2]:
+            return a, b
+        """
+    )
+    assert _dep_names(node) == ["tuple"]
+
+
+@type_parameter_syntax
+def test_generic_class_requirements():
+    node = _parse(
+        """
+        class ClassA[T]:
+            attr1: T 
+            def method1(self) -> T:
+                return self.attr1
+        """
+    )
+    assert _dep_names(node) == []
+
+
+@type_parameter_syntax
+def test_generic_inner_class_requirements():
+    node = _parse(
+        """
+        class Outer:
+            class Private:
+                pass
+
+            class Inner[T](Private, Sequence[T]):
+                pass
+
+            def method1[T](self, a: Inner[T]) -> Inner[T]:
+                return a        
+        """
+    )
+    assert _dep_names(node) == ["Sequence"]

@@ -24,6 +24,11 @@ exception_group = pytest.mark.skipif(
     reason="exception groups were introduced in python 3.11",
 )
 
+type_parameter_syntax = pytest.mark.skipif(
+    sys.version_info < (3, 12),
+    reason="type parameter syntax was introduced in python 3.12",
+)
+
 
 def _parse(source):
     source = textwrap.dedent(source)
@@ -1632,3 +1637,50 @@ def test_try_star_binding_walrus_exeption_type():
         """
     )
     assert list(get_bindings(node)) == ["a", "grp_type", "grp", "b", "c", "d"]
+
+
+@type_parameter_syntax
+def test_type_var_bindings():
+    node = _parse("type RecursiveList[T] = T | list[RecursiveList[T]]")
+    assert list(get_bindings(node)) == ["RecursiveList"]
+
+
+@type_parameter_syntax
+def test_param_spec_bindings():
+    node = _parse("type Alias[**P] = Callable[P, int]")
+    assert list(get_bindings(node)) == ["Alias"]
+
+
+@type_parameter_syntax
+def test_type_var_tuple_bindings():
+    node = _parse("type Alias[*Ts] = tuple[*Ts]")
+    assert list(get_bindings(node)) == ["Alias"]
+
+
+@type_parameter_syntax
+def test_generic_type_alias_bindings():
+    node = _parse("type ListOrSet[T] = list[T] | set[T]")
+    assert list(get_bindings(node)) == ["ListOrSet"]
+
+
+@type_parameter_syntax
+def test_generic_function_bindings():
+    node = _parse(
+        """
+        def func[T](a: T, b: T) -> T:
+            pass
+        """
+    )
+    assert list(get_bindings(node)) == ["func"]
+
+
+@type_parameter_syntax
+def test_generic_class_bindings():
+    node = _parse(
+        """
+        class ClassA[AnyStr: (str, bytes)]:
+            def method1(self) -> AnyStr:
+                pass
+        """
+    )
+    assert list(get_bindings(node)) == ["ClassA"]
