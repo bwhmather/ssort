@@ -1640,7 +1640,7 @@ def test_try_star_binding_walrus_exeption_type():
 
 
 @type_parameter_syntax
-def test_type_var_bindings():
+def test_type_var_recursive_bindings():
     node = _parse("type RecursiveList[T] = T | list[RecursiveList[T]]")
     assert list(get_bindings(node)) == ["RecursiveList"]
 

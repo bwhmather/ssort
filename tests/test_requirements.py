@@ -1209,9 +1209,15 @@ def test_type_var_requirements():
 
 
 @type_parameter_syntax
-def test_type_var_requirements_recursive():
+def test_type_var_recursive_requirements():
     node = _parse("type RecursiveList[T] = T | list[RecursiveList[T]]")
     assert _dep_names(node) == ["list"]
+
+
+@type_parameter_syntax
+def test_type_var_scope_requirements():
+    node = _parse("type Alias[S, T: Sequence[S]] = dict[S, T]")
+    assert _dep_names(node) == ["Sequence", "dict"]
 
 
 @type_parameter_syntax
@@ -1244,6 +1250,17 @@ def test_generic_function_requirements():
 
 
 @type_parameter_syntax
+def test_generic_function_scope_requirements():
+    node = _parse(
+        """
+        def func[S, T: Sequence[S]](a: S) -> T:
+            pass
+        """
+    )
+    assert _dep_names(node) == ["Sequence"]
+
+
+@type_parameter_syntax
 def test_generic_class_requirements():
     node = _parse(
         """
@@ -1254,6 +1271,17 @@ def test_generic_class_requirements():
         """
     )
     assert _dep_names(node) == []
+
+
+@type_parameter_syntax
+def test_generic_class_scope_requirements():
+    node = _parse(
+        """
+        class ClassA[S, T: Sequence[S]]:
+            pass
+        """
+    )
+    assert _dep_names(node) == ["Sequence"]
 
 
 @type_parameter_syntax
