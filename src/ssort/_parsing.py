@@ -128,21 +128,24 @@ def split_class(statement):
     assert token.type == NAME
 
     token = next(tokens)
-
-    def _optional_nested_brackets(open: str, close: str):
-        nonlocal token
-        if token.string == open:
+    if token.string == "[":
+        token = next(tokens)
+        depth = 1
+        while depth:
+            if token.string == "[":
+                depth += 1
+            if token.string == "]":
+                depth -= 1
             token = next(tokens)
-            depth = 1
-            while depth:
-                if token.string == open:
-                    depth += 1
-                if token.string == close:
-                    depth -= 1
-                token = next(tokens)
-
-    _optional_nested_brackets("[", "]")
-    _optional_nested_brackets("(", ")")
+    if token.string == "(":
+        token = next(tokens)
+        depth = 1
+        while depth:
+            if token.string == "(":
+                depth += 1
+            if token.string == ")":
+                depth -= 1
+            token = next(tokens)
 
     assert token.string == ":"
 
