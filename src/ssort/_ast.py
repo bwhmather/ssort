@@ -50,6 +50,8 @@ def _iter_child_nodes_of_function_def(
     if node.returns is not None:
         yield node.returns
     yield from node.body
+    if sys.version_info >= (3, 12):
+        yield from node.type_params
 
 
 @iter_child_nodes.register(ast.ClassDef)
@@ -58,6 +60,8 @@ def _iter_child_nodes_of_class_def(node: ast.ClassDef) -> Iterable[ast.AST]:
     yield from node.bases
     yield from node.keywords
     yield from node.body
+    if sys.version_info >= (3, 12):
+        yield from node.type_params
 
 
 @iter_child_nodes.register(ast.Return)
@@ -496,3 +500,31 @@ def _iter_child_nodes_of_type_ignore(
     node: ast.TypeIgnore,
 ) -> Iterable[ast.AST]:
     return ()
+
+
+if sys.version_info >= (3, 12):
+
+    @iter_child_nodes.register(ast.TypeAlias)
+    def _iter_child_nodes_of_type_alias(
+        node: ast.TypeAlias,
+    ) -> Iterable[ast.AST]:
+        yield node.name
+        yield from node.type_params
+        yield node.value
+
+    @iter_child_nodes.register(ast.TypeVar)
+    def _iter_child_nodes_of_type_var(node: ast.TypeVar) -> Iterable[ast.AST]:
+        if node.bound is not None:
+            yield node.bound
+
+    @iter_child_nodes.register(ast.ParamSpec)
+    def _iter_child_nodes_of_param_spec(
+        node: ast.ParamSpec,
+    ) -> Iterable[ast.AST]:
+        return ()
+
+    @iter_child_nodes.register(ast.TypeVarTuple)
+    def _iter_child_nodes_of_type_var_tuple(
+        node: ast.TypeVarTuple,
+    ) -> Iterable[ast.AST]:
+        return ()
