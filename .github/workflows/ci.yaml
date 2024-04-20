@@ -14,7 +14,7 @@ jobs:
         runs-on: ["ubuntu-22.04", "windows-2019", "macos-11"]
     runs-on: ${{ matrix.runs-on }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -33,7 +33,7 @@ jobs:
     name: "Coverage"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
@@ -57,7 +57,7 @@ jobs:
     name: "Black"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
@@ -74,7 +74,7 @@ jobs:
     name: "ISort"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
@@ -91,7 +91,7 @@ jobs:
     name: "SSort"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
@@ -108,7 +108,7 @@ jobs:
     name: "PyFlakes"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
@@ -125,7 +125,7 @@ jobs:
     name: "PyLint"
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
@@ -145,7 +145,7 @@ jobs:
     name: "Mypy"
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up Python 3.12
         uses: actions/setup-python@v2
         with:
