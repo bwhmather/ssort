@@ -1,4 +1,13 @@
+import sys
+
+import pytest
+
 from ssort._parsing import parse, split_class
+
+type_parameter_syntax = pytest.mark.skipif(
+    sys.version_info < (3, 12),
+    reason="type parameter syntax was introduced in python 3.12",
+)
 
 
 def _split_text(source):
@@ -117,8 +126,20 @@ def test_split_class_decorators():
     assert actual == expected
 
 
+def test_split_class_decorator_single_line():
+    actual = _split_class("@decorator()\nclass A: key: int")
+    expected = "@decorator()\nclass A:", ["    key: int"]
+    assert actual == expected
+
+
 def test_split_class_leading_comment():
     actual = _split_class("# Comment.\nclass A:\n    pass")
+    expected = "# Comment.\nclass A:", ["    pass"]
+    assert actual == expected
+
+
+def test_split_class_leading_comment_single_line():
+    actual = _split_class("# Comment.\nclass A: pass")
     expected = "# Comment.\nclass A:", ["    pass"]
     assert actual == expected
 
@@ -126,4 +147,17 @@ def test_split_class_leading_comment():
 def test_split_class_multiple():
     actual = _split_class("def a():\n    pass\n\nclass A:\n    pass")
     expected = "\nclass A:", ["    pass"]
+    assert actual == expected
+
+
+def test_split_class_with_bases():
+    actual = _split_class("class A(\n    B,\n): pass")
+    expected = "class A(\n    B,\n):", ["    pass"]
+    assert actual == expected
+
+
+@type_parameter_syntax
+def test_split_class_with_type_params():
+    actual = _split_class("class A[\n    B,\n]: pass")
+    expected = "class A[\n    B,\n]:", ["    pass"]
     assert actual == expected
