@@ -104,28 +104,11 @@ def main():
                 + f"line {lineno}, column {col_offset}\n"
             )
 
-        def _on_unresolved(message, *, name, lineno, col_offset, **kwargs):
-            nonlocal errors
-            errors = True
-
-            sys.stderr.write(
-                f"ERROR: unresolved dependency {name!r} "
-                + f"in {escape_path(path)}: "
-                + f"line {lineno}, column {col_offset}\n"
-            )
-
-        def _on_wildcard_import(**kwargs):
-            sys.stderr.write(
-                "WARNING: can't determine dependencies on * import\n"
-            )
-
         try:
             updated = ssort(
                 original,
                 filename=escape_path(path),
                 on_parse_error=_on_parse_error,
-                on_unresolved=_on_unresolved,
-                on_wildcard_import=_on_wildcard_import,
             )
 
             if errors:
