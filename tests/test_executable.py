@@ -420,3 +420,32 @@ def test_ssort_run_module():
     module_output = module_result.stderr.splitlines(keepends=True)
 
     assert module_output == entrypoint_output
+
+
+@pytest.mark.parametrize(
+    ("stdin", "stdout"),
+    (
+        (_unsorted, _good),
+        (_good, _good),
+        (_encoding, _encoding),
+        (_character, _character),
+        (_syntax, _syntax),
+        (_resolution, _resolution),
+        (_double_resolution, _double_resolution),
+    ),
+    ids=(
+        "unsorted",
+        "good",
+        "encoding",
+        "character",
+        "syntax",
+        "resolution",
+        "double_resolution",
+    ),
+)
+def test_ssort_stdin(stdin, stdout):
+    for command in [(sys.executable, "-m", "ssort"), ("ssort",)]:
+        result = subprocess.run(
+            [*command, "-"], capture_output=True, input=stdin
+        )
+        assert result.stdout == stdout
