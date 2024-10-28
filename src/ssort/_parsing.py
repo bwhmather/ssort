@@ -49,12 +49,14 @@ def split(
 
     next_node = next(nodes, None)
 
-    if next_node is not None:
-        next_start_row, next_start_col = _find_start(next_node)
-        next_end_row, next_end_col = _find_end(next_node)
+    if next_node is None:
+        return
 
-        indent_text = " " * next_node.col_offset
-        next_indent_text = ""
+    next_start_row, next_start_col = _find_start(next_node)
+    next_end_row, next_end_col = _find_end(next_node)
+
+    indent_text = " " * next_node.col_offset
+    next_indent_text = ""
 
     while next_node:
         this_node, next_node = next_node, next(nodes, None)
