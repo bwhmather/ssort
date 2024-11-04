@@ -40,7 +40,9 @@ def main():
         "needs to be changed.  Otherwise returns 1.",
     )
     parser.add_argument(
-        "files", nargs="*", help="One or more python files to sort"
+        "files",
+        nargs="*",
+        help="One or more python files to sort, or '-' for stdin.",
     )
 
     args = parser.parse_args()
@@ -56,20 +58,29 @@ def main():
     for path in find_python_files(args.files):
         errors = False
 
-        try:
-            original_bytes = path.read_bytes()
-        except FileNotFoundError:
-            sys.stderr.write(f"ERROR: {escape_path(path)} does not exist\n")
-            unsortable += 1
-            continue
-        except IsADirectoryError:
-            sys.stderr.write(f"ERROR: {escape_path(path)} is a directory\n")
-            unsortable += 1
-            continue
-        except PermissionError:
-            sys.stderr.write(f"ERROR: {escape_path(path)} is not readable\n")
-            unsortable += 1
-            continue
+        if str(path) == "-":
+            original_bytes = sys.stdin.buffer.read()
+        else:
+            try:
+                original_bytes = path.read_bytes()
+            except FileNotFoundError:
+                sys.stderr.write(
+                    f"ERROR: {escape_path(path)} does not exist\n"
+                )
+                unsortable += 1
+                continue
+            except IsADirectoryError:
+                sys.stderr.write(
+                    f"ERROR: {escape_path(path)} is a directory\n"
+                )
+                unsortable += 1
+                continue
+            except PermissionError:
+                sys.stderr.write(
+                    f"ERROR: {escape_path(path)} is not readable\n"
+                )
+                unsortable += 1
+                continue
 
         # The logic for converting from bytes to text is duplicated in `ssort`
         # and here because we need access to the text to be able to compute a
@@ -80,6 +91,8 @@ def main():
             sys.stderr.write(
                 f"ERROR: unknown encoding, {exc.encoding!r}, in {escape_path(path)}\n"
             )
+            if str(path) == "-":
+                sys.stdout.buffer.write(original_bytes)
             unsortable += 1
             continue
 
@@ -89,6 +102,8 @@ def main():
             sys.stderr.write(
                 f"ERROR: encoding error in {escape_path(path)}: {exc}\n"
             )
+            if str(path) == "-":
+                sys.stdout.buffer.write(original_bytes)
             unsortable += 1
             continue
 
@@ -129,10 +144,14 @@ def main():
             )
 
             if errors:
+                if str(path) == "-":
+                    sys.stdout.buffer.write(original_bytes)
                 unsortable += 1
                 continue
 
         except Exception as e:
+            if str(path) == "-":
+                sys.stdout.buffer.write(original_bytes)
             raise Exception(f"ERROR while sorting {path}\n") from e
 
         if original != updated:
@@ -154,8 +173,13 @@ def main():
                     updated_bytes = re.sub("\n", newline, updated_bytes)
                 updated_bytes = updated_bytes.encode(encoding)
 
-                path.write_bytes(updated_bytes)
+                if str(path) == "-":
+                    sys.stdout.buffer.write(updated_bytes)
+                else:
+                    path.write_bytes(updated_bytes)
         else:
+            if str(path) == "-" and not args.check:
+                sys.stdout.buffer.write(original_bytes)
             unchanged += 1
 
         if args.show_diff:

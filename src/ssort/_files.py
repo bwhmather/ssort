@@ -57,7 +57,7 @@ def find_python_files(
     paths_set = set()
     for pattern in patterns:
         path = pathlib.Path(pattern)
-        if not path.is_dir():
+        if str(path) == "-" or not path.is_dir():
             subpaths = [path]
         else:
             subpaths = [
