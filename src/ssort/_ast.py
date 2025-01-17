@@ -356,19 +356,6 @@ def _iter_child_nodes_of_slice(node: ast.Slice) -> Iterable[ast.AST]:
         yield node.step
 
 
-if sys.version_info < (3, 9):
-
-    @iter_child_nodes.register(ast.ExtSlice)
-    def _iter_child_nodes_of_ext_slice(
-        node: ast.ExtSlice,
-    ) -> Iterable[ast.AST]:
-        yield from node.dims
-
-    @iter_child_nodes.register(ast.Index)
-    def _iter_child_nodes_of_index(node: ast.Index) -> Iterable[ast.AST]:
-        yield node.value
-
-
 @iter_child_nodes.register(ast.comprehension)
 def _iter_child_nodes_of_comprehension(
     node: ast.comprehension,
