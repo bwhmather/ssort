@@ -12,9 +12,9 @@ _deprecated_node_types: tuple[type[ast.AST], ...] = (
     ast.AugStore,
     ast.Param,
     ast.Suite,
+    ast.Index,
+    ast.ExtSlice,
 )
-
-_deprecated_node_types += (ast.Index, ast.ExtSlice)
 
 _ignored_node_types: tuple[type[ast.AST], ...] = (
     ast.expr_context,

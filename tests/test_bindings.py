@@ -6,7 +6,6 @@ import pytest
 
 from ssort._bindings import get_bindings
 
-
 match_statement = pytest.mark.skipif(
     sys.version_info < (3, 10),
     reason="match statements were introduced in python 3.10",
@@ -935,9 +934,7 @@ def test_if_exp_bindings_walrus_alternate():
 
 
 def test_if_exp_bindings_walrus():
-    node = _parse(
-        "(a := subsequent()) if (b := predicate()) else (c := alternate())"
-    )
+    node = _parse("(a := subsequent()) if (b := predicate()) else (c := alternate())")
     assert list(get_bindings(node)) == ["b", "a", "c"]
 
 
@@ -1069,30 +1066,22 @@ def test_dict_comp_bindings_unpack():
 
 
 def test_dict_comp_bindings_walrus_key():
-    node = _parse(
-        "{(key := item[0]): item[1] for item in iterator if check(item)}"
-    )
+    node = _parse("{(key := item[0]): item[1] for item in iterator if check(item)}")
     assert list(get_bindings(node)) == ["key"]
 
 
 def test_dict_comp_bindings_walrus_value():
-    node = _parse(
-        "{item[0]: (value := item[1]) for item in iterator if check(item)}"
-    )
+    node = _parse("{item[0]: (value := item[1]) for item in iterator if check(item)}")
     assert list(get_bindings(node)) == ["value"]
 
 
 def test_dict_comp_bindings_walrus_iter():
-    node = _parse(
-        "{item[0]: item[1] for item in (it := iterator) if check(item)}"
-    )
+    node = _parse("{item[0]: item[1] for item in (it := iterator) if check(item)}")
     assert list(get_bindings(node)) == ["it"]
 
 
 def test_dict_comp_bindings_walrus_condition():
-    node = _parse(
-        "{item[0]: item[1] for item in iterator if (c := check(item))}"
-    )
+    node = _parse("{item[0]: item[1] for item in iterator if (c := check(item))}")
     assert list(get_bindings(node)) == ["c"]
 
 
