@@ -6,14 +6,6 @@ import pytest
 
 from ssort._bindings import get_bindings
 
-# Most walrus operator syntax is valid in 3.8. Only use this decorator for the
-# rare cases where it is not.
-walrus_operator = pytest.mark.skipif(
-    sys.version_info < (3, 9),
-    reason="some walrus operator syntax is not valid prior to python 3.9",
-)
-
-
 match_statement = pytest.mark.skipif(
     sys.version_info < (3, 10),
     reason="match statements were introduced in python 3.10",
@@ -35,10 +27,7 @@ def _parse(source):
     root = ast.parse(source)
     assert len(root.body) == 1
     node = root.body[0]
-    if sys.version_info >= (3, 9):
-        print(ast.dump(node, include_attributes=True, indent=2))
-    else:
-        print(ast.dump(node, include_attributes=True))
+    print(ast.dump(node, include_attributes=True, indent=2))
     return node
 
 
@@ -96,7 +85,6 @@ def test_function_def_bindings_walrus_type():
     ]
 
 
-@walrus_operator
 def test_function_def_bindings_walrus_decorator():
     node = _parse(
         """
@@ -165,7 +153,6 @@ def test_async_function_def_bindings_walrus_type():
     ]
 
 
-@walrus_operator
 def test_async_function_def_bindings_walrus_decorator():
     node = _parse(
         """
@@ -201,7 +188,6 @@ def test_class_def_bindings():
     assert list(get_bindings(node)) == ["ClassName"]
 
 
-@walrus_operator
 def test_class_def_bindings_walrus_decorator():
     node = _parse(
         """
@@ -1004,14 +990,8 @@ def test_set_bindings_unpack():
     assert list(get_bindings(node)) == []
 
 
-@walrus_operator
 def test_set_bindings_walrus():
     node = _parse("{a, {b := genb()}, c}")
-    assert list(get_bindings(node)) == ["b"]
-
-
-def test_set_bindings_walrus_py38():
-    node = _parse("{a, {(b := genb())}, c}")
     assert list(get_bindings(node)) == ["b"]
 
 

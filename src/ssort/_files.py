@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import os
 import pathlib
+from functools import cache
 from typing import Iterable
 
 import pathspec
 
-from ssort._utils import memoize
-
 _EMPTY_PATH_SPEC = pathspec.PathSpec([])
 
 
-@memoize
+@cache
 def _is_project_root(path: pathlib.Path) -> bool:
     if path == path.root or path == path.parent:
         return True
@@ -22,7 +21,7 @@ def _is_project_root(path: pathlib.Path) -> bool:
     return False
 
 
-@memoize
+@cache
 def _get_ignore_patterns(path: pathlib.Path) -> pathspec.PathSpec:
     git_ignore = path / ".gitignore"
     if git_ignore.is_file():

@@ -27,10 +27,7 @@ def _parse(source):
     root = ast.parse(source)
     assert len(root.body) == 1
     node = root.body[0]
-    if sys.version_info >= (3, 9):
-        print(ast.dump(node, include_attributes=True, indent=2))
-    else:
-        print(ast.dump(node, include_attributes=True))
+    print(ast.dump(node, include_attributes=True, indent=2))
     return node
 
 

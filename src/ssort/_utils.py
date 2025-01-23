@@ -10,11 +10,6 @@ from typing import Any, Callable, Generic, TypeVar
 
 from ssort._exceptions import UnknownEncodingError
 
-if sys.version_info < (3, 9):
-    memoize = functools.lru_cache(maxsize=None)
-else:
-    memoize = functools.cache
-
 
 def sort_key_from_iter(values):
     index = {statement: index for index, statement in enumerate(values)}
