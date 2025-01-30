@@ -2,7 +2,7 @@ from ssort._builtins import MODULE_BUILTINS
 from ssort._graphs import Graph
 
 
-def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
+def module_statements_graph(statements):
     """
     Constructs a graph of the interdependencies in a list of module level
     statements.
@@ -10,16 +10,6 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
     :param statements:
         An ordered list of opaque `Statement` objects from which to construct
         the graph.
-
-    :param on_unresolved:
-        An callback that should be invoked for each unresolved dependency.  Can
-        safely raise any arbitrary exception to abort constructing the graph.
-        If no exception is raised, the graph returned by this function will not
-        contain a link for the missing requirement.
-    :param on_wildcard_import:
-        A callback that should be invoked if ssort detects a `*` import.  If no
-        exception is raised, all dangling references will be pointed back to the
-        last `*` import.
 
     :returns:
         A `Graph` mapping from statements to the set of statements that they
@@ -35,7 +25,6 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
         for requirement in statement.requirements():
             all_requirements.append(requirement)
 
-            # TODO error if requirement is not deferred.
             if requirement.name in scope:
                 resolved[requirement] = scope[requirement.name]
                 continue
@@ -45,12 +34,6 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
                 continue
 
         for name in statement.bindings():
-            if name == "*":
-                on_wildcard_import(
-                    lineno=statement.node.lineno,
-                    col_offset=statement.node.col_offset,
-                )
-
             scope[name] = statement
 
     # Patch up dependencies that couldn't be resolved immediately.
@@ -63,41 +46,13 @@ def module_statements_graph(statements, *, on_unresolved, on_wildcard_import):
 
         resolved[requirement] = scope[requirement.name]
 
-    if "*" in scope:
-        for requirement in all_requirements:
-            if requirement in resolved:
-                continue
-
-            resolved[requirement] = scope["*"]
-
-    else:
-        unresolved = [
-            requirement
-            for requirement in all_requirements
-            if requirement not in resolved
-        ]
-
-        for requirement in unresolved:
-            on_unresolved(
-                f"could not resolve {requirement.name!r}",
-                name=requirement.name,
-                lineno=requirement.lineno,
-                col_offset=requirement.col_offset,
-            )
-
-        if unresolved:
-            # Not safe to attempt to re-order in the event of unresolved
-            # dependencies.  A typo could cause a statement to be moved ahead of
-            # something that it should depend on.
-            return None
-
     graph = Graph()
     for statement in statements:
         graph.add_node(statement)
 
     for statement in statements:
         for requirement in statement.requirements():
-            if resolved[requirement] is not None:
+            if resolved.get(requirement) is not None:
                 graph.add_dependency(statement, resolved[requirement])
 
     # Add links between statements that overwrite the same binding to make sure

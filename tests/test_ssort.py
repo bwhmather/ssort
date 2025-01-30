@@ -684,6 +684,22 @@ def test_ssort_self_positional_only():
                 pass
         """
     )
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_shadow_builtin():
+    original = _clean(
+        """
+        print("Hello, World!")
+
+        def print(message):
+            pass
+        """
+    )
+    expected = original
+
     actual = ssort(original)
     assert actual == expected
 
