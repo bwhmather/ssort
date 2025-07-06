@@ -13,6 +13,7 @@ MODULE_BUILTINS = {
     "__package__",
     "__path__",
     "__spec__",
+    "_IncompleteInputError",
     "ArithmeticError",
     "AssertionError",
     "AttributeError",
@@ -62,6 +63,7 @@ MODULE_BUILTINS = {
     "PendingDeprecationWarning",
     "PermissionError",
     "ProcessLookupError",
+    "PythonFinalizationError",
     "RecursionError",
     "ReferenceError",
     "ResourceWarning",
@@ -182,6 +184,8 @@ MODULE_BUILTINS = {
 }
 
 CLASS_BUILTINS = {
+    "__firstlineno__",
     "__module__",
     "__qualname__",
+    "__static_attributes__",
 }
