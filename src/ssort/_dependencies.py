@@ -212,4 +212,16 @@ def class_statements_runtime_graph(statements, *, ignore_public):
                 continue
             graph.add_dependency(statement, scope[name])
 
+    overloads = {}
+    for statement in statements:
+        for name in statement.bindings():
+            if name not in overloads:
+                continue
+            for overload in overloads[name]:
+                for dependency in graph.dependencies[statement]:
+                    graph.add_dependency(overload, dependency)
+        if statement.is_overload():
+            for name in statement.bindings():
+                overloads.setdefault(name, []).append(statement)
+
     return graph

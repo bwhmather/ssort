@@ -5,6 +5,7 @@ from typing import Iterable
 
 from ssort._bindings import get_bindings
 from ssort._method_requirements import get_method_requirements
+from ssort._overloads import is_overload
 from ssort._requirements import Requirement, get_requirements
 from ssort._utils import cached_method
 
@@ -48,6 +49,10 @@ class Statement:
         Returns an iterable yielding the names bound by this statement.
         """
         return tuple(get_bindings(self.node))
+
+    @cached_method
+    def is_overload(self) -> bool:
+        return is_overload(self.node)
 
     def __repr__(self) -> str:
         return f"<Statement text={self.text!r}>"

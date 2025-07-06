@@ -711,7 +711,7 @@ def test_ssort_type_alias():
         from decimal import Decimal
 
         roundint(3.14)
-        
+
         def roundint(n: N) -> int:
             return int(round(n))
 
@@ -726,7 +726,7 @@ def test_ssort_type_alias():
 
         def roundint(n: N) -> int:
             return int(round(n))
-            
+
         roundint(3.14)
         """
     )
@@ -772,6 +772,129 @@ def test_ssort_generic_class():
         class ClassA[T: (str, bytes)](BaseClass[T]):
             attr1: T
         obj = ClassA[str]()
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_overload_variants():
+    original = _clean(
+        """
+        from typing import overload
+
+        def _get_value() -> int:
+            return 0
+
+        @overload
+        def func(self, first: int, second: int) -> int: ...
+        def func(self, both: tuple[int, int]) -> int:
+            return _get_value()
+        """
+    )
+    expected = _clean(
+        """
+        from typing import overload
+
+        def _get_value() -> int:
+            return 0
+
+        @overload
+        def func(self, first: int, second: int) -> int: ...
+        def func(self, both: tuple[int, int]) -> int:
+            return _get_value()
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_method_overload_variants():
+    original = _clean(
+        """
+        from typing import Any, Generic, TypeVar, overload
+
+        T = TypeVar("T")
+
+        class MyClass(Generic[T]):
+            def _get_value(self):
+                return 0
+
+            @overload
+            def __get__(self, instance: None, owner=None) ->  MyClass(Generic[T]): ...
+            @overload
+            def __get__(self, instance: Any, owner=None) -> T: ...
+            def __get__(self, instance, owner=None):
+                if instance is None:
+                    return self
+                return self._get_value()
+        """
+    )
+    expected = _clean(
+        """
+        from typing import Any, Generic, TypeVar, overload
+
+        T = TypeVar("T")
+
+        class MyClass(Generic[T]):
+            def _get_value(self):
+                return 0
+
+            @overload
+            def __get__(self, instance: None, owner=None) ->  MyClass(Generic[T]): ...
+            @overload
+            def __get__(self, instance: Any, owner=None) -> T: ...
+            def __get__(self, instance, owner=None):
+                if instance is None:
+                    return self
+                return self._get_value()
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_method_overload_variants_qualified():
+    original = _clean(
+        """
+        from typing import Any, Generic, TypeVar
+        import typing
+
+        T = TypeVar("T")
+
+        class MyClass(Generic[T]):
+            def _get_value(self):
+                return 0
+
+            @typing.overload
+            def __get__(self, instance: None, owner=None) -> MyClass(Generic[T]): ...
+            @typing.overload
+            def __get__(self, instance: Any, owner=None) -> T: ...
+            def __get__(self, instance, owner=None):
+                if instance is None:
+                    return self
+                return self._get_value()
+        """
+    )
+    expected = _clean(
+        """
+        from typing import Any, Generic, TypeVar
+        import typing
+
+        T = TypeVar("T")
+
+        class MyClass(Generic[T]):
+            def _get_value(self):
+                return 0
+
+            @typing.overload
+            def __get__(self, instance: None, owner=None) -> MyClass(Generic[T]): ...
+            @typing.overload
+            def __get__(self, instance: Any, owner=None) -> T: ...
+            def __get__(self, instance, owner=None):
+                if instance is None:
+                    return self
+                return self._get_value()
         """
     )
     actual = ssort(original)
