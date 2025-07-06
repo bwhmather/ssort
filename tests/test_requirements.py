@@ -688,7 +688,7 @@ def test_control_flow_requirements():
         Pass | Break | Continue
 
     """
-    return []
+    pass
 
 
 def test_bool_op_requirements():
@@ -1262,7 +1262,7 @@ def test_generic_class_requirements():
     node = _parse(
         """
         class ClassA[T]:
-            attr1: T 
+            attr1: T
             def method1(self) -> T:
                 return self.attr1
         """
@@ -1293,7 +1293,7 @@ def test_generic_inner_class_requirements():
                 pass
 
             def method1[T](self, a: Inner[T]) -> Inner[T]:
-                return a        
+                return a
         """
     )
     assert _dep_names(node) == ["Sequence"]
