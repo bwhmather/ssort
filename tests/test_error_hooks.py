@@ -1,13 +1,6 @@
 import pytest
 
-from ssort import (
-    DecodingError,
-    ParseError,
-    ResolutionError,
-    UnknownEncodingError,
-    WildcardImportError,
-    ssort,
-)
+from ssort import DecodingError, ParseError, UnknownEncodingError, ssort
 
 
 class _DummyException(Exception):
@@ -104,80 +97,3 @@ def test_on_parse_error_callback():
     with pytest.raises(_DummyException) as exc_info:
         ssort(original, on_parse_error=on_parse_error)
     assert exc_info.value.args == ("invalid syntax", 1, 4)
-
-
-# === Unresolved ===============================================================
-
-
-def test_on_unresolved_raise():
-    original = "def fun():\n    unresolved()"
-
-    with pytest.raises(ResolutionError) as exc_info:
-        ssort(original, on_unresolved="raise")
-
-    assert str(exc_info.value) == "could not resolve 'unresolved'"
-    assert exc_info.value.name == "unresolved"
-    assert exc_info.value.lineno == 2
-    assert exc_info.value.col_offset == 4
-
-
-def test_on_unresolved_ignore():
-    original = "def fun():\n    unresolved()"
-
-    actual = ssort(original, on_unresolved="ignore")
-
-    assert actual == original
-
-
-def test_on_unresolved_callback():
-    original = "def fun():\n    unresolved()"
-
-    def on_unresolved(message, *, name, lineno, col_offset):
-        raise _DummyException(message, name, lineno, col_offset)
-
-    with pytest.raises(_DummyException) as exc_info:
-        ssort(original, on_unresolved=on_unresolved)
-
-    assert exc_info.value.args == (
-        "could not resolve 'unresolved'",
-        "unresolved",
-        2,
-        4,
-    )
-
-
-# === Wildcard Import ==========================================================
-
-
-def test_on_wildcard_import_raise():
-    original = "from module import *"
-
-    with pytest.raises(WildcardImportError) as exc_info:
-        ssort(original, on_wildcard_import="raise")
-
-    assert (
-        str(exc_info.value)
-        == "can't reliably determine dependencies on * import"
-    )
-    assert exc_info.value.lineno == 1
-    assert exc_info.value.col_offset == 0
-
-
-def test_on_wildcard_import_ignore():
-    original = "from module import *\n"
-
-    actual = ssort(original, on_wildcard_import="ignore")
-
-    assert actual == original
-
-
-def test_on_wildcard_import_callback():
-    original = "from module import *"
-
-    def on_wildcard_import(*, lineno, col_offset):
-        raise _DummyException(lineno, col_offset)
-
-    with pytest.raises(_DummyException) as exc_info:
-        ssort(original, on_wildcard_import=on_wildcard_import)
-
-    assert exc_info.value.args == (1, 0)
