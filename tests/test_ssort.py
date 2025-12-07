@@ -9,6 +9,10 @@ type_parameter_syntax = pytest.mark.skipif(
     sys.version_info < (3, 12),
     reason="type parameter syntax was introduced in python 3.12",
 )
+template_syntax = pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="template string syntax was introduced in python 3.14",
+)
 
 
 def _clean(text):
@@ -935,6 +939,45 @@ def test_method_overload_variants_qualified():
                 if instance is None:
                     return self
                 return self._get_value()
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_format_strings():
+    original = _clean(
+        """
+        def fmt():
+            return f"{b}"
+        b = 2
+        """
+    )
+    expected = _clean(
+        """
+        b = 2
+        def fmt():
+            return f"{b}"
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+@template_syntax
+def test_template_strings():
+    original = _clean(
+        """
+        def fmt():
+            return f"{b}"
+        b = 2
+        """
+    )
+    expected = _clean(
+        """
+        b = 2
+        def fmt():
+            return f"{b}"
         """
     )
     actual = ssort(original)
