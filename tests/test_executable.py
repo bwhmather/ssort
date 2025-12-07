@@ -66,6 +66,10 @@ def _write_fixtures(dirpath, texts):
     return paths
 
 
+def _read_fixtures(paths):
+    return [pathlib.Path(path).read_bytes() for path in paths]
+
+
 def _messages(stderr):
     return stderr.decode("utf-8").splitlines(keepends=True)
 
@@ -89,7 +93,7 @@ def ssort(request):
 
 
 def test_check_all_well(ssort, tmp_path):
-    _write_fixtures(tmp_path, [_good, _good, _good])
+    paths = _write_fixtures(tmp_path, [_good, _good, _good])
 
     stdout, stderr, status = ssort("--check", tmp_path)
 
@@ -98,6 +102,7 @@ def test_check_all_well(ssort, tmp_path):
         "3 files would be left unchanged\n",
     ]
     assert status == 0
+    assert _read_fixtures(paths) == [_good, _good, _good]
 
 
 def test_check_one_unsorted(ssort, tmp_path):
@@ -111,6 +116,7 @@ def test_check_one_unsorted(ssort, tmp_path):
         "1 file would be resorted, 2 files would be left unchanged\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_unsorted, _good, _good]
 
 
 def test_check_all_unsorted(ssort, tmp_path):
@@ -126,6 +132,7 @@ def test_check_all_unsorted(ssort, tmp_path):
         "3 files would be resorted\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_unsorted, _unsorted, _unsorted]
 
 
 def test_check_one_syntax_error(ssort, tmp_path):
@@ -139,6 +146,7 @@ def test_check_one_syntax_error(ssort, tmp_path):
         "2 files would be left unchanged, 1 file would not be sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_syntax, _good, _good]
 
 
 def test_check_all_syntax_error(ssort, tmp_path):
@@ -154,6 +162,7 @@ def test_check_all_syntax_error(ssort, tmp_path):
         "3 files would not be sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_syntax, _syntax, _syntax]
 
 
 def test_check_resolution_error(ssort, tmp_path):
@@ -167,6 +176,7 @@ def test_check_resolution_error(ssort, tmp_path):
         "2 files would be left unchanged, 1 file would not be sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_resolution, _good, _good]
 
 
 def test_check_double_resolution_error(ssort, tmp_path):
@@ -181,6 +191,7 @@ def test_check_double_resolution_error(ssort, tmp_path):
         "2 files would be left unchanged, 1 file would not be sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_double_resolution, _good, _good]
 
 
 def test_check_one_unsorted_one_syntax_error(ssort, tmp_path):
@@ -195,10 +206,11 @@ def test_check_one_unsorted_one_syntax_error(ssort, tmp_path):
         "1 file would be resorted, 1 file would be left unchanged, 1 file would not be sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_syntax, _unsorted, _good]
 
 
 def test_ssort_all_well(ssort, tmp_path):
-    _write_fixtures(tmp_path, [_good, _good, _good])
+    paths = _write_fixtures(tmp_path, [_good, _good, _good])
 
     stdout, stderr, status = ssort(tmp_path)
 
@@ -207,6 +219,7 @@ def test_ssort_all_well(ssort, tmp_path):
         "3 files were left unchanged\n",
     ]
     assert status == 0
+    assert _read_fixtures(paths) == [_good, _good, _good]
 
 
 def test_ssort_one_unsorted(ssort, tmp_path):
@@ -220,6 +233,7 @@ def test_ssort_one_unsorted(ssort, tmp_path):
         "1 file was resorted, 2 files were left unchanged\n",
     ]
     assert status == 0
+    assert _read_fixtures(paths) == [_good, _good, _good]
 
 
 def test_ssort_all_unsorted(ssort, tmp_path):
@@ -235,6 +249,7 @@ def test_ssort_all_unsorted(ssort, tmp_path):
         "3 files were resorted\n",
     ]
     assert status == 0
+    assert _read_fixtures(paths) == [_good, _good, _good]
 
 
 def test_ssort_one_syntax_error(ssort, tmp_path):
@@ -248,6 +263,7 @@ def test_ssort_one_syntax_error(ssort, tmp_path):
         "2 files were left unchanged, 1 file was not sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_syntax, _good, _good]
 
 
 def test_ssort_all_syntax_error(ssort, tmp_path):
@@ -263,6 +279,7 @@ def test_ssort_all_syntax_error(ssort, tmp_path):
         "3 files were not sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_syntax, _syntax, _syntax]
 
 
 def test_ssort_resolution_error(ssort, tmp_path):
@@ -276,6 +293,7 @@ def test_ssort_resolution_error(ssort, tmp_path):
         "2 files were left unchanged, 1 file was not sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_resolution, _good, _good]
 
 
 def test_ssort_one_unsorted_one_syntax_error(ssort, tmp_path):
@@ -290,6 +308,7 @@ def test_ssort_one_unsorted_one_syntax_error(ssort, tmp_path):
         "1 file was resorted, 1 file was left unchanged, 1 file was not sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_syntax, _good, _good]
 
 
 def test_ssort_encoding_error(ssort, tmp_path):
@@ -303,6 +322,7 @@ def test_ssort_encoding_error(ssort, tmp_path):
         "1 file was not sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_encoding]
 
 
 def test_ssort_character_error(ssort, tmp_path):
@@ -316,11 +336,11 @@ def test_ssort_character_error(ssort, tmp_path):
         "1 file was not sortable\n",
     ]
     assert status == 1
+    assert _read_fixtures(paths) == [_character]
 
 
 def test_ssort_preserve_crlf_endlines(ssort, tmp_path):
-    input = b"a = b\r\nb = 4"
-    paths = _write_fixtures(tmp_path, [input])
+    paths = _write_fixtures(tmp_path, [b"a = b\r\nb = 4"])
 
     stdout, stderr, status = ssort(tmp_path)
 
@@ -331,8 +351,7 @@ def test_ssort_preserve_crlf_endlines(ssort, tmp_path):
     ]
     assert status == 0
 
-    (output,) = [pathlib.Path(path).read_bytes() for path in paths]
-    assert output == b"b = 4\r\na = b\r\n"
+    assert _read_fixtures(paths) == [b"b = 4\r\na = b\r\n"]
 
 
 def test_ssort_empty_dir(ssort, tmp_path):
