@@ -312,6 +312,23 @@ def _iter_child_nodes_of_joined_str(node: ast.JoinedStr) -> Iterable[ast.AST]:
     yield from node.values
 
 
+if sys.version_info >= (3, 14):
+
+    @iter_child_nodes.register(ast.Interpolation)
+    def _iter_child_nodes_of_interpolation(
+        node: ast.Interpolation,
+    ) -> Iterable[ast.AST]:
+        yield node.value
+        if node.format_spec is not None:
+            yield node.format_spec
+
+    @iter_child_nodes.register(ast.TemplateStr)
+    def _iter_child_nodes_of_template_str(
+        node: ast.JoinedStr,
+    ) -> Iterable[ast.AST]:
+        yield from node.values
+
+
 @iter_child_nodes.register(ast.Constant)
 def _iter_child_nodes_of_constant(node: ast.Constant) -> Iterable[ast.AST]:
     return ()
