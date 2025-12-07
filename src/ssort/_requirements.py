@@ -124,25 +124,27 @@ def _get_requirements_for_class_def(
 ) -> Iterable[Requirement]:
     yield from _get_requirements_from_nodes(node.decorator_list)
 
-    scope: set[str] = set()
+    runtime_scope = set()
     if sys.version_info >= (3, 12):
-        scope.update(_get_scope_from_type_params(node.type_params))
+        runtime_scope.update(_get_scope_from_type_params(node.type_params))
         for requirement in _get_requirements_from_nodes(node.type_params):
-            if requirement.name not in scope:
+            if requirement.name not in runtime_scope:
                 yield requirement
 
     for requirement in _get_requirements_from_nodes(node.bases):
-        if requirement.name not in scope:
+        if requirement.name not in runtime_scope:
             yield requirement
 
-    scope.update(CLASS_BUILTINS)
-
+    definition_scope = set(CLASS_BUILTINS)
     for statement in node.body:
         for stmt_dep in get_requirements(statement):
-            if stmt_dep.deferred or stmt_dep.name not in scope:
-                yield stmt_dep
+            if stmt_dep.name in runtime_scope:
+                continue
+            if stmt_dep.name in definition_scope and not stmt_dep.deferred:
+                continue
+            yield stmt_dep
 
-        scope.update(get_bindings(statement))
+        definition_scope.update(get_bindings(statement))
 
 
 @get_requirements.register(ast.For)

@@ -755,6 +755,26 @@ def test_ssort_generic_function():
 
 
 @type_parameter_syntax
+def test_ssort_generic_function_inner():
+    original = _clean(
+        """
+        def func[T](a: T) -> T:
+            b: list[T] = [a]
+            return b
+        """
+    )
+    expected = _clean(
+        """
+        def func[T](a: T) -> T:
+            b: list[T] = [a]
+            return b
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+@type_parameter_syntax
 def test_ssort_generic_class():
     original = _clean(
         """
@@ -772,6 +792,26 @@ def test_ssort_generic_class():
         class ClassA[T: (str, bytes)](BaseClass[T]):
             attr1: T
         obj = ClassA[str]()
+        """
+    )
+    actual = ssort(original)
+    assert actual == expected
+
+
+@type_parameter_syntax
+def test_ssort_generic_class_method_locals():
+    original = _clean(
+        """
+        class MyGeneric[T]:
+            def __init__(self):
+                self.stuff: list[T] = []
+        """
+    )
+    expected = _clean(
+        """
+        class MyGeneric[T]:
+            def __init__(self):
+                self.stuff: list[T] = []
         """
     )
     actual = ssort(original)
