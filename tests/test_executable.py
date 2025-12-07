@@ -1,3 +1,4 @@
+import os
 import pathlib
 import subprocess
 import sys
@@ -86,6 +87,7 @@ def ssort(request):
             [*ssort_exe, *args],
             capture_output=True,
             input=input,
+            env={**os.environ, "COLUMNS": "80"},
         )
         return result.stdout, result.stderr, result.returncode
 
@@ -431,9 +433,9 @@ positional arguments:
   -h, --help  show this help message and exit
   --version   Outputs version information and then exit
   --diff      Prints a diff of all changes ssort would make to a file.
-  --check     Check the file for unsorted statements. Returns 0 if nothing needs to be changed. Otherwise returns 1.
-    """.strip()
-        + "\n"
+  --check     Check the file for unsorted statements. Returns 0 if nothing
+              needs to be changed. Otherwise returns 1.
+""".lstrip()
     )
     assert stderr == b""
     assert status == 0
