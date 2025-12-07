@@ -72,7 +72,9 @@ def _read_fixtures(paths):
 
 
 def _messages(stderr):
-    return stderr.decode("utf-8").splitlines(keepends=True)
+    return (
+        stderr.decode("utf-8").replace("\r\n", "\n").splitlines(keepends=True)
+    )
 
 
 @pytest.fixture(params=["entrypoint", "module"])
@@ -411,7 +413,10 @@ def test_ssort_unreadable_file(ssort, tmp_path):
 
 def test_ssort_version(ssort):
     stdout, stderr, status = ssort("--version")
-    assert stdout.decode("utf-8") == f"ssort {__version__}\n"
+    assert (
+        stdout.decode("utf-8").replace("\r\n", "\n")
+        == f"ssort {__version__}\n"
+    )
     assert stderr == b""
     assert status == 0
 
@@ -420,7 +425,7 @@ def test_ssort_help(ssort):
     stdout, stderr, status = ssort("--help")
 
     assert (
-        stdout.decode("utf-8")
+        stdout.decode("utf-8").replace("\r\n", "\n")
         == f"""
 usage: ssort [-h] [--version] [--diff] [--check] [files ...]
 
