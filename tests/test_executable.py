@@ -66,316 +66,308 @@ def _write_fixtures(dirpath, texts):
     return paths
 
 
-@pytest.fixture(params=["entrypoint", "module"])
-def check(request):
-    def _check(dirpath):
-        ssort_exe = {
-            "entrypoint": ["ssort"],
-            "module": [sys.executable, "-m", "ssort"],
-        }[request.param]
-
-        result = subprocess.run(
-            [*ssort_exe, "--check", str(dirpath)],
-            capture_output=True,
-            encoding="utf-8",
-        )
-        return result.stderr.splitlines(keepends=True), result.returncode
-
-    return _check
+def _messages(stderr):
+    return stderr.decode("utf-8").splitlines(keepends=True)
 
 
 @pytest.fixture(params=["entrypoint", "module"])
 def ssort(request):
-    def _ssort(dirpath):
+    def _ssort(*args, input=""):
         ssort_exe = {
             "entrypoint": ["ssort"],
             "module": [sys.executable, "-m", "ssort"],
         }[request.param]
 
         result = subprocess.run(
-            [*ssort_exe, str(dirpath)],
+            [*ssort_exe, *args],
             capture_output=True,
-            encoding="utf-8",
+            input=input,
         )
-        return result.stderr.splitlines(keepends=True), result.returncode
+        return result.stdout, result.stderr, result.returncode
 
     return _ssort
 
 
-def test_check_all_well(check, tmp_path):
+def test_check_all_well(ssort, tmp_path):
     _write_fixtures(tmp_path, [_good, _good, _good])
-    expected_msgs = [
+
+    stdout, stderr, status = ssort("--check", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         "3 files would be left unchanged\n",
     ]
-    expected_status = 0
-    actual_msgs, actual_status = check(tmp_path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 0
 
 
-def test_check_one_unsorted(check, tmp_path):
+def test_check_one_unsorted(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_unsorted, _good, _good])
-    expected_msgs = [
+
+    stdout, stderr, status = ssort("--check", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: {escape_path(paths[0])} is incorrectly sorted\n",
         "1 file would be resorted, 2 files would be left unchanged\n",
     ]
-    expected_status = 1
-    actual_msgs, actual_status = check(tmp_path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
-def test_check_all_unsorted(check, tmp_path):
+def test_check_all_unsorted(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_unsorted, _unsorted, _unsorted])
-    expected_msgs = [
+
+    stdout, stderr, status = ssort("--check", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: {escape_path(paths[0])} is incorrectly sorted\n",
         f"ERROR: {escape_path(paths[1])} is incorrectly sorted\n",
         f"ERROR: {escape_path(paths[2])} is incorrectly sorted\n",
         "3 files would be resorted\n",
     ]
-    expected_status = 1
-    actual_msgs, actual_status = check(tmp_path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
-def test_check_one_syntax_error(check, tmp_path):
+def test_check_one_syntax_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_syntax, _good, _good])
-    expected_msgs = [
+
+    stdout, stderr, status = ssort("--check", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: syntax error in {escape_path(paths[0])}: line 3, column 5\n",
         "2 files would be left unchanged, 1 file would not be sortable\n",
     ]
-    expected_status = 1
-    actual_msgs, actual_status = check(tmp_path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
-def test_check_all_syntax_error(check, tmp_path):
+def test_check_all_syntax_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_syntax, _syntax, _syntax])
-    expected_msgs = [
+
+    stdout, stderr, status = ssort("--check", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: syntax error in {escape_path(paths[0])}: line 3, column 5\n",
         f"ERROR: syntax error in {escape_path(paths[1])}: line 3, column 5\n",
         f"ERROR: syntax error in {escape_path(paths[2])}: line 3, column 5\n",
         "3 files would not be sortable\n",
     ]
-    expected_status = 1
-    actual_msgs, actual_status = check(tmp_path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
-def test_check_resolution_error(check, tmp_path):
+def test_check_resolution_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_resolution, _good, _good])
-    expected_msgs = [
+
+    stdout, stderr, status = ssort("--check", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
         "2 files would be left unchanged, 1 file would not be sortable\n",
     ]
-    expected_status = 1
-    actual_msgs, actual_status = check(tmp_path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
-def test_check_double_resolution_error(check, tmp_path):
+def test_check_double_resolution_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_double_resolution, _good, _good])
-    expected_msgs = [
+
+    stdout, stderr, status = ssort("--check", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
         f"ERROR: unresolved dependency '_same' in {escape_path(paths[0])}: line 6, column 22\n",
         "2 files would be left unchanged, 1 file would not be sortable\n",
     ]
-    expected_status = 1
-    actual_msgs, actual_status = check(tmp_path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
-def test_check_one_unsorted_one_syntax_error(check, tmp_path):
+def test_check_one_unsorted_one_syntax_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_syntax, _unsorted, _good])
-    expected_msgs = [
+
+    stdout, stderr, status = ssort("--check", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: syntax error in {escape_path(paths[0])}: line 3, column 5\n",
         f"ERROR: {escape_path(paths[1])} is incorrectly sorted\n",
         "1 file would be resorted, 1 file would be left unchanged, 1 file would not be sortable\n",
     ]
-    expected_status = 1
-    actual_msgs, actual_status = check(tmp_path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
 def test_ssort_all_well(ssort, tmp_path):
     _write_fixtures(tmp_path, [_good, _good, _good])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         "3 files were left unchanged\n",
     ]
-    expected_status = 0
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 0
 
 
 def test_ssort_one_unsorted(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_unsorted, _good, _good])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"Sorting {escape_path(paths[0])}\n",
         "1 file was resorted, 2 files were left unchanged\n",
     ]
-    expected_status = 0
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 0
 
 
 def test_ssort_all_unsorted(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_unsorted, _unsorted, _unsorted])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"Sorting {escape_path(paths[0])}\n",
         f"Sorting {escape_path(paths[1])}\n",
         f"Sorting {escape_path(paths[2])}\n",
         "3 files were resorted\n",
     ]
-    expected_status = 0
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 0
 
 
 def test_ssort_one_syntax_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_syntax, _good, _good])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: syntax error in {escape_path(paths[0])}: line 3, column 5\n",
         "2 files were left unchanged, 1 file was not sortable\n",
     ]
-    expected_status = 1
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
 def test_ssort_all_syntax_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_syntax, _syntax, _syntax])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: syntax error in {escape_path(paths[0])}: line 3, column 5\n",
         f"ERROR: syntax error in {escape_path(paths[1])}: line 3, column 5\n",
         f"ERROR: syntax error in {escape_path(paths[2])}: line 3, column 5\n",
         "3 files were not sortable\n",
     ]
-    expected_status = 1
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
 def test_ssort_resolution_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_resolution, _good, _good])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: unresolved dependency '_other' in {escape_path(paths[0])}: line 6, column 11\n",
         "2 files were left unchanged, 1 file was not sortable\n",
     ]
-    expected_status = 1
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
 def test_ssort_one_unsorted_one_syntax_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_syntax, _unsorted, _good])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: syntax error in {escape_path(paths[0])}: line 3, column 5\n",
         f"Sorting {escape_path(paths[1])}\n",
         "1 file was resorted, 1 file was left unchanged, 1 file was not sortable\n",
     ]
-    expected_status = 1
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
 def test_ssort_encoding_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_encoding])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: unknown encoding, 'invalid-encoding', in {escape_path(paths[0])}\n",
         "1 file was not sortable\n",
     ]
-    expected_status = 1
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
 def test_ssort_character_error(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [_character])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: encoding error in {escape_path(paths[0])}: 'ascii' codec can't decode byte 0xfe in position 16: ordinal not in range(128)\n",
         "1 file was not sortable\n",
     ]
-    expected_status = 1
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
 def test_ssort_preserve_crlf_endlines(ssort, tmp_path):
     input = b"a = b\r\nb = 4"
-    expected_output = b"b = 4\r\na = b\r\n"
-
     paths = _write_fixtures(tmp_path, [input])
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"Sorting {escape_path(paths[0])}\n",
         "1 file was resorted\n",
     ]
-    expected_status = 0
-
-    actual_msgs, actual_status = ssort(tmp_path)
-
-    assert actual_msgs == expected_msgs
-    assert actual_status == expected_status
+    assert status == 0
 
     (output,) = [pathlib.Path(path).read_bytes() for path in paths]
-    assert output == expected_output
+    assert output == b"b = 4\r\na = b\r\n"
 
 
 def test_ssort_empty_dir(ssort, tmp_path):
-    expected_msgs = ["No files are present to be sorted. Nothing to do.\n"]
-    expected_status = 0
+    stdout, stderr, status = ssort(tmp_path)
 
-    actual_msgs, actual_status = ssort(tmp_path)
+    assert stdout == b""
+    assert _messages(stderr) == [
+        "No files are present to be sorted. Nothing to do.\n"
+    ]
 
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 0
 
 
 def test_ssort_non_existent_file(ssort, tmp_path):
     path = tmp_path / "file.py"
 
-    expected_msgs = [
+    stdout, stderr, status = ssort(path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: {escape_path(path)} does not exist\n",
         "1 file was not sortable\n",
     ]
-    expected_status = 1
-
-    actual_msgs, actual_status = ssort(path)
-
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
 def test_ssort_no_py_extension(ssort, tmp_path):
     path = tmp_path / "file"
     path.write_bytes(_good)
-    expected_msgs = ["1 file was left unchanged\n"]
-    expected_status = 0
-    actual_msgs, actual_status = ssort(path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+
+    stdout, stderr, status = ssort(path)
+
+    assert stdout == b""
+    assert _messages(stderr) == ["1 file was left unchanged\n"]
+    assert status == 0
 
 
 @pytest.mark.skipif(
@@ -385,45 +377,51 @@ def test_ssort_unreadable_file(ssort, tmp_path):
     path = tmp_path / "file.py"
     path.write_bytes(_good)
     path.chmod(0)
-    expected_msgs = [
+
+    stdout, stderr, status = ssort(path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
         f"ERROR: {escape_path(path)} is not readable\n",
         "1 file was not sortable\n",
     ]
-    expected_status = 1
-    actual_msgs, actual_status = ssort(path)
-    assert (actual_msgs, actual_status) == (expected_msgs, expected_status)
+    assert status == 1
 
 
-def test_ssort_version():
-    result = subprocess.run(
-        ["ssort", "--version"],
-        capture_output=True,
-        encoding="utf-8",
+def test_ssort_version(ssort):
+    stdout, stderr, status = ssort("--version")
+    assert stdout.decode("utf-8") == f"ssort {__version__}\n"
+    assert stderr == b""
+    assert status == 0
+
+
+def test_ssort_help(ssort):
+    stdout, stderr, status = ssort("--help")
+
+    assert (
+        stdout.decode("utf-8")
+        == f"""
+usage: ssort [-h] [--version] [--diff] [--check] [files ...]
+
+Sort python statements into dependency order
+
+positional arguments:
+  files       One or more python files to sort, or '-' for stdin.
+
+{"optional arguments" if sys.version_info < (3, 10) else "options"}:
+  -h, --help  show this help message and exit
+  --version   Outputs version information and then exit
+  --diff      Prints a diff of all changes ssort would make to a file.
+  --check     Check the file for unsorted statements. Returns 0 if nothing needs to be changed. Otherwise returns 1.
+    """.strip()
+        + "\n"
     )
-    output = result.stdout
-    assert output == f"ssort {__version__}\n"
-
-
-def test_ssort_run_module():
-    entrypoint_result = subprocess.run(
-        ["ssort", "--help"],
-        capture_output=True,
-        encoding="utf-8",
-    )
-    entrypoint_output = entrypoint_result.stderr.splitlines(keepends=True)
-
-    module_result = subprocess.run(
-        [sys.executable, "-m", "ssort", "--help"],
-        capture_output=True,
-        encoding="utf-8",
-    )
-    module_output = module_result.stderr.splitlines(keepends=True)
-
-    assert module_output == entrypoint_output
+    assert stderr == b""
+    assert status == 0
 
 
 @pytest.mark.parametrize(
-    ("stdin", "stdout"),
+    ("stdin", "expected_stdout"),
     (
         (_unsorted, _good),
         (_good, _good),
@@ -443,9 +441,6 @@ def test_ssort_run_module():
         "double_resolution",
     ),
 )
-def test_ssort_stdin(stdin, stdout):
-    for command in [(sys.executable, "-m", "ssort"), ("ssort",)]:
-        result = subprocess.run(
-            [*command, "-"], capture_output=True, input=stdin
-        )
-        assert result.stdout == stdout
+def test_ssort_stdin(stdin, expected_stdout, ssort):
+    stdout, stderr, status = ssort("-", input=stdin)
+    assert stdout == expected_stdout

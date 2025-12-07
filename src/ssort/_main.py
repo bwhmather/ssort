@@ -17,6 +17,7 @@ from ssort._utils import (
 
 def main():
     parser = argparse.ArgumentParser(
+        prog="ssort",
         description="Sort python statements into dependency order",
     )
 
