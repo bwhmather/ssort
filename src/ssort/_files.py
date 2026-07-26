@@ -7,7 +7,7 @@ from typing import Iterable
 
 import pathspec
 
-_EMPTY_PATH_SPEC = pathspec.PathSpec([])
+_EMPTY_PATH_SPEC: pathspec.PathSpec = pathspec.PathSpec([])
 
 
 @cache
