@@ -89,14 +89,6 @@ Usage
 =====
 .. begin-usage
 
-To check that a file is correctly sorted use the `--check` flag.
-`--diff` can be passed to see what changes ``ssort`` would make.
-
-.. code:: bash
-
-    $ ssort --check --diff path/to/python_module.py
-
-
 To allow ``ssort`` to rearrange your file, simply invoke with no extra flags.
 If ``ssort`` needs to make changes to a `black <https://black.readthedocs.io/en/stable/>`_ conformant file, the result will not necessarily be `black <https://black.readthedocs.io/en/stable/>`_ conformant.
 The result of running `black <https://black.readthedocs.io/en/stable/>`_ on an ``ssort`` conformant file will always be ``ssort`` conformant.
@@ -105,6 +97,17 @@ We recommend that you reformat using `isort <https://pycqa.github.io/isort/>`_ a
 .. code:: bash
 
     $ ssort src/ tests/; isort src/ tests/; black src/ tests/
+
+
+To check that a file is correctly sorted without making changes use the `--check` flag.
+To see what changes ``ssort`` would make, again without making changes, use `--diff`.
+Pass both if you want a diff and a non-zero exit status when a file needs sorting.
+
+.. code:: bash
+
+    $ ssort --check --diff path/to/python_module.py
+
+
 
 You can also setup ssort to run automatically before commit by setting up `pre-commit <https://pre-commit.com/index.html>`_,
 and registering ssort in your `.pre-commit-config.yaml`.
