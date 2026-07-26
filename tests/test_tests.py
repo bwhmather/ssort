@@ -50,3 +50,23 @@ def test_tox_python_versions_match_ci_python_versions():
     }
 
     assert ci_versions == tox_versions
+
+
+def test_tox_basepython_matches_ci_basepython():
+    ci_conf = _load_ci_conf()
+    ci_versions = set()
+    for job in ci_conf["jobs"].values():
+        if job["name"] in ("Unit Tests", "Coverage"):
+            continue
+        step = job["steps"][1]
+        ci_versions.add(step["with"]["python-version"])
+
+    tox_conf = _load_tox_conf()
+    tox_versions = set()
+    for section, contents in tox_conf.items():
+        if not section.startswith("testenv:"):
+            continue
+        basepython = contents["basepython"]
+        tox_versions.add(f"3.{basepython[3:]}")
+
+    assert ci_versions == tox_versions
