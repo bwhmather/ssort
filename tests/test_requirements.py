@@ -36,193 +36,159 @@ def _dep_names(node):
 
 
 def test_function_def_requirements():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             name
-        """
-    )
+        """)
     assert _dep_names(node) == ["name"]
 
 
 def test_function_def_requirements_multiple():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             a
             b
-        """
-    )
+        """)
     assert _dep_names(node) == ["a", "b"]
 
 
 def test_function_def_requirements_arg_shadows():
-    node = _parse(
-        """
+    node = _parse("""
         def function(arg):
             arg
-        """
-    )
+        """)
     assert _dep_names(node) == []
 
 
 def test_function_def_requirements_positional_only_arg_shadows():
-    node = _parse(
-        """
+    node = _parse("""
         def function(arg, /):
             arg
-        """
-    )
+        """)
     assert _dep_names(node) == []
 
 
 def test_function_def_requirements_keyword_only_arg_shadows():
-    node = _parse(
-        """
+    node = _parse("""
         def function(*, arg):
             arg
-        """
-    )
+        """)
     assert _dep_names(node) == []
 
 
 def test_function_def_requirements_assignment_shadows():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             a = b
             a
-        """
-    )
+        """)
     assert _dep_names(node) == ["b"]
 
 
 def test_function_def_requirements_rest_shadows():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             _, *rest = value
             rest
-        """
-    )
+        """)
     assert _dep_names(node) == ["value"]
 
 
 def test_function_def_requirements_shadowed_after():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             a
             a = b
-        """
-    )
+        """)
     assert _dep_names(node) == ["b"]
 
 
 def test_function_def_requirements_decorator():
-    node = _parse(
-        """
+    node = _parse("""
         @decorator(arg)
         def function():
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["decorator", "arg"]
 
 
 def test_function_def_requirements_nonlocal():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             nonlocal a
             a = 4
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 def test_function_def_requirements_nonlocal_closure():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             def inner():
                 nonlocal a
                 a = 4
             return inner
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 def test_function_def_requirements_nonlocal_closure_capture():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             def inner():
                 nonlocal a
                 a = 4
             a = 2
             return inner
-        """
-    )
+        """)
     assert _dep_names(node) == []
 
 
 def test_function_def_requirements_global():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             global a
             a = 4
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 def test_function_def_requirements_global_closure():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             def inner():
                 global a
                 a = 4
             return inner
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 def test_function_def_requirements_global_closure_no_capture():
-    node = _parse(
-        """
+    node = _parse("""
         def function():
             def inner():
                 global a
                 a = 4
             a = 2
             return inner
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 def test_function_def_requirements_default():
-    node = _parse(
-        """
+    node = _parse("""
         def function(a=b):
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["b"]
 
 
 def test_function_def_requirements_annotations():
-    node = _parse(
-        """
+    node = _parse("""
         def function(a: b) -> c:
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["b", "c"]
 
 
@@ -240,12 +206,10 @@ def test_async_function_def_requirements():
         )
 
     """
-    node = _parse(
-        """
+    node = _parse("""
         async def function(arg):
             return await other(arg)
-        """
-    )
+        """)
     assert _dep_names(node) == ["other"]
 
 
@@ -261,8 +225,7 @@ def test_class_def_requirements():
             expr* decorator_list,
         )
     """
-    node = _parse(
-        """
+    node = _parse("""
         @decorator(arg)
         class A(B, C):
             _a = something
@@ -271,8 +234,7 @@ def test_class_def_requirements():
             @method_decorator(_a)
             def method():
                 return _b
-        """
-    )
+        """)
     assert _dep_names(node) == [
         "decorator",
         "arg",
@@ -286,14 +248,12 @@ def test_class_def_requirements():
 
 
 def test_class_def_builtin_requirements():
-    node = _parse(
-        """
+    node = _parse("""
         class A:
             name = __qualname__
             def method(self):
                 return __module__
-        """
-    )
+        """)
     assert _dep_names(node) == ["__module__"]
 
 
@@ -423,34 +383,28 @@ def test_for_requirements():
             string? type_comment,
         )
     """
-    node = _parse(
-        """
+    node = _parse("""
         for a in b(c):
             d = a + e
         else:
             f = g
-        """
-    )
+        """)
     assert _dep_names(node) == ["b", "c", "e", "g"]
 
 
 def test_for_requirements_target_replaces_scope():
-    node = _parse(
-        """
+    node = _parse("""
         for a in a():
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 def test_for_requirements_attribute():
-    node = _parse(
-        """
+    node = _parse("""
         for a.b in c:
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a", "c"]
 
 
@@ -466,14 +420,12 @@ def test_async_for_requirements():
             string? type_comment,
         )
     """
-    node = _parse(
-        """
+    node = _parse("""
         for a in b(c):
             d = a + e
         else:
             f = g
-        """
-    )
+        """)
     assert _dep_names(node) == ["b", "c", "e", "g"]
 
 
@@ -483,14 +435,12 @@ def test_while_requirements():
 
         While(expr test, stmt* body, stmt* orelse)
     """
-    node = _parse(
-        """
+    node = _parse("""
         while predicate():
             action()
         else:
             cleanup()
-        """
-    )
+        """)
     assert _dep_names(node) == ["predicate", "action", "cleanup"]
 
 
@@ -500,14 +450,12 @@ def test_if_requirements():
 
         If(expr test, stmt* body, stmt* orelse)
     """
-    node = _parse(
-        """
+    node = _parse("""
         if predicate():
             return subsequent()
         else:
             return alternate()
-        """
-    )
+        """)
     assert _dep_names(node) == ["predicate", "subsequent", "alternate"]
 
 
@@ -517,46 +465,38 @@ def test_with_requirements():
 
         With(withitem* items, stmt* body, string? type_comment)
     """
-    node = _parse(
-        """
+    node = _parse("""
         with A() as a:
             a()
             b()
-        """
-    )
+        """)
     assert _dep_names(node) == ["A", "b"]
 
 
 def test_with_requirements_shadow():
-    node = _parse(
-        """
+    node = _parse("""
         with a as a:
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 def test_with_requirements_attribute():
-    node = _parse(
-        """
+    node = _parse("""
         with a as b.c:
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a", "b"]
 
 
 def test_with_requirements_bindings():
-    node = _parse(
-        """
+    node = _parse("""
         with chdir(os.path.dirname(path)):
             requirements = parse_requirements(path)
             for req in requirements.values():
                 if req.name:
                     results.append(req.name)
-        """
-    )
+        """)
     assert _dep_names(node) == [
         "chdir",
         "os",
@@ -573,13 +513,11 @@ def test_async_with_requirements():
 
         AsyncWith(withitem* items, stmt* body, string? type_comment)
     """
-    node = _parse(
-        """
+    node = _parse("""
         async with A() as a:
             a()
             b()
-        """
-    )
+        """)
     assert _dep_names(node) == ["A", "b"]
 
 
@@ -604,8 +542,7 @@ def test_try_requirements():
             stmt* finalbody,
         )
     """
-    node = _parse(
-        """
+    node = _parse("""
         try:
             a = something_stupid()
         except Exception as exc:
@@ -614,8 +551,7 @@ def test_try_requirements():
             c = otherwise()
         finally:
             d = finish()
-        """
-    )
+        """)
     assert _dep_names(node) == [
         "something_stupid",
         "Exception",
@@ -816,14 +752,12 @@ def test_dict_comp_requirements():
 
         DictComp(expr key, expr value, comprehension* generators)
     """
-    node = _parse(
-        """
+    node = _parse("""
         {
             process_key(key): process_value(value)
             for key, value in iterator
         }
-        """
-    )
+        """)
     assert _dep_names(node) == ["process_key", "process_value", "iterator"]
 
 
@@ -1048,121 +982,101 @@ def test_slice_requirements():
 
 @match_statement
 def test_match_statement_requirements_literal():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case True:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 @match_statement
 def test_match_statement_requirements_capture():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case b:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 @match_statement
 def test_match_statement_requirements_wildcard():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case _:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 @match_statement
 def test_match_statement_requirements_constant():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case 1:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 @match_statement
 def test_match_statement_requirements_named_constant():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case MyEnum.CONSTANT:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a", "MyEnum"]
 
 
 @match_statement
 def test_match_statement_requirements_sequence():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case [b, *c, d, _]:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 @match_statement
 def test_match_statement_requirements_mapping():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case {"k1": "v1", "k2": b, "k3": _, **c}:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 @match_statement
 def test_match_statement_requirements_class():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case MyClass(0, b, x=_, y=c):
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a", "MyClass"]
 
 
 @match_statement
 def test_match_statement_requirements_or():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case b | c:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
 @match_statement
 def test_match_statement_requirements_as():
-    node = _parse(
-        """
+    node = _parse("""
         match a:
             case b as c:
                 pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["a"]
 
 
@@ -1178,8 +1092,7 @@ def test_try_star_requirements():
             stmt* finalbody,
         )
     """
-    node = _parse(
-        """
+    node = _parse("""
         try:
             a = something_stupid()
         except* ExceptionGroup as exc:
@@ -1188,8 +1101,7 @@ def test_try_star_requirements():
             c = otherwise()
         finally:
             d = finish()
-        """
-    )
+        """)
     assert _dep_names(node) == [
         "something_stupid",
         "ExceptionGroup",
@@ -1237,54 +1149,45 @@ def test_generic_type_alias_requirements():
 
 @type_parameter_syntax
 def test_generic_function_requirements():
-    node = _parse(
-        """
+    node = _parse("""
         def func[T1, T2](a: T1, b: T2) -> tuple[T1, T2]:
             return a, b
-        """
-    )
+        """)
     assert _dep_names(node) == ["tuple"]
 
 
 @type_parameter_syntax
 def test_generic_function_scope_requirements():
-    node = _parse(
-        """
+    node = _parse("""
         def func[S, T: Sequence[S]](a: S) -> T:
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["Sequence"]
 
 
 @type_parameter_syntax
 def test_generic_class_requirements():
-    node = _parse(
-        """
+    node = _parse("""
         class ClassA[T]:
             attr1: T
             def method1(self) -> T:
                 return self.attr1
-        """
-    )
+        """)
     assert _dep_names(node) == []
 
 
 @type_parameter_syntax
 def test_generic_class_scope_requirements():
-    node = _parse(
-        """
+    node = _parse("""
         class ClassA[S, T: Sequence[S]]:
             pass
-        """
-    )
+        """)
     assert _dep_names(node) == ["Sequence"]
 
 
 @type_parameter_syntax
 def test_generic_inner_class_requirements():
-    node = _parse(
-        """
+    node = _parse("""
         class Outer:
             class Private:
                 pass
@@ -1294,6 +1197,5 @@ def test_generic_inner_class_requirements():
 
             def method1[T](self, a: Inner[T]) -> Inner[T]:
                 return a
-        """
-    )
+        """)
     assert _dep_names(node) == ["Sequence"]
