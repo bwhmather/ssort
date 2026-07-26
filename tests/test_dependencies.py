@@ -13,8 +13,7 @@ def _unreachable(*args, **kwargs):
 
 
 def test_dependencies_ordered_by_first_use():
-    source = _clean(
-        """
+    source = _clean("""
         def c():
             pass
 
@@ -25,8 +24,7 @@ def test_dependencies_ordered_by_first_use():
 
         def b():
             pass
-        """
-    )
+        """)
     c, a, b = statements = list(parse(source, filename="<unknown>"))
     graph = module_statements_graph(
         statements, on_unresolved=_unreachable, on_wildcard_import=_unreachable

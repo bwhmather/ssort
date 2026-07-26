@@ -424,9 +424,7 @@ def test_ssort_version(ssort):
 def test_ssort_help(ssort):
     stdout, stderr, status = ssort("--help")
 
-    assert (
-        stdout.decode("utf-8").replace("\r\n", "\n")
-        == f"""
+    assert stdout.decode("utf-8").replace("\r\n", "\n") == f"""
 usage: ssort [-h] [--version] [--diff] [--check] [files ...]
 
 Sort python statements into dependency order
@@ -441,7 +439,6 @@ positional arguments:
   --check     Check the file for unsorted statements. Returns 0 if nothing
               needs to be changed. Otherwise returns 1.
 """.lstrip()
-    )
     assert stderr == b""
     assert status == 0
 
