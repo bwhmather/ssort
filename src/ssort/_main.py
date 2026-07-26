@@ -52,6 +52,8 @@ def main():
         sys.stdout.write(f"ssort {__version__}\n")
         return
 
+    dry_run = args.check or args.show_diff
+
     unsorted = 0
     unsortable = 0
     unchanged = 0
@@ -92,7 +94,7 @@ def main():
             sys.stderr.write(
                 f"ERROR: unknown encoding, {exc.encoding!r}, in {escape_path(path)}\n"
             )
-            if str(path) == "-":
+            if str(path) == "-" and not dry_run:
                 sys.stdout.buffer.write(original_bytes)
             unsortable += 1
             continue
@@ -103,7 +105,7 @@ def main():
             sys.stderr.write(
                 f"ERROR: encoding error in {escape_path(path)}: {exc}\n"
             )
-            if str(path) == "-":
+            if str(path) == "-" and not dry_run:
                 sys.stdout.buffer.write(original_bytes)
             unsortable += 1
             continue
@@ -145,13 +147,13 @@ def main():
             )
 
             if errors:
-                if str(path) == "-":
+                if str(path) == "-" and not dry_run:
                     sys.stdout.buffer.write(original_bytes)
                 unsortable += 1
                 continue
 
         except Exception as e:
-            if str(path) == "-":
+            if str(path) == "-" and not dry_run:
                 sys.stdout.buffer.write(original_bytes)
             raise Exception(f"ERROR while sorting {path}\n") from e
 
@@ -161,7 +163,7 @@ def main():
                 sys.stderr.write(
                     f"ERROR: {escape_path(path)} is incorrectly sorted\n"
                 )
-            else:
+            if not dry_run:
                 sys.stderr.write(f"Sorting {escape_path(path)}\n")
 
                 # The logic for converting from bytes to text is duplicated in
@@ -179,12 +181,12 @@ def main():
                 else:
                     path.write_bytes(updated_bytes)
         else:
-            if str(path) == "-" and not args.check:
+            if str(path) == "-" and not dry_run:
                 sys.stdout.buffer.write(original_bytes)
             unchanged += 1
 
         if args.show_diff:
-            sys.stderr.writelines(
+            sys.stdout.writelines(
                 difflib.unified_diff(
                     original.splitlines(keepends=True),
                     updated.splitlines(keepends=True),
@@ -193,7 +195,7 @@ def main():
                 )
             )
 
-    if args.check:
+    if dry_run:
 
         def _fmt_count(count):
             return f"{count} file" if count == 1 else f"{count} files"
@@ -207,11 +209,6 @@ def main():
             summary.append(f"{_fmt_count(unsortable)} would not be sortable")
         if not unsorted and not unchanged and not unsortable:
             summary.append("No files are present to be sorted. Nothing to do.")
-
-        sys.stderr.write(", ".join(summary) + "\n")
-
-        if unsorted or unsortable:
-            sys.exit(1)
 
     else:
 
@@ -231,7 +228,7 @@ def main():
         if not unsorted and not unchanged and not unsortable:
             summary.append("No files are present to be sorted. Nothing to do.")
 
-        sys.stderr.write(", ".join(summary) + "\n")
+    sys.stderr.write(", ".join(summary) + "\n")
 
-        if unsortable:
-            sys.exit(1)
+    if unsortable or (args.check and unsorted):
+        sys.exit(1)

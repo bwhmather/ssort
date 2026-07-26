@@ -343,6 +343,140 @@ def test_ssort_character_error(ssort, tmp_path):
     assert _read_fixtures(paths) == [_character]
 
 
+def test_diff_all_well(ssort, tmp_path):
+    paths = _write_fixtures(tmp_path, [_good, _good, _good])
+
+    stdout, stderr, status = ssort("--diff", tmp_path)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
+        "3 files would be left unchanged\n",
+    ]
+    assert status == 0
+    assert _read_fixtures(paths) == [_good, _good, _good]
+
+
+def test_diff_one_unsorted(ssort, tmp_path):
+    paths = _write_fixtures(tmp_path, [_unsorted, _good, _good])
+
+    stdout, stderr, status = ssort("--diff", tmp_path)
+
+    assert _messages(stdout) == [
+        f"--- {paths[0]}:before\n",
+        f"+++ {paths[0]}:after\n",
+        "@@ -1,6 +1,6 @@\n",
+        "+\n",
+        "+def _private():\n",
+        "+    pass\n",
+        " \n",
+        " def public():\n",
+        "     return _private()\n",
+        "-\n",
+        "-def _private():\n",
+        "-    pass\n",
+    ]
+    assert _messages(stderr) == [
+        "1 file would be resorted, 2 files would be left unchanged\n",
+    ]
+    assert status == 0
+    assert _read_fixtures(paths) == [_unsorted, _good, _good]
+
+
+def test_check_diff_one_unsorted(ssort, tmp_path):
+    paths = _write_fixtures(tmp_path, [_unsorted, _good, _good])
+
+    stdout, stderr, status = ssort("--check", "--diff", tmp_path)
+
+    assert _messages(stdout)[:2] == [
+        f"--- {paths[0]}:before\n",
+        f"+++ {paths[0]}:after\n",
+    ]
+    assert _messages(stderr) == [
+        f"ERROR: {escape_path(paths[0])} is incorrectly sorted\n",
+        "1 file would be resorted, 2 files would be left unchanged\n",
+    ]
+    assert status == 1
+    assert _read_fixtures(paths) == [_unsorted, _good, _good]
+
+
+def test_diff_stdin(ssort):
+    stdout, stderr, status = ssort("--diff", "-", input=_unsorted)
+
+    assert _messages(stdout) == [
+        "--- -:before\n",
+        "+++ -:after\n",
+        "@@ -1,6 +1,6 @@\n",
+        "+\n",
+        "+def _private():\n",
+        "+    pass\n",
+        " \n",
+        " def public():\n",
+        "     return _private()\n",
+        "-\n",
+        "-def _private():\n",
+        "-    pass\n",
+    ]
+    assert _messages(stderr) == [
+        "1 file would be resorted\n",
+    ]
+    assert status == 0
+
+
+def test_diff_stdin_unchanged(ssort):
+    stdout, stderr, status = ssort("--diff", "-", input=_good)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
+        "1 file would be left unchanged\n",
+    ]
+    assert status == 0
+
+
+@pytest.mark.parametrize(
+    "stdin",
+    (_encoding, _character, _syntax, _resolution),
+    ids=("encoding", "character", "syntax", "resolution"),
+)
+def test_diff_stdin_unsortable(stdin, ssort):
+    stdout, stderr, status = ssort("--diff", "-", input=stdin)
+
+    assert stdout == b""
+    assert status == 1
+
+
+def test_check_stdin_unsorted(ssort):
+    stdout, stderr, status = ssort("--check", "-", input=_unsorted)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
+        "ERROR: - is incorrectly sorted\n",
+        "1 file would be resorted\n",
+    ]
+    assert status == 1
+
+
+def test_check_stdin_unchanged(ssort):
+    stdout, stderr, status = ssort("--check", "-", input=_good)
+
+    assert stdout == b""
+    assert _messages(stderr) == [
+        "1 file would be left unchanged\n",
+    ]
+    assert status == 0
+
+
+@pytest.mark.parametrize(
+    "stdin",
+    (_encoding, _character, _syntax, _resolution),
+    ids=("encoding", "character", "syntax", "resolution"),
+)
+def test_check_stdin_unsortable(stdin, ssort):
+    stdout, stderr, status = ssort("--check", "-", input=stdin)
+
+    assert stdout == b""
+    assert status == 1
+
+
 def test_ssort_preserve_crlf_endlines(ssort, tmp_path):
     paths = _write_fixtures(tmp_path, [b"a = b\r\nb = 4"])
 
