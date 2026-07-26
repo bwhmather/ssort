@@ -41,6 +41,12 @@ requires-python = ">=3.9"
 [project.license]
 text = "MIT"
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pyyaml ==6.0.1"
+]
+
 [project.scripts]
 ssort = "ssort._main:main"
 

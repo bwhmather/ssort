@@ -22,9 +22,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest
-        pip install pyyaml==6.0.1
-        pip install -e .[test]
+        pip install -e ".[test]"
     - name: Run tests
       run: |
         pytest -vv tests/
@@ -41,9 +39,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov coveralls
-        pip install pyyaml==6.0.1
-        pip install -e .[test]
+        pip install pytest-cov coveralls
+        pip install -e ".[test]"
     - name: Run tests
       run: |
         pytest --cov=ssort -v tests/
@@ -133,9 +130,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[test]
-        pip install pytest
-        pip install pyyaml==6.0.1
+        pip install -e ".[test]"
         pip install pylint
     - name: Run pylint
       run: |
