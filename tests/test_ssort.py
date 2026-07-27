@@ -410,6 +410,50 @@ def test_inner_class():
     assert actual == expected
 
 
+def test_inner_class_in_sorted_outer_class():
+    original = _clean("""
+        class Outer:
+            class Inner:
+                def public(self):
+                    ...
+                def __init__(self):
+                    ...
+        """)
+    expected = _clean("""
+        class Outer:
+            class Inner:
+                def __init__(self):
+                    ...
+                def public(self):
+                    ...
+        """)
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_inner_class_nested_in_sorted_outer_classes():
+    original = _clean("""
+        class Outer:
+            class Middle:
+                class Inner:
+                    def public(self):
+                        ...
+                    def __init__(self):
+                        ...
+        """)
+    expected = _clean("""
+        class Outer:
+            class Middle:
+                class Inner:
+                    def __init__(self):
+                        ...
+                    def public(self):
+                        ...
+        """)
+    actual = ssort(original)
+    assert actual == expected
+
+
 def test_lifecycle_class():
     original = _clean("""
         class Thing:

@@ -319,17 +319,17 @@ def _statement_text_sorted_class(statement):
         sorted_statements, graph=runtime_graph
     )
 
-    if sorted_statements == unsorted_statements:
-        return statement.text
+    # === Sort nested statements ===============================================
+    sorted_statement_texts = [
+        statement_text_sorted(statement) for statement in sorted_statements
+    ]
 
-    return (
-        head_text
-        + "\n"
-        + "\n".join(
-            statement_text_sorted(body_statement)
-            for body_statement in sorted_statements
-        )
-    )
+    unsorted_statement_texts = [
+        statement.text for statement in unsorted_statements
+    ]
+    if sorted_statement_texts == unsorted_statement_texts:
+        return statement.text
+    return head_text + "\n" + "\n".join(sorted_statement_texts)
 
 
 def statement_text_sorted(statement):
