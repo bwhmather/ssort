@@ -894,3 +894,125 @@ def test_template_strings():
         """)
     actual = ssort(original)
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "assignment", ["value = 1", "value: int = 1", "value: int"]
+)
+def test_attribute_docstrings(assignment):
+    original = _clean(f'''
+        class Example:
+            """Class documentation."""
+
+            def method(self):
+                return self.value
+
+            {assignment}  # Attribute comment.
+            # Documentation comment.
+            """Attribute documentation."""
+            """Additional documentation."""
+            other = 2
+            """Other documentation."""
+        ''')
+    expected = _clean(f'''
+        class Example:
+            """Class documentation."""
+
+            {assignment}  # Attribute comment.
+            # Documentation comment.
+            """Attribute documentation."""
+            """Additional documentation."""
+            other = 2
+            """Other documentation."""
+
+            def method(self):
+                return self.value
+        ''')
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual
+
+
+def test_module_attribute_docstring():
+    original = _clean('''
+        """Module documentation."""
+        print(value)
+        value = 1
+        """Value documentation."""
+        """Additional documentation."""
+        ''')
+    expected = _clean('''
+        """Module documentation."""
+        value = 1
+        """Value documentation."""
+        """Additional documentation."""
+        print(value)
+        ''')
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual
+
+
+@type_parameter_syntax
+def test_type_alias_docstring():
+    original = _clean('''
+        def identity(value: Value) -> Value:
+            return value
+        type Value = int | float
+        """Value documentation."""
+        ''')
+    expected = _clean('''
+        type Value = int | float
+        """Value documentation."""
+        def identity(value: Value) -> Value:
+            return value
+        ''')
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual
+
+
+@pytest.mark.parametrize(
+    "original, expected",
+    [
+        (
+            'print(value); value = 1; "Value documentation."\n',
+            'value = 1\n"Value documentation."\nprint(value)\n',
+        ),
+        (
+            'class Example: value = 1; "Value documentation."; other = 2\n',
+            'class Example: value = 1; "Value documentation."; other = 2\n',
+        ),
+        (
+            'class Example:\n    value = 1; "Documentation."; __slots__ = ()\n',
+            "class Example:\n    __slots__ = ()\n    value = 1\n"
+            '    "Documentation."\n',
+        ),
+    ],
+)
+def test_attribute_docstrings_on_same_line(original, expected):
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual
+
+
+def test_nested_class_attribute_docstring():
+    original = _clean('''
+        class Outer:
+            class Inner:
+                def method(self):
+                    return self.value
+                value = 1
+                """Value documentation."""
+        ''')
+    expected = _clean('''
+        class Outer:
+            class Inner:
+                value = 1
+                """Value documentation."""
+                def method(self):
+                    return self.value
+        ''')
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual

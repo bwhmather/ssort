@@ -107,6 +107,37 @@ def split(
         )
 
 
+def _attach_attribute_docstrings(statements):
+    """Keep attribute and additional docstrings with their assignment."""
+    assignment_types = (ast.Assign, ast.AnnAssign)
+    if hasattr(ast, "TypeAlias"):
+        assignment_types += (ast.TypeAlias,)
+
+    previous = None
+    for statement in statements:
+        node = statement.node
+        if (
+            previous is not None
+            and isinstance(previous.node, assignment_types)
+            and isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, str)
+        ):
+            previous = Statement(
+                text=previous.text + "\n" + statement.text,
+                node=previous.node,
+                start_row=previous.start_row,
+                start_col=previous.start_col,
+            )
+        else:
+            if previous is not None:
+                yield previous
+            previous = statement
+
+    if previous is not None:
+        yield previous
+
+
 def split_class(statement):
     node = statement.node
     text = statement.text
@@ -200,7 +231,7 @@ def split_class(statement):
             )
         )
 
-    return head_text, body_statements
+    return head_text, list(_attach_attribute_docstrings(body_statements))
 
 
 def parse(root_text, *, filename="<unknown>"):
@@ -210,4 +241,6 @@ def parse(root_text, *, filename="<unknown>"):
             root_node = ast.parse(root_text, filename)
         except SyntaxError as exc:
             raise ParseError(exc.msg, lineno=exc.lineno, col_offset=exc.offset)
-    return split(root_text, nodes=list(root_node.body))
+    return _attach_attribute_docstrings(
+        split(root_text, nodes=list(root_node.body))
+    )
