@@ -124,6 +124,9 @@ def _attach_attribute_docstrings(statements):
             and isinstance(node.value, ast.Constant)
             and isinstance(node.value.value, str)
         ):
+            # Keep the assignment node for dependency analysis and sorting.
+            # This also lets subsequent docstrings attach to the same
+            # assignment.
             previous = Statement(
                 text=previous.text + "\n" + statement.text,
                 node=previous.node,
