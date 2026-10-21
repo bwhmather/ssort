@@ -1,4 +1,5 @@
 import ast
+import sys
 import warnings
 from io import StringIO
 from token import NAME
@@ -110,7 +111,7 @@ def split(
 def _attach_attribute_docstrings(statements):
     """Keep attribute and additional docstrings with their assignment."""
     assignment_types = (ast.Assign, ast.AnnAssign)
-    if hasattr(ast, "TypeAlias"):
+    if sys.version_info >= (3, 12):
         assignment_types += (ast.TypeAlias,)
 
     previous = None
