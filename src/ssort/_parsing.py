@@ -114,6 +114,9 @@ def _attach_attribute_docstrings(statements):
     if sys.version_info >= (3, 12):
         assignment_types += (ast.TypeAlias,)
 
+    # Loop through all statements. If we encounter an Assignment followed by a
+    # string, we bundle the string into its preceding assignment so they get
+    # sorted together
     previous = None
     for statement in statements:
         node = statement.node
