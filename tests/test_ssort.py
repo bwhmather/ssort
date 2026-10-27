@@ -13,6 +13,14 @@ template_syntax = pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="template string syntax was introduced in python 3.14",
 )
+lazy_import_syntax = pytest.mark.skipif(
+    sys.version_info < (3, 15),
+    reason="lazy import syntax was introduced in python 3.15",
+)
+comprehension_unpacking = pytest.mark.skipif(
+    sys.version_info < (3, 15),
+    reason="unpacking in comprehensions was introduced in python 3.15",
+)
 
 
 def _clean(text):
@@ -1053,4 +1061,103 @@ def test_nested_class_attribute_docstring():
         ''')
     actual = ssort(original)
     assert actual == expected
-    assert ssort(actual) == actual
+
+
+@comprehension_unpacking
+def test_list_comp_unpack():
+    original = _clean("""
+        merged = [*_load(name) for name in NAMES]
+        def _load(name):
+            return [name]
+        NAMES = ["a", "b"]
+        """)
+    expected = _clean("""
+        def _load(name):
+            return [name]
+        NAMES = ["a", "b"]
+        merged = [*_load(name) for name in NAMES]
+        """)
+    actual = ssort(original)
+    assert actual == expected
+
+
+@comprehension_unpacking
+def test_set_comp_unpack():
+    original = _clean("""
+        merged = {*_load(name) for name in NAMES}
+        def _load(name):
+            return {name}
+        NAMES = ["a", "b"]
+        """)
+    expected = _clean("""
+        def _load(name):
+            return {name}
+        NAMES = ["a", "b"]
+        merged = {*_load(name) for name in NAMES}
+        """)
+    actual = ssort(original)
+    assert actual == expected
+
+
+@comprehension_unpacking
+def test_generator_exp_unpack():
+    original = _clean("""
+        merged = list(*_load(name) for name in NAMES)
+        def _load(name):
+            return [name]
+        NAMES = ["a", "b"]
+        """)
+    expected = _clean("""
+        def _load(name):
+            return [name]
+        NAMES = ["a", "b"]
+        merged = list(*_load(name) for name in NAMES)
+        """)
+    actual = ssort(original)
+    assert actual == expected
+
+
+@comprehension_unpacking
+def test_dict_comp_unpack():
+    original = _clean("""
+        merged = {**_load(name) for name in NAMES}
+        def _load(name):
+            return {name: name}
+        NAMES = ["a", "b"]
+        """)
+    expected = _clean("""
+        def _load(name):
+            return {name: name}
+        NAMES = ["a", "b"]
+        merged = {**_load(name) for name in NAMES}
+        """)
+    actual = ssort(original)
+    assert actual == expected
+
+
+@lazy_import_syntax
+def test_lazy_import():
+    original = _clean("""
+        mod.func()
+        lazy import mod
+        """)
+    expected = _clean("""
+        lazy import mod
+        mod.func()
+        """)
+    actual = ssort(original)
+    assert actual == expected
+
+
+@lazy_import_syntax
+def test_lazy_import_from():
+    original = _clean("""
+        func()
+        lazy from mod import func
+        """)
+    expected = _clean("""
+        lazy from mod import func
+        func()
+        """)
+    actual = ssort(original)
+    assert actual == expected

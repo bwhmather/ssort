@@ -21,6 +21,11 @@ type_parameter_syntax = pytest.mark.skipif(
     reason="type parameter syntax was introduced in python 3.12",
 )
 
+comprehension_unpacking = pytest.mark.skipif(
+    sys.version_info < (3, 15),
+    reason="unpacking in comprehensions was introduced in python 3.15",
+)
+
 
 def _parse(source):
     source = textwrap.dedent(source)
@@ -759,6 +764,39 @@ def test_dict_comp_requirements():
         }
         """)
     assert _dep_names(node) == ["process_key", "process_value", "iterator"]
+
+
+@comprehension_unpacking
+def test_list_comp_requirements_unpack():
+    node = _parse("[*process(item) for item in iterator]")
+    assert _dep_names(node) == ["process", "iterator"]
+
+
+@comprehension_unpacking
+def test_set_comp_requirements_unpack():
+    node = _parse("{*process(item) for item in iterator}")
+    assert _dep_names(node) == ["process", "iterator"]
+
+
+@comprehension_unpacking
+def test_dict_comp_requirements_unpack():
+    node = _parse("{**process(item) for item in iterator}")
+    assert _dep_names(node) == ["process", "iterator"]
+
+
+@comprehension_unpacking
+def test_generator_exp_requirements_unpack():
+    node = _parse("(*process(item) for item in iterator)")
+    assert _dep_names(node) == ["process", "iterator"]
+
+
+@comprehension_unpacking
+def test_async_generator_exp_requirements_unpack():
+    node = _parse("""
+        async def function():
+            return (*process(item) async for item in iterator())
+        """)
+    assert _dep_names(node) == ["process", "iterator"]
 
 
 def test_generator_exp_requirements():
