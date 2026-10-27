@@ -257,7 +257,8 @@ def _iter_child_nodes_of_set_comp(node: ast.SetComp) -> Iterable[ast.AST]:
 @iter_child_nodes.register(ast.DictComp)
 def _iter_child_nodes_of_dict_comp(node: ast.DictComp) -> Iterable[ast.AST]:
     yield node.key
-    yield node.value
+    if node.value is not None:
+        yield node.value
     yield from node.generators
 
 
