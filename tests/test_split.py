@@ -89,14 +89,46 @@ def test_split_attribute_docstrings():
     ]
 
 
-@pytest.mark.parametrize("expression", ["42", 'b"bytes"', 'f"{value}"', "f()"])
-def test_split_attribute_docstrings_stop_at_non_string(expression):
+def test_split_attribute_docstrings_stop_at_number():
     statements = _split_text(
-        f'value = 1\n"Value documentation."\n{expression}\n"Unrelated."'
+        'value = 1\n"Value documentation."\n42\n"Unrelated."'
     )
     assert statements == [
         'value = 1\n"Value documentation."',
-        expression,
+        "42",
+        '"Unrelated."',
+    ]
+
+
+def test_split_attribute_docstrings_stop_at_bytes():
+    statements = _split_text(
+        'value = 1\n"Value documentation."\nb"bytes"\n"Unrelated."'
+    )
+    assert statements == [
+        'value = 1\n"Value documentation."',
+        'b"bytes"',
+        '"Unrelated."',
+    ]
+
+
+def test_split_attribute_docstrings_stop_at_f_string():
+    statements = _split_text(
+        'value = 1\n"Value documentation."\nf"{value}"\n"Unrelated."'
+    )
+    assert statements == [
+        'value = 1\n"Value documentation."',
+        'f"{value}"',
+        '"Unrelated."',
+    ]
+
+
+def test_split_attribute_docstrings_stop_at_call():
+    statements = _split_text(
+        'value = 1\n"Value documentation."\nf()\n"Unrelated."'
+    )
+    assert statements == [
+        'value = 1\n"Value documentation."',
+        "f()",
         '"Unrelated."',
     ]
 
@@ -139,16 +171,10 @@ def test_split_class_simple():
     assert actual == expected
 
 
-@pytest.mark.parametrize(
-    "source",
-    [
-        'class A: value = 1; "Value documentation."; "Additional."; other = 2',
-        'class A:\n    value = 1\n    "Value documentation."\n'
-        '    "Additional."\n    other = 2',
-    ],
-)
-def test_split_class_attribute_docstrings(source):
-    actual = _split_class(source)
+def test_split_class_attribute_docstrings_single_line():
+    actual = _split_class(
+        'class A: value = 1; "Value documentation."; "Additional."; other = 2'
+    )
     expected = "class A:", [
         '    value = 1\n    "Value documentation."\n    "Additional."',
         "    other = 2",
@@ -156,15 +182,65 @@ def test_split_class_attribute_docstrings(source):
     assert actual == expected
 
 
-@pytest.mark.parametrize("expression", ["42", 'b"bytes"', 'f"{value}"', "f()"])
-def test_split_class_attribute_docstrings_stop_at_non_string(expression):
+def test_split_class_attribute_docstrings_multiple_lines():
     actual = _split_class(
         'class A:\n    value = 1\n    "Value documentation."\n'
-        f'    {expression}\n    "Unrelated."'
+        '    "Additional."\n    other = 2'
+    )
+    expected = "class A:", [
+        '    value = 1\n    "Value documentation."\n    "Additional."',
+        "    other = 2",
+    ]
+    assert actual == expected
+
+
+def test_split_class_attribute_docstrings_stop_at_number():
+    actual = _split_class(
+        'class A:\n    value = 1\n    "Value documentation."\n'
+        '    42\n    "Unrelated."'
     )
     expected = "class A:", [
         '    value = 1\n    "Value documentation."',
-        f"    {expression}",
+        "    42",
+        '    "Unrelated."',
+    ]
+    assert actual == expected
+
+
+def test_split_class_attribute_docstrings_stop_at_bytes():
+    actual = _split_class(
+        'class A:\n    value = 1\n    "Value documentation."\n'
+        '    b"bytes"\n    "Unrelated."'
+    )
+    expected = "class A:", [
+        '    value = 1\n    "Value documentation."',
+        '    b"bytes"',
+        '    "Unrelated."',
+    ]
+    assert actual == expected
+
+
+def test_split_class_attribute_docstrings_stop_at_f_string():
+    actual = _split_class(
+        'class A:\n    value = 1\n    "Value documentation."\n'
+        '    f"{value}"\n    "Unrelated."'
+    )
+    expected = "class A:", [
+        '    value = 1\n    "Value documentation."',
+        '    f"{value}"',
+        '    "Unrelated."',
+    ]
+    assert actual == expected
+
+
+def test_split_class_attribute_docstrings_stop_at_call():
+    actual = _split_class(
+        'class A:\n    value = 1\n    "Value documentation."\n'
+        '    f()\n    "Unrelated."'
+    )
+    expected = "class A:", [
+        '    value = 1\n    "Value documentation."',
+        "    f()",
         '    "Unrelated."',
     ]
     assert actual == expected

@@ -942,29 +942,94 @@ def test_template_strings():
     assert actual == expected
 
 
-@pytest.mark.parametrize(
-    "assignment", ["value = 1", "value: int = 1", "value: int"]
-)
-def test_attribute_docstrings(assignment):
-    original = _clean(f'''
+def test_attribute_docstrings_assign():
+    original = _clean('''
         class Example:
             """Class documentation."""
 
             def method(self):
                 return self.value
 
-            {assignment}  # Attribute comment.
+            value = 1  # Attribute comment.
             # Documentation comment.
             """Attribute documentation."""
             """Additional documentation."""
             other = 2
             """Other documentation."""
         ''')
-    expected = _clean(f'''
+    expected = _clean('''
         class Example:
             """Class documentation."""
 
-            {assignment}  # Attribute comment.
+            value = 1  # Attribute comment.
+            # Documentation comment.
+            """Attribute documentation."""
+            """Additional documentation."""
+            other = 2
+            """Other documentation."""
+
+            def method(self):
+                return self.value
+        ''')
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual
+
+
+def test_attribute_docstrings_annotated_assign():
+    original = _clean('''
+        class Example:
+            """Class documentation."""
+
+            def method(self):
+                return self.value
+
+            value: int = 1  # Attribute comment.
+            # Documentation comment.
+            """Attribute documentation."""
+            """Additional documentation."""
+            other = 2
+            """Other documentation."""
+        ''')
+    expected = _clean('''
+        class Example:
+            """Class documentation."""
+
+            value: int = 1  # Attribute comment.
+            # Documentation comment.
+            """Attribute documentation."""
+            """Additional documentation."""
+            other = 2
+            """Other documentation."""
+
+            def method(self):
+                return self.value
+        ''')
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual
+
+
+def test_attribute_docstrings_annotation_only():
+    original = _clean('''
+        class Example:
+            """Class documentation."""
+
+            def method(self):
+                return self.value
+
+            value: int  # Attribute comment.
+            # Documentation comment.
+            """Attribute documentation."""
+            """Additional documentation."""
+            other = 2
+            """Other documentation."""
+        ''')
+    expected = _clean('''
+        class Example:
+            """Class documentation."""
+
+            value: int  # Attribute comment.
             # Documentation comment.
             """Attribute documentation."""
             """Additional documentation."""
@@ -1018,25 +1083,30 @@ def test_type_alias_docstring():
     assert ssort(actual) == actual
 
 
-@pytest.mark.parametrize(
-    "original, expected",
-    [
-        (
-            'print(value); value = 1; "Value documentation."\n',
-            'value = 1\n"Value documentation."\nprint(value)\n',
-        ),
-        (
-            'class Example: value = 1; "Value documentation."; other = 2\n',
-            'class Example: value = 1; "Value documentation."; other = 2\n',
-        ),
-        (
-            'class Example:\n    value = 1; "Documentation."; __slots__ = ()\n',
-            "class Example:\n    __slots__ = ()\n    value = 1\n"
-            '    "Documentation."\n',
-        ),
-    ],
-)
-def test_attribute_docstrings_on_same_line(original, expected):
+def test_module_attribute_docstring_on_same_line():
+    original = 'print(value); value = 1; "Value documentation."\n'
+    expected = 'value = 1\n"Value documentation."\nprint(value)\n'
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual
+
+
+def test_class_attribute_docstring_on_same_line():
+    original = 'class Example: value = 1; "Value documentation."; other = 2\n'
+    expected = 'class Example: value = 1; "Value documentation."; other = 2\n'
+    actual = ssort(original)
+    assert actual == expected
+    assert ssort(actual) == actual
+
+
+def test_class_attribute_docstring_on_same_line_reordered():
+    original = (
+        'class Example:\n    value = 1; "Documentation."; __slots__ = ()\n'
+    )
+    expected = (
+        "class Example:\n    __slots__ = ()\n    value = 1\n"
+        '    "Documentation."\n'
+    )
     actual = ssort(original)
     assert actual == expected
     assert ssort(actual) == actual
