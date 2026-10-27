@@ -640,6 +640,44 @@ def test_ssort_self_positional_only():
             def _notdep(self):
                 pass
         """)
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_shadow_builtin():
+    original = _clean("""
+        print("Hello, World!")
+
+        def print(message):
+            pass
+        """)
+    expected = original
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_almost_shadow_builtin():
+    original = _clean("""
+        def print(message):
+            pass
+
+        print("Hello, World!")
+        """)
+    expected = original
+
+    actual = ssort(original)
+    assert actual == expected
+
+
+def test_ignore_wildcard():
+    original = _clean("""
+        a()
+        from b import *
+        """)
+    expected = original
+
     actual = ssort(original)
     assert actual == expected
 
