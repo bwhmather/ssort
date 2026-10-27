@@ -1,3 +1,4 @@
+import ast
 import sys
 
 import pytest
@@ -71,6 +72,48 @@ def test_split_assignments_leading_and_trailing_comments():
     ]
 
 
+def test_split_attribute_docstrings():
+    statements = _split_text(
+        '"Module documentation."\n'
+        "value = 1\n"
+        '# Documentation comment.\n"Value documentation."\n'
+        '"Additional documentation."\n'
+        "other = 2"
+    )
+    assert statements == [
+        '"Module documentation."',
+        "value = 1\n"
+        '# Documentation comment.\n"Value documentation."\n'
+        '"Additional documentation."',
+        "other = 2",
+    ]
+
+
+@pytest.mark.parametrize("expression", ["42", 'b"bytes"', 'f"{value}"', "f()"])
+def test_split_attribute_docstrings_stop_at_non_string(expression):
+    statements = _split_text(
+        f'value = 1\n"Value documentation."\n{expression}\n"Unrelated."'
+    )
+    assert statements == [
+        'value = 1\n"Value documentation."',
+        expression,
+        '"Unrelated."',
+    ]
+
+
+def test_split_attribute_docstring_coordinates():
+    statements = list(parse('other = 0; value = 1\n"Value documentation."'))
+    statement = statements[1]
+    assert statement.text == 'value = 1\n"Value documentation."'
+    assert (statement.start_row, statement.start_col) == (0, 11)
+    assert isinstance(statement.node, ast.Assign)
+    assert (statement.node.lineno, statement.node.col_offset) == (1, 11)
+    assert (statement.node.end_lineno, statement.node.end_col_offset) == (
+        1,
+        20,
+    )
+
+
 def test_split_function_def():
     statements = _split_text(
         "@something(2, kwarg=3)\n"
@@ -94,6 +137,46 @@ def test_split_class_simple():
     actual = _split_class("class A:\n    attr = 2")
     expected = "class A:", ["    attr = 2"]
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'class A: value = 1; "Value documentation."; "Additional."; other = 2',
+        'class A:\n    value = 1\n    "Value documentation."\n'
+        '    "Additional."\n    other = 2',
+    ],
+)
+def test_split_class_attribute_docstrings(source):
+    actual = _split_class(source)
+    expected = "class A:", [
+        '    value = 1\n    "Value documentation."\n    "Additional."',
+        "    other = 2",
+    ]
+    assert actual == expected
+
+
+@pytest.mark.parametrize("expression", ["42", 'b"bytes"', 'f"{value}"', "f()"])
+def test_split_class_attribute_docstrings_stop_at_non_string(expression):
+    actual = _split_class(
+        'class A:\n    value = 1\n    "Value documentation."\n'
+        f'    {expression}\n    "Unrelated."'
+    )
+    expected = "class A:", [
+        '    value = 1\n    "Value documentation."',
+        f"    {expression}",
+        '    "Unrelated."',
+    ]
+    assert actual == expected
+
+
+def test_split_class_attribute_docstring_coordinates():
+    statement = next(parse('\nclass A:\n    value = 1\n    "Documentation."'))
+    _, body = split_class(statement)
+    assert body[0].text == '    value = 1\n    "Documentation."'
+    assert (body[0].start_row, body[0].start_col) == (2, 0)
+    assert body[0].node is statement.node.body[0]
+    assert (body[0].node.lineno, body[0].node.col_offset) == (3, 4)
 
 
 def test_split_class_single_line():
